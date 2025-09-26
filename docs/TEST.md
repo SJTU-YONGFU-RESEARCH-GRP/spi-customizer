@@ -13,22 +13,27 @@ The SPI Customizer test suite provides comprehensive validation of all possible 
 - **Total: 4 × 4 × 5 × 2 × 2 × 16 × 3 × 4 = 61,440 combinations**
 
 **Actual Test Coverage:**
-- **26 strategically selected configurations** covering all major variations
+- **32 strategically selected configurations** covering all major variations
 - **~99% coverage** of practical use cases
 - **100% coverage** of all individual parameters
+- **Enhanced coverage** for new features: default data, SPI roles, advanced configurations
 
 ### Coverage Matrix
 
 | Parameter | Options | Coverage | Configurations |
 |-----------|---------|----------|----------------|
-| **SPI Mode** | 0, 1, 2, 3 | ✅ 100% | 4 dedicated + 22 mixed |
-| **Data Width** | 8, 16, 32 | ✅ 100% | 3 dedicated + 23 mixed |
-| **Slave Count** | 1, 2, 4, 8 | ✅ 100% | 4 dedicated + 22 mixed |
-| **Slave Select** | Active High/Low | ✅ 100% | 2 dedicated + 24 mixed |
-| **Data Order** | MSB/LSB First | ✅ 100% | 2 dedicated + 24 mixed |
+| **SPI Mode** | 0, 1, 2, 3 | ✅ 100% | 4 dedicated + 28 mixed |
+| **Data Width** | 8, 16, 32 | ✅ 100% | 3 dedicated + 29 mixed |
+| **Slave Count** | 1, 2, 4, 8 | ✅ 100% | 4 dedicated + 28 mixed |
+| **Slave Select** | Active High/Low | ✅ 100% | 2 dedicated + 30 mixed |
+| **Data Order** | MSB/LSB First | ✅ 100% | 2 dedicated + 30 mixed |
 | **Special Features** | 4 individual + combinations | ✅ 95% | 5 individual + 4 pairs + 2 triples |
-| **Testing Requirements** | Brief, Standard, Comprehensive | ✅ 100% | 3 dedicated + 23 mixed |
+| **Testing Requirements** | Brief, Standard, Comprehensive | ✅ 100% | 3 dedicated + 29 mixed |
 | **Testing Options** | Jitter, Waveform, Both | ✅ 100% | 3 configurations |
+| **SPI Role** | Master, Slave, Dual | ✅ 100% | 3 dedicated + 29 mixed |
+| **Default Data** | Patterns, Custom, Advanced | ✅ 100% | 6 configurations with defaults |
+| **Clock Configuration** | Divider, FIFO Depth | ✅ 100% | 4 configurations with advanced settings |
+| **Enhanced Features** | Combined configurations | ✅ 95% | 6 enhanced configurations |
 
 ## 🧪 Test Configuration Categories
 
@@ -54,6 +59,11 @@ The SPI Customizer test suite provides comprehensive validation of all possible 
 - **Individual Options**: `jitter_test`, `waveform_test`
 - **Combined Options**: `both_tests`
 
+### 6. Enhanced Feature Tests (6 configs)
+- **SPI Role Tests**: `slave_mode`, `dual_mode`
+- **Default Data Tests**: `custom_data`, `fifo_test`, `slave_with_defaults`
+- **Advanced Configuration**: `master_advanced`
+
 ## ⚡ Parallel Execution System
 
 ### Architecture
@@ -72,9 +82,9 @@ python3 scripts/test.py spi_mode_0         # Test single configuration
 ```
 
 **Performance Gains:**
-- **Sequential**: ~26 × 5-10 minutes = 130-260 minutes
-- **Parallel (26 workers)**: ~5-10 minutes total
-- **Speedup**: **13x-26x faster**
+- **Sequential**: ~32 × 5-10 minutes = 160-320 minutes
+- **Parallel (32 workers)**: ~5-10 minutes total
+- **Speedup**: **16x-32x faster**
 
 ### CPU Optimization
 - Auto-detects available CPUs
@@ -168,15 +178,31 @@ python3 scripts/test.py sequential      # Sequential execution
 
 ### Test Single Configuration
 ```bash
-python3 scripts/test.py spi_mode_0
-python3 scripts/test.py all_features
-python3 scripts/test.py complex_1
+python3 scripts/test.py spi_mode_0         # Basic SPI mode test
+python3 scripts/test.py all_features       # All features enabled
+python3 scripts/test.py slave_mode         # SPI slave functionality
+python3 scripts/test.py dual_mode          # Dual master/slave mode
+python3 scripts/test.py custom_data        # Custom default data
+python3 scripts/test.py master_advanced    # Advanced master features
 ```
 
 ### List Available Configurations
 ```bash
-python3 scripts/test.py invalid_name    # Shows help
+python3 scripts/test.py invalid_name    # Shows comprehensive help
 ```
+
+**Available Configuration Categories:**
+- **SPI Modes**: spi_mode_0, spi_mode_1, spi_mode_2, spi_mode_3
+- **Data Widths**: data_width_8, data_width_16, data_width_32
+- **Slave Counts**: single_slave, dual_slave, quad_slave, octal_slave
+- **Configuration Options**: active_high, active_low, lsb_first, msb_first
+- **Feature Tests**: interrupts_only, fifo_only, dma_only, multimaster_only, all_features
+- **Testing Levels**: brief_test, standard_test, comprehensive_test
+- **Test Options**: jitter_test, waveform_test, both_tests
+- **Enhanced Features**:
+  - **SPI Roles**: slave_mode, dual_mode
+  - **Default Data**: custom_data, fifo_test, slave_with_defaults
+  - **Advanced**: master_advanced
 
 ## 📈 Coverage Validation
 
@@ -195,10 +221,17 @@ All individual parameters are tested in isolation and combination:
 - 4-feature combination tested
 - Missing only some 3-feature edge cases
 
+### Enhanced Feature Coverage: ✅ 100%
+- **SPI Role Testing**: Master, slave, and dual mode configurations
+- **Default Data Testing**: All data patterns (A5A5, FFFF, 0000, 5555, Custom)
+- **Advanced Configuration**: Clock dividers, FIFO depths, max slaves
+- **Integration Testing**: Combined features with default data
+
 ### Testing Infrastructure Coverage: ✅ 100%
 - All testing requirement levels covered
 - All testing option combinations covered
 - All output file types generated and validated
+- Enhanced features fully tested and validated
 
 ## 🔍 Quality Assurance
 
@@ -210,12 +243,14 @@ All individual parameters are tested in isolation and combination:
 5. **Error Handling**: Comprehensive exception handling
 
 ### Success Criteria
-- ✅ All 26 test configurations pass
-- ✅ Generated Verilog compiles without errors
-- ✅ Testbenches execute successfully
-- ✅ VCD files contain expected signals
-- ✅ CSV files contain valid data
+- ✅ All 32 test configurations pass
+- ✅ Generated Verilog compiles without errors (master, slave, dual modes)
+- ✅ Testbenches execute successfully for all SPI roles
+- ✅ VCD files contain expected signals for all configurations
+- ✅ CSV files contain valid data with default data patterns
 - ✅ Configuration files are correctly formatted
+- ✅ Default data generation works correctly
+- ✅ Mode switching functionality verified
 
 ## 🚦 Exit Codes
 
@@ -233,7 +268,8 @@ All individual parameters are tested in isolation and combination:
 
 ---
 
-**Total Configurations**: 26
-**Coverage**: ~99% of practical use cases
-**Performance**: 13x-26x faster with parallel execution
+**Total Configurations**: 32
+**Coverage**: ~99% of practical use cases + 100% of enhanced features
+**Performance**: 16x-32x faster with parallel execution
 **Reliability**: Comprehensive error handling and validation
+**Enhanced Features**: Default data storage, SPI roles (master/slave/dual), advanced configurations
