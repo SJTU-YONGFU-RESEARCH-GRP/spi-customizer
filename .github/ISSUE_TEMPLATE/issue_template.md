@@ -8,9 +8,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## SPI Configuration Request
+## SPI Configuration Request
 
-        Please provide the following details for your custom SPI configuration:
+Please provide the following details for your custom SPI configuration:
   - type: input
     id: spi_mode
     attributes:
@@ -126,15 +126,15 @@ body:
   - type: markdown
     attributes:
       value: |
-        ---
+---
 
-        ## What Happens Next?
+## What Happens Next?
 
-        1. 🤖 The automation system will parse your configuration
-        2. 🔧 Custom Verilog code will be generated for your specifications
-        3. 🧪 The design will be tested with comprehensive testbenches
-        4. 📊 Timing diagrams and performance plots will be created
-        5. 📧 Results will be emailed to you with downloadable files
-        6. ✅ This issue will be updated with the results and then closed
+1. 🤖 The automation system will parse your configuration
+2. 🔧 Custom Verilog code will be generated for your specifications
+3. 🧪 The design will be tested with comprehensive testbenches
+4. 📊 Timing diagrams and performance plots will be created
+5. 📧 Results will be emailed to you with downloadable files
+6. ✅ This issue will be updated with the results and then closed
 
-        **Expected completion time: 5-10 minutes**
+**Expected completion time: 5-10 minutes**
