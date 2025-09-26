@@ -1,0 +1,51 @@
+Icarus Verilog simulation log
+==================================================
+Command: /home/luwangzilu/yongfu/local/bin/vvp -n results/issue-example1/spi_simulation
+Simulation time: 100us
+VCD file: results/issue-example1/spi_waveform.vcd
+Start time: /data1/luwangzilu/yongfu/spi-customizer
+
+Return code: 0
+STDOUT:
+VCD info: dumpfile results/issue-example1/spi_waveform.vcd opened for output.
+VCD warning: skipping signal spi_master_tb.dut.sclk, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.mosi, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.miso, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.ss_n, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.busy, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.irq, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.state, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.next_state, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.bit_counter, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.clk_counter, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.tx_shift_reg, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.rx_shift_reg, it was previously included.
+VCD warning: skipping signal spi_master_tb.dut.sclk_gen, it was previously included.
+=== SPI RTL Testbench Starting ===
+Configuration: Mode 0, 16-bit data, 1 slaves
+--- Testing Slave 0 ---
+TX Data: 0xaa55
+✓ Transmission complete for slave 0
+TX Data: 0xcccc
+✓ Second transmission complete for slave 0
+--- Testing Reception ---
+✓ Reception complete from slave 0
+--- Testing Burst Transmission ---
+Burst TX[          0]: 0x0000
+✓ Burst transmission 0 complete
+Burst TX[          1]: 0x1111
+✓ Burst transmission 1 complete
+Burst TX[          2]: 0x2222
+✓ Burst transmission 2 complete
+--- Testing Continuous Read Operations ---
+Reading from slave 0...
+✓ Read operation 0 from slave 0 complete
+✓ Read operation 1 from slave 0 complete
+--- Testing Mixed Read/Write Operations ---
+Writing config: 0x1234
+✓ Configuration write complete
+Reading back configuration...
+✓ Configuration read complete
+=== All Tests Completed Successfully ===
+results/issue-example1/example1_tb.v:217: $finish called at 1402030000 (1ps)
+

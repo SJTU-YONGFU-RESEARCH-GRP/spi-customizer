@@ -1,0 +1,5 @@
+Time (ns),spi_master_tb.busy
+0,x
+0,0
+10200,1
+35000,0

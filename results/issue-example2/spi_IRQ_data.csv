@@ -1,0 +1,5 @@
+Time (ns),spi_master_tb.irq
+0,x
+0,0
+35000,1
+35200,0

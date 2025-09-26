@@ -1,0 +1,24 @@
+SPI Timing Diagram (Text-based representation)
+============================================================
+
+CSV Data Preview:
+     0: ['Time (ns)', 'SCLK', 'MOSI', 'MISO', 'SS_N', 'BUSY', 'IRQ', 'DATA']
+     1: ['0', '0', '1', '0', '1', '0', '0', 'x']
+     2: ['2000', '1', '0', '0', '1', '0', '0', 'x']
+     3: ['3000', '1', '0', '1', '1', '0', '0', 'x']
+     4: ['4000', '0', '1', '1', '1', '0', '0', 'x']
+     5: ['5000', '0', '1', '0', '1', '0', '0', 'x']
+     6: ['6000', '1', '0', '0', '1', '0', '0', 'x']
+     7: ['8000', '0', '1', '1', '1', '0', '0', 'x']
+     8: ['10000', '1', '0', '0', '1', '0', '0', 'x']
+     9: ['10200', '1', '0', '0', '0', '1', '0', 'x']
+
+... (showing first 10 of 73 rows)
+
+ASCII Timing Diagram:
+------------------------------------------------------------
+Time 0   ns: SCLK=1 MOSI=0 MISO=1 SS=0 BUSY=0 IRQ=x
+Time 2000ns: SCLK=0 MOSI=0 MISO=1 SS=0 BUSY=0 IRQ=x
+Time 3000ns: SCLK=0 MOSI=1 MISO=1 SS=0 BUSY=0 IRQ=x
+Time 4000ns: SCLK=1 MOSI=1 MISO=1 SS=0 BUSY=0 IRQ=x
+Time 5000ns: SCLK=1 MOSI=0 MISO=1 SS=0 BUSY=0 IRQ=x

@@ -1,6 +1,44 @@
 # SPI Customizer
 
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Verilog](https://img.shields.io/badge/Verilog-IEEE%201364-orange.svg)](https://en.wikipedia.org/wiki/Verilog)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-green.svg)](https://github.com/features/actions)
+[![Issues](https://img.shields.io/github/issues/luwangzilu/spi-customizer)](https://github.com/luwangzilu/spi-customizer/issues)
+[![Stars](https://img.shields.io/github/stars/luwangzilu/spi-customizer?style=social)](https://github.com/luwangzilu/spi-customizer)
+
 A GitHub-based system for automatic generation of custom SPI (Serial Peripheral Interface) cores with RTL simulation and testing.
+
+## Table of Contents
+
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Quick Start](#quick-start)
+  - [For Users: Requesting a Custom SPI Core](#for-users-requesting-a-custom-spi-core)
+  - [Example Configuration](#example-configuration)
+- [Architecture](#architecture)
+  - [Core Components](#core-components)
+  - [Generated Files](#generated-files)
+  - [File Organization](#file-organization)
+- [Installation](#installation)
+  - [Local Development](#local-development)
+  - [Docker (Alternative)](#docker-alternative)
+  - [CI/CD (GitHub Actions)](#cicd-github-actions)
+- [Testing](#testing)
+- [Configuration Parameters](#configuration-parameters)
+  - [Basic Settings](#basic-settings)
+  - [Advanced Options](#advanced-options)
+  - [Testing Options](#testing-options)
+- [Example Output](#example-output)
+  - [Generated SPI Core](#generated-spi-core)
+  - [File Structure Example](#file-structure-example)
+  - [Test Results](#test-results)
+- [Requirements](#requirements)
+  - [Software Dependencies](#software-dependencies)
+  - [Hardware Support](#hardware-support)
+- [License](#license)
+- [Contributing](#contributing)
+- [Support](#support)
 
 ## Features
 
@@ -224,7 +262,25 @@ results/issue-123/
 
 ## License
 
-This project is open source. See LICENSE file for details.
+This project is licensed under the **Creative Commons Attribution 4.0 International License** (CC BY 4.0).
+
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+
+### What this means:
+
+- **Attribution Required**: You must give appropriate credit to the original author(s) and provide a link to the license
+- **Share Alike**: You may distribute, remix, adapt, and build upon the material for any purpose, even commercially
+- **No Additional Restrictions**: You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits
+
+### Key Points:
+
+- ✅ **Commercial Use**: You can use this project for commercial purposes
+- ✅ **Modifications**: You can modify, adapt, and build upon this work
+- ✅ **Distribution**: You can distribute your modified versions
+- 📋 **Attribution**: You must credit the original authors and include license information
+- 📋 **License Copy**: You must include a copy of the CC BY 4.0 license with your distribution
+
+For the full license text, see the [LICENSE](LICENSE) file in this repository or visit [creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/).
 
 ## Contributing
 

@@ -1,0 +1,24 @@
+SPI Timing Diagram (Text-based representation)
+============================================================
+
+CSV Data Preview:
+     0: ['Time (ns)', 'SCLK', 'MOSI', 'MISO', 'SS_N', 'BUSY', 'IRQ', 'DATA']
+     1: ['0', '1', '0', 'b0', '0', '0', '0', 'b10000']
+     2: ['10000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+     3: ['20000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+     4: ['30000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+     5: ['40000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+     6: ['50000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+     7: ['60000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+     8: ['70000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+     9: ['80000', '1', 'x', 'b0', '0', '0', '0', 'b10000']
+
+... (showing first 10 of 140205 rows)
+
+ASCII Timing Diagram:
+------------------------------------------------------------
+Time 0   ns: SCLK=0 MOSI=b0 MISO=0 SS=0 BUSY=0 IRQ=b10000
+Time 10000ns: SCLK=x MOSI=b0 MISO=0 SS=0 BUSY=0 IRQ=b10000
+Time 20000ns: SCLK=x MOSI=b0 MISO=0 SS=0 BUSY=0 IRQ=b10000
+Time 30000ns: SCLK=x MOSI=b0 MISO=0 SS=0 BUSY=0 IRQ=b10000
+Time 40000ns: SCLK=x MOSI=b0 MISO=0 SS=0 BUSY=0 IRQ=b10000

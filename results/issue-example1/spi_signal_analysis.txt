@@ -1,0 +1,198 @@
+SPI Signal Analysis Summary
+========================================
+
+Signal: spi_master_tb.dut.ss_n
+  Width: 1 bits
+  Changes: 19
+  Current Value: 1
+
+Signal: spi_master_tb.dut.sclk
+  Width: 1 bits
+  Changes: 295
+  Current Value: 0
+
+Signal: spi_master_tb.rx_data
+  Width: 16 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_master_tb.dut.mosi
+  Width: 1 bits
+  Changes: 79
+  Current Value: 0
+
+Signal: spi_master_tb.dut.irq
+  Width: 1 bits
+  Changes: 19
+  Current Value: 0
+
+Signal: spi_master_tb.dut.busy
+  Width: 1 bits
+  Changes: 19
+  Current Value: 0
+
+Signal: spi_master_tb.DATA_WIDTH
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10000
+
+Signal: spi_master_tb.MODE
+  Width: 32 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_master_tb.NUM_SLAVES
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_master_tb.dut.clk
+  Width: 1 bits
+  Changes: 140204
+  Current Value: 1
+
+Signal: spi_master_tb.dut.miso
+  Width: 1 bits
+  Changes: 5
+  Current Value: 0
+
+Signal: spi_master_tb.dut.rst_n
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_master_tb.dut.start_rx
+  Width: 1 bits
+  Changes: 9
+  Current Value: 0
+
+Signal: spi_master_tb.dut.start_tx
+  Width: 1 bits
+  Changes: 13
+  Current Value: 0
+
+Signal: spi_master_tb.tx_data
+  Width: 16 bits
+  Changes: 7
+  Current Value: b1001000110100
+
+Signal: spi_master_tb.dut.CPHA
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_master_tb.dut.CPOL
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_master_tb.dut.SS_ACTIVE
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_master_tb.dut.tx_data
+  Width: 16 bits
+  Changes: 7
+  Current Value: b1001000110100
+
+Signal: spi_master_tb.dut.COMPLETE
+  Width: 3 bits
+  Changes: 1
+  Current Value: b100
+
+Signal: spi_master_tb.dut.DATA_WIDTH
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10000
+
+Signal: spi_master_tb.dut.IDLE
+  Width: 3 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_master_tb.dut.MODE
+  Width: 32 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_master_tb.dut.MSB_FIRST
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_master_tb.dut.NUM_SLAVES
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_master_tb.dut.RECEIVE
+  Width: 3 bits
+  Changes: 1
+  Current Value: b11
+
+Signal: spi_master_tb.dut.SCLK_HALF_PERIOD
+  Width: 32 bits
+  Changes: 1
+  Current Value: b11111010
+
+Signal: spi_master_tb.dut.SETUP
+  Width: 3 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_master_tb.dut.SLAVE_ACTIVE_LOW
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_master_tb.dut.TRANSMIT
+  Width: 3 bits
+  Changes: 1
+  Current Value: b10
+
+Signal: spi_master_tb.dut.bit_counter
+  Width: 5 bits
+  Changes: 153
+  Current Value: b10000
+
+Signal: spi_master_tb.dut.clk_counter
+  Width: 16 bits
+  Changes: 69778
+  Current Value: b0
+
+Signal: spi_master_tb.dut.last_sclk
+  Width: 1 bits
+  Changes: 291
+  Current Value: 0
+
+Signal: spi_master_tb.dut.next_state
+  Width: 3 bits
+  Changes: 35
+  Current Value: b0
+
+Signal: spi_master_tb.dut.rx_data
+  Width: 16 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_master_tb.dut.rx_shift_reg
+  Width: 16 bits
+  Changes: 69
+  Current Value: b0
+
+Signal: spi_master_tb.dut.sclk_gen
+  Width: 1 bits
+  Changes: 290
+  Current Value: 0
+
+Signal: spi_master_tb.dut.state
+  Width: 3 bits
+  Changes: 37
+  Current Value: b0
+
+Signal: spi_master_tb.dut.tx_shift_reg
+  Width: 16 bits
+  Changes: 143
+  Current Value: b0
+

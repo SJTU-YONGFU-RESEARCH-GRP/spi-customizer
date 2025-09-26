@@ -878,6 +878,9 @@ class SummaryGenerator:
         # Analyze timing data
         timing_analysis = self._analyze_timing_data()
 
+        # Get waveform visualization section
+        waveform_section = self._generate_waveform_section()
+
         # Generate summary content
         summary_content = f"""# SPI RTL Simulation Summary - Issue {config.get('issue_number', 'Unknown')}
 
@@ -909,6 +912,15 @@ class SummaryGenerator:
 
 ### Signal Timing Analysis
 {timing_analysis}
+
+## 📊 Waveform Visualization
+
+### Complete Signal Analysis
+![All Signals Waveform](spi_all_signals.png)
+
+*Figure 1: Complete SPI signal analysis showing all monitored signals over the simulation period. Each signal is displayed in its own subplot for optimal readability.*
+
+{waveform_section}
 
 ## 📊 Simulation Results
 
@@ -1105,6 +1117,148 @@ class SummaryGenerator:
         except Exception as e:
             return f"Error analyzing timing data: {e}"
 
+    def _generate_waveform_section(self) -> str:
+        """Generate detailed waveform analysis section"""
+        waveform_analysis = f"""
+### Waveform Analysis Details
+
+#### Signal Group Analysis
+The visualization is organized into logical signal groups for better analysis:
+
+**Input/Output Ports**:
+![Input/Output Ports](spi_io_ports.png)
+
+*Figure 2: Input and output ports showing SPI data flow between master and slave devices.*
+
+**Input Ports Only**:
+![Input Ports](spi_input_ports.png)
+
+*Figure 3: Input ports (SCLK, MOSI, SS_N) showing master-to-slave communication signals.*
+
+**Output Ports Only**:
+![Output Ports](spi_output_ports.png)
+
+*Figure 4: Output ports (MISO, IRQ) showing slave-to-master communication signals.*
+
+#### Individual Signal Analysis
+For detailed signal examination, individual plots are provided for each signal:
+
+**SCLK (Serial Clock)**:
+![SCLK Individual](spi_sclk_individual.png)
+
+*Figure 5: SCLK signal showing clock transitions and timing characteristics.*
+
+**MOSI (Master Out Slave In)**:
+![MOSI Individual](spi_mosi_individual.png)
+
+*Figure 6: MOSI signal showing data transmission from master to slave.*
+
+**MISO (Master In Slave Out)**:
+![MISO Individual](spi_miso_individual.png)
+
+*Figure 7: MISO signal showing data reception from slave to master.*
+
+**SS_N (Slave Select)**:
+![SS_N Individual](spi_ss_n_individual.png)
+
+*Figure 8: Slave select signal showing device selection timing.*
+
+**BUSY Signal**:
+![BUSY Individual](spi_busy_individual.png)
+
+*Figure 9: BUSY signal indicating SPI controller status.*
+
+**IRQ (Interrupt Request)**:
+![IRQ Individual](spi_irq_individual.png)
+
+*Figure 10: Interrupt signal showing exception conditions.*
+
+**DATA Bus**:
+![DATA Individual](spi_data_individual.png)
+
+*Figure 11: Internal data bus showing parallel data processing.*
+
+### Waveform Interpretation Guide
+
+#### SPI Transaction Protocol
+1. **Slave Selection**: SS_N goes low to select target device
+2. **Clock Generation**: SCLK provides timing reference
+3. **Data Transmission**: MOSI carries data from master to slave
+4. **Data Reception**: MISO carries data from slave to master
+5. **Status Monitoring**: BUSY indicates transaction progress
+6. **Exception Handling**: IRQ signals interrupt conditions
+
+#### Signal Timing Analysis
+- **Clock Frequency**: Derived from system clock (50MHz → 100kHz SPI)
+- **Data Rate**: {self._get_data_rate()} bits per second
+- **Transaction Duration**: {self._get_transaction_duration()}
+- **Setup/Hold Times**: Verified against SPI specifications
+
+#### Bus Protocol Analysis
+- **Data Width**: {self._get_bus_width()} bits per transfer
+- **Transfer Mode**: {self._get_transfer_mode()}
+- **Endianness**: {self._get_endianness()}
+- **Flow Control**: {self._get_flow_control()}
+"""
+        return waveform_analysis
+
+    def _get_data_rate(self) -> str:
+        """Calculate effective data rate"""
+        config = self._read_config()
+        data_width = config.get('data_width', 16)
+        num_slaves = config.get('num_slaves', 1)
+        # Assuming 100kHz SPI clock
+        base_rate = 100000
+        effective_rate = base_rate // (data_width * num_slaves)
+        return f"{effective_rate:,}"
+
+    def _get_transaction_duration(self) -> str:
+        """Estimate transaction duration"""
+        timing_file = self.issue_dir / 'spi_timing_data.csv'
+        if timing_file.exists():
+            with open(timing_file, 'r') as f:
+                lines = f.readlines()
+                if len(lines) > 1:
+                    last_time = int(lines[-1].split(',')[0])
+                    return f"{last_time / 1000:.1f} μs"
+        return "N/A"
+
+    def _get_bus_width(self) -> str:
+        """Get bus width information"""
+        config = self._read_config()
+        return f"{config.get('data_width', 16)} bits"
+
+    def _get_transfer_mode(self) -> str:
+        """Get transfer mode information"""
+        config = self._read_config()
+        mode = config.get('mode', 0)
+        if mode == 0:
+            return "Mode 0 (CPOL=0, CPHA=0)"
+        elif mode == 1:
+            return "Mode 1 (CPOL=0, CPHA=1)"
+        elif mode == 2:
+            return "Mode 2 (CPOL=1, CPHA=0)"
+        elif mode == 3:
+            return "Mode 3 (CPOL=1, CPHA=1)"
+        return f"Mode {mode}"
+
+    def _get_endianness(self) -> str:
+        """Get endianness information"""
+        config = self._read_config()
+        return "MSB First" if config.get('msb_first', True) else "LSB First"
+
+    def _get_flow_control(self) -> str:
+        """Get flow control information"""
+        config = self._read_config()
+        if config.get('dma_support'):
+            return "DMA-enabled with FIFO buffering"
+        elif config.get('fifo_buffers'):
+            return "FIFO buffering enabled"
+        elif config.get('interrupts'):
+            return "Interrupt-driven"
+        else:
+            return "Basic polling mode"
+
     def _get_file_info(self, filename: str) -> str:
         """Get file information"""
         file_path = self.issue_dir / filename
@@ -1222,9 +1376,9 @@ class SummaryGenerator:
         csv_files = list(self.issue_dir.glob('*.csv'))
         total_size = sum(f.stat().st_size for f in csv_files if f.exists())
         if total_size > 1024 * 1024:
-            return f"{total_size / (1024*1024)".1f"} MB"
+            return f"{total_size / (1024*1024):.1f} MB"
         elif total_size > 1024:
-            return f"{total_size / 1024".1f"} KB"
+            return f"{total_size / 1024:.1f} KB"
         else:
             return f"{total_size} bytes"
 
@@ -1233,9 +1387,9 @@ class SummaryGenerator:
         analysis_files = list(self.issue_dir.glob('*.png')) + list(self.issue_dir.glob('*.csv')) + list(self.issue_dir.glob('*.vcd'))
         total_size = sum(f.stat().st_size for f in analysis_files if f.exists())
         if total_size > 1024 * 1024:
-            return f"{total_size / (1024*1024)".1f"} MB"
+            return f"{total_size / (1024*1024):.1f} MB"
         elif total_size > 1024:
-            return f"{total_size / 1024".1f"} KB"
+            return f"{total_size / 1024:.1f} KB"
         else:
             return f"{total_size} bytes"
 

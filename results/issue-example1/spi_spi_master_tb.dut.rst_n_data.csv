@@ -1,0 +1,3 @@
+Time (ns),spi_master_tb.dut.rst_n
+0,0
+100000,1

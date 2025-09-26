@@ -294,7 +294,7 @@ class RTLSimulator:
                             cmd,
                             capture_output=True,
                             text=True,
-                            timeout=60,  # 60 second timeout
+                            timeout=120,  # 120 second timeout for comprehensive tests
                             env={**os.environ, 'VCD_FILE': vcd_file}
                         )
 

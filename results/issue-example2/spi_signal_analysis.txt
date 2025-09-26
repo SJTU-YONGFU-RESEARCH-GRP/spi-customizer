@@ -1,0 +1,38 @@
+SPI Signal Analysis Summary
+========================================
+
+Signal: spi_master_tb.sclk
+  Width: 1 bits
+  Changes: 51
+  Current Value: 1
+
+Signal: spi_master_tb.mosi
+  Width: 1 bits
+  Changes: 51
+  Current Value: 0
+
+Signal: spi_master_tb.miso
+  Width: 1 bits
+  Changes: 41
+  Current Value: 1
+
+Signal: spi_master_tb.ss_n
+  Width: 1 bits
+  Changes: 4
+  Current Value: 1
+
+Signal: spi_master_tb.busy
+  Width: 1 bits
+  Changes: 4
+  Current Value: 0
+
+Signal: spi_master_tb.irq
+  Width: 1 bits
+  Changes: 4
+  Current Value: 0
+
+Signal: spi_master_tb.data
+  Width: 8 bits
+  Changes: 1
+  Current Value: x
+

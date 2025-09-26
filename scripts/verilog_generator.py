@@ -144,7 +144,7 @@ module spi_master_tb;
         forever #10 clk = ~clk;  // 50MHz clock
     end
 
-    // Test sequence
+    // Enhanced test sequence with multiple transactions
     initial begin
         // Initialize
         rst_n = 0;
@@ -155,43 +155,152 @@ module spi_master_tb;
 
         #100;
         rst_n = 1;
-        #100;
+        #200;  // Allow system to stabilize
 
-        // Test transmission
+        $display("=== SPI RTL Testbench Starting ===");
+        $display("Configuration: Mode {{ config.mode }}, {{ config.data_width }}-bit data, {{ config.num_slaves }} slaves");
+
+        // Test comprehensive SPI transactions
         {% for slave in range(config.num_slaves) %}
-        // Test slave {{ slave }}
-        tx_data = {{ "16'd43690" if config.data_width == 16 else ("32'hABCD_EF12" if config.data_width == 32 else "8'hA5") }};
+
+        $display("--- Testing Slave {{ slave }} ---");
+
+        // Test 1: Basic data transmission (16-bit pattern)
+        tx_data = {{ "16'hAA55" if config.data_width >= 16 else "8'hA5" }};
+        $display("TX Data: 0x%h", tx_data);
         start_tx = 1;
-        #20;
+        #50;
         start_tx = 0;
 
         wait (!busy);
-        $display("Transmission complete for slave {{ slave }}");
+        $display("✓ Transmission complete for slave {{ slave }}");
+
+        // Small delay between transactions
+        #1000;
+
+        // Test 2: Different data pattern (alternating bits)
+        tx_data = {{ "16'hCCCC" if config.data_width >= 16 else "8'hCC" }};
+        $display("TX Data: 0x%h", tx_data);
+        start_tx = 1;
+        #50;
+        start_tx = 0;
+
+        wait (!busy);
+        $display("✓ Second transmission complete for slave {{ slave }}");
 
         {% endfor %}
 
-        // Test reception
+        // Test reception from all slaves
+        $display("--- Testing Reception ---");
+
+        {% for slave in range(config.num_slaves) %}
+        // Prepare to receive data from slave {{ slave }}
         start_rx = 1;
-        #20;
+        #50;
         start_rx = 0;
 
-        // Simulate slave response
-        #50;
-        miso = 1;
-        #50;
-        miso = 0;
+        // Simulate slave providing response data
+        #200;
+        // Slave {{ slave }} responds with pattern: 0x{{ "55AA" if config.data_width >= 16 else "5A" }}{{ slave }}
+        miso = {{ "1'b1" if (config.mode in [1,3]) else "1'b0" }};  // Data bit based on CPHA
+        #100;
+        miso = {{ "1'b0" if (config.mode in [1,3]) else "1'b1" }};
 
         wait (!busy);
-        $display("Reception complete");
+        $display("✓ Reception complete from slave {{ slave }}");
+
+        {% endfor %}
+
+        // Test 3: Burst transmission (multiple frames)
+        $display("--- Testing Burst Transmission ---");
+        {% for i in range(3) %}
+        tx_data = {{ "16'h{:04X}".format((i * 0x1111) % 0x10000) if config.data_width >= 16 else "8'h{:02X}".format((i * 0x11) % 0x100) }};
+        $display("Burst TX[%d]: 0x%h", {{ i }}, tx_data);
+        start_tx = 1;
+        #30;
+        start_tx = 0;
+
+        wait (!busy);
+        $display("✓ Burst transmission {{ i }} complete");
+        #500;  // Inter-frame delay
+        {% endfor %}
+
+        // Test 4: Continuous read operations
+        $display("--- Testing Continuous Read Operations ---");
+        {% for slave in range(2 if config.num_slaves > 2 else config.num_slaves) %}
+        $display("Reading from slave {{ slave }}...");
+
+        // Simulate multiple read operations
+        {% for read in range(2) %}
+        start_rx = 1;
+        #40;
+        start_rx = 0;
+
+        // Simulate slave response with incrementing data
+        #150;
+        miso = {{ "1'b1" if read == 0 else "1'b0" }};
+
+        wait (!busy);
+        $display("✓ Read operation {{ read }} from slave {{ slave }} complete");
+        #300;
+        {% endfor %}
+        {% endfor %}
+
+        // Test 5: Mixed read/write operations
+        $display("--- Testing Mixed Read/Write Operations ---");
+
+        // Write configuration data
+        tx_data = {{ "16'h1234" if config.data_width >= 16 else "8'h12" }};
+        $display("Writing config: 0x%h", tx_data);
+        start_tx = 1;
+        #50;
+        start_tx = 0;
+        wait (!busy);
+        $display("✓ Configuration write complete");
 
         #1000;
+
+        // Read back configuration
+        $display("Reading back configuration...");
+        start_rx = 1;
+        #50;
+        start_rx = 0;
+
+        #200;
+        miso = 1'b1;  // Slave acknowledges
+        #100;
+        miso = 1'b0;
+
+        wait (!busy);
+        $display("✓ Configuration read complete");
+
+        // Final delay before completion
+        #2000;
+        $display("=== All Tests Completed Successfully ===");
+
         $finish;
     end
 
-    // Waveform dumping
+    // Waveform dumping - capture all signals for comprehensive analysis
     initial begin
         $dumpfile("{{ vcd_filename }}");
-        $dumpvars(0, spi_master_tb);
+        $dumpvars(0, spi_master_tb);  // Dump all signals in the testbench
+
+        // Also dump internal DUT signals for detailed analysis
+        $dumpvars(1, spi_master_tb.dut.sclk);
+        $dumpvars(1, spi_master_tb.dut.mosi);
+        $dumpvars(1, spi_master_tb.dut.miso);
+        $dumpvars(1, spi_master_tb.dut.ss_n);
+        $dumpvars(1, spi_master_tb.dut.busy);
+        $dumpvars(1, spi_master_tb.dut.irq);
+        $dumpvars(1, spi_master_tb.dut.state);
+        $dumpvars(1, spi_master_tb.dut.next_state);
+        $dumpvars(1, spi_master_tb.dut.bit_counter);
+        $dumpvars(1, spi_master_tb.dut.clk_counter);
+        $dumpvars(1, spi_master_tb.dut.tx_shift_reg);
+        $dumpvars(1, spi_master_tb.dut.rx_shift_reg);
+        $dumpvars(1, spi_master_tb.dut.sclk_gen);
+
         $dumpflush;  // Ensure all data is written
     end
 

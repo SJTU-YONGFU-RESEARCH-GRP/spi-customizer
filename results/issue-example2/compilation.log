@@ -1,0 +1,6 @@
+Icarus Verilog compilation log
+==================================================
+Command: iverilog -o results/issue-example2/spi_simulation results/issue-example2/example2.v results/issue-example2/example2_tb.v
+Working directory: /data1/luwangzilu/yongfu/spi-customizer
+Return code: 0
+Compilation: SUCCESS
