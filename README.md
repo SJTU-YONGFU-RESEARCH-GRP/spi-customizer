@@ -4,8 +4,8 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![Verilog](https://img.shields.io/badge/Verilog-IEEE%201364-orange.svg)](https://en.wikipedia.org/wiki/Verilog)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-green.svg)](https://github.com/features/actions)
-[![Issues](https://img.shields.io/github/issues/luwangzilu/spi-customizer)](https://github.com/luwangzilu/spi-customizer/issues)
-[![Stars](https://img.shields.io/github/stars/luwangzilu/spi-customizer?style=social)](https://github.com/luwangzilu/spi-customizer)
+[![Issues](https://img.shields.io/github/issues/SJTU-YONGFU-RESEARCH-GRP/spi-customizer)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/issues)
+[![Stars](https://img.shields.io/github/stars/SJTU-YONGFU-RESEARCH-GRP/spi-customizer?style=social)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer)
 
 A GitHub-based system for automatic generation of custom SPI (Serial Peripheral Interface) cores with RTL simulation and testing.
 
