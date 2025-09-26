@@ -3,6 +3,9 @@ contact_links:
   - name: SPI Customizer Documentation
     url: https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/blob/main/README.md
     about: Read the documentation for the SPI Customizer system
-  - name: SPI Request Issue
-    url: https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/.github/ISSUE_TEMPLATE/issue_template.md
-    about: Create a new SPI request issue
+  - name: Feature Request
+    url: https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/issues/new?template=spi-config-form.yml
+    about: Request a new SPI configuration or feature
+  - name: Bug Report
+    url: https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/issues/new
+    about: Report a bug or issue with the SPI Customizer
