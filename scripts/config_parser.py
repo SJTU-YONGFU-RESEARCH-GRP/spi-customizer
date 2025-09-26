@@ -37,17 +37,17 @@ class SPIConfigParser:
 
     def __init__(self):
         self.patterns = {
-            'mode': r'SPI Mode[^0-9]*(\d)',
-            'data_width': r'Data Width[^0-9]*(\d+)',
-            'num_slaves': r'Number of Slaves[^0-9]*(\d+)',
-            'clock_freq': r'Clock Frequency[^0-9]*(\d+(?:\.\d+)?)',
+            'mode': r'(?:SPI Mode|Mode)[^0-9]*(\d)',
+            'data_width': r'(?:Data Width|Width)[^0-9]*(\d+)',
+            'num_slaves': r'(?:Number of Slaves|Slaves)[^0-9]*(\d+)',
+            'clock_freq': r'(?:Clock Frequency|Frequency)[^0-9]*(\d+(?:\.\d+)?)',
             'slave_active': r'\[[^\]]*\]\s*Active (Low|High)',
             'data_order': r'\[[^\]]*\]\s*(MSB|LSB) First',
             'features': r'Special Features[^:]*:([\s\S]*?)(?=###|\n\n|\Z)',
             'test_duration': r'Test Duration[^:]*:?\s*(Brief|Standard|Comprehensive)',
             'clock_jitter': r'Clock Jitter Testing[^:]*:?\s*(Yes|No)',
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
-            'email': r'(?:Email Address|Email)\s*\n\s*(.+?)\s*$',
+            'email': r'(?:## Email Address|Email)\s*:?\s*\n?\s*([^\n\r]+)',
             'github_user': r'GitHub Username[^:]*:?\s*([^\n\r]+)'
         }
 
