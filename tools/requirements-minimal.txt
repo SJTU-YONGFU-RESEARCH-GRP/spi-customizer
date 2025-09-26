@@ -1,10 +1,11 @@
-# Essential dependencies for venv environment
-Jinja2>=3.1.0
-PyYAML>=6.0
+# Essential dependencies for venv environment (minimal working setup)
+Jinja2>=3.1.6
+PyYAML>=6.0.3
+requests>=2.32.5
 
 # Core RTL testing (required)
-cocotb>=1.8.0
-pytest>=7.0.0
+cocotb>=2.0.0
+pytest>=8.4.2
 
-# HTTP requests for GitHub API (required)
-requests>=2.31.0
+# Note: matplotlib and numpy are not included in minimal requirements
+# Add them if VCD parsing and plotting functionality is needed

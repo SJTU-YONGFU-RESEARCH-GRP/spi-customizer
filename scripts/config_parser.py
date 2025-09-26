@@ -71,15 +71,30 @@ class SPIConfigParser:
         params = {}
 
         # Required parameters
+        mode_value = self._extract_single(issue_body, self.patterns['mode'])
+        data_width_value = self._extract_single(issue_body, self.patterns['data_width'])
+
+        # Validate required parameters
+        if mode_value is None:
+            raise ValueError("Missing required parameter: SPI Mode")
+        if data_width_value is None:
+            raise ValueError("Missing required parameter: Data Width")
+
         try:
-            params['mode'] = int(self._extract_single(issue_body, self.patterns['mode']))
-            params['data_width'] = int(self._extract_single(issue_body, self.patterns['data_width']))
+            params['mode'] = int(mode_value)
+            params['data_width'] = int(data_width_value)
         except (ValueError, TypeError) as e:
-            raise ValueError(f"Missing or invalid required parameters: {e}")
+            raise ValueError(f"Invalid required parameters: {e}")
 
         # Optional parameters with defaults
-        params['num_slaves'] = int(self._extract_single(issue_body, self.patterns['num_slaves']) or 1)
-        params['clock_frequency'] = float(self._extract_single(issue_body, self.patterns['clock_freq']) or 25.0)
+        num_slaves_value = self._extract_single(issue_body, self.patterns['num_slaves'])
+        clock_freq_value = self._extract_single(issue_body, self.patterns['clock_freq'])
+
+        try:
+            params['num_slaves'] = int(num_slaves_value) if num_slaves_value else 1
+            params['clock_frequency'] = float(clock_freq_value) if clock_freq_value else 25.0
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid optional parameter values: {e}")
 
         # Parse slave select behavior - find the line with checked checkbox
         slave_matches = re.findall(r'(\[[^\]]*\]\s*Active (Low|High))', issue_body, re.IGNORECASE | re.MULTILINE)
@@ -90,7 +105,8 @@ class SPIConfigParser:
         data_order_matches = re.findall(r'(\[[^\]]*\]\s*(MSB|LSB) First)', issue_body, re.IGNORECASE | re.MULTILINE)
         data_order_checked = [full_line for full_line, value in data_order_matches if '[x]' in full_line or '[X]' in full_line]
         params['msb_first'] = len(data_order_checked) == 0 or 'MSB' in data_order_checked[0]  # Default to MSB if none checked or MSB is checked
-        params['email'] = self._extract_single(issue_body, self.patterns['email']) or ''
+        email_value = self._extract_single(issue_body, self.patterns['email']) or ''
+        params['email'] = email_value.strip()
         params['github_username'] = self._extract_single(issue_body, self.patterns['github_user']) or ''
 
         # Feature flags
@@ -135,6 +151,10 @@ class SPIConfigParser:
         # Validate test duration
         if params['test_duration'].lower() not in ['brief', 'standard', 'comprehensive']:
             raise ValueError(f"Invalid test duration: {params['test_duration']}")
+
+        # Validate email (required for email functionality)
+        if not params['email'] or '@' not in params['email']:
+            raise ValueError("Valid email address is required for notification delivery")
 
 
 def main():
