@@ -1,5 +1,5 @@
-name: Bug Report
-description: Report a bug or issue with the SPI Customizer system
+name: 🐛 Bug Report
+description: Report a bug or issue with the SPI Customizer system (include steps to reproduce)
 title: "Bug: [Brief description of the issue]"
 labels: ["bug", "needs-triage"]
 assignees: []

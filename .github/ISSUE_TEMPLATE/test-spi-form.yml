@@ -1,5 +1,5 @@
-name: Test SPI Request
-description: Test form to verify GitHub issue forms work correctly
+name: 🧪 Test SPI Request
+description: Test form to verify GitHub issue forms work correctly (for development testing)
 title: "Test: SPI Configuration"
 labels: ["test"]
 assignees: []
