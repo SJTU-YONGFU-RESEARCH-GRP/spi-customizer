@@ -81,7 +81,12 @@ class VerilogGenerator:
         """
 
         if filename is None:
-            filename = f"spi_master_mode{config.mode}_{config.clock_frequency}MHz_{config.data_width}bit.v"
+            # Use simple naming for string issue numbers (like example1, example2, etc.)
+            if isinstance(config.issue_number, str):
+                filename = f"{config.issue_number}.v"
+            else:
+                # Use detailed naming for numeric issue numbers
+                filename = f"spi_master_mode{config.mode}_{config.clock_frequency}MHz_{config.data_width}bit.v"
 
         verilog_code = self.generate_spi_core(config)
 
@@ -230,7 +235,12 @@ endmodule
         """
 
         if filename is None:
-            filename = f"spi_master_tb_mode{config.mode}_{config.clock_frequency}MHz.v"
+            # Use simple naming for string issue numbers (like example1, example2, etc.)
+            if isinstance(config.issue_number, str):
+                filename = f"{config.issue_number}_tb.v"
+            else:
+                # Use detailed naming for numeric issue numbers
+                filename = f"spi_master_tb_mode{config.mode}_{config.clock_frequency}MHz.v"
 
         testbench_code = self.generate_testbench(config)
 
