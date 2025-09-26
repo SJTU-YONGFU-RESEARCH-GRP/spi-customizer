@@ -222,7 +222,14 @@ def send_workflow_email():
         print("⚠️  No issue number found - running test mode")
         return send_test_email()
 
-    print(f"📧 Processing email for issue #{issue_number}")
+    # Validate issue number is a valid integer
+    try:
+        issue_number_int = int(issue_number)
+    except (ValueError, TypeError):
+        print(f"⚠️  Invalid issue number '{issue_number}' - running test mode")
+        return send_test_email()
+
+    print(f"📧 Processing email for issue #{issue_number_int}")
 
     # Parse the issue to get configuration
     try:
@@ -242,11 +249,11 @@ def send_workflow_email():
             'Accept': 'application/vnd.github.v3+json'
         }
 
-        url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/issues/{issue_number}"
+        url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/issues/{issue_number_int}"
         response = requests.get(url, headers=headers)
 
         if response.status_code != 200:
-            print(f"⚠️  Failed to fetch issue #{issue_number}: {response.status_code}")
+            print(f"⚠️  Failed to fetch issue #{issue_number_int}: {response.status_code}")
             return False
 
         issue_data = response.json()
@@ -254,10 +261,10 @@ def send_workflow_email():
 
         # Parse configuration from issue
         parser = SPIConfigParser()
-        config = parser.parse_issue(issue_body, int(issue_number))
+        config = parser.parse_issue(issue_body, issue_number_int)
 
         # Look for result files
-        issue_dir = f'results/issue-{issue_number}'
+        issue_dir = f'results/issue-{issue_number_int}'
         attachments = []
 
         # Add generated files if they exist

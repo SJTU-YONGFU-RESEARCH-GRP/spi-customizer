@@ -9,14 +9,15 @@ import sys
 import json
 from pathlib import Path
 
-# Add current directory to path for imports
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
+# Add project root to path for imports
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-from scripts.config_parser import SPIConfigParser
-from scripts.verilog_generator import VerilogGenerator
-from scripts.email_sender import EmailSender
+from config_parser import SPIConfigParser
+from verilog_generator import VerilogGenerator
+from email_sender import EmailSender
 
 def create_test_issue_content(email_address="yongfu.li@sjtu.edu.cn"):
     """Create test issue content with specified email"""
@@ -74,7 +75,7 @@ def test_email_dry_run(config, attachments=None):
         print("   ⚠️  SMTP credentials not configured")
         print("   📝 To enable email:")
         print("      1. Set environment variables:")
-        print("         export SMTP_USERNAME='yongfu.unix@gmail.com'")
+        print("         export SMTP_USERNAME='liyongfu.sg@gmail.com'")
         print("         export SMTP_PASSWORD='your_16_char_app_password'")
         print("      2. Or configure GitHub repository secrets")
         return False

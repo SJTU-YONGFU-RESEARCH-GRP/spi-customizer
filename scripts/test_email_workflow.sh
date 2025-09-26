@@ -8,6 +8,10 @@ echo "🚀 SPI Customizer Email Workflow Test"
 echo "====================================="
 echo ""
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 # Configuration
 ISSUE_NUMBER="999"
 EMAIL_ADDRESS="yongfu.li@sjtu.edu.cn"
@@ -48,9 +52,11 @@ echo "✅ Environment configured"
 
 # Step 3: Test configuration parsing
 echo "3️⃣  Testing configuration parsing..."
-cd /home/luwangzilu/yongfu/spi-customizer
+cd "$PROJECT_ROOT"
 python3 -c "
-from scripts.config_parser import SPIConfigParser
+import sys
+sys.path.insert(0, '$PROJECT_ROOT/scripts')
+from config_parser import SPIConfigParser
 
 with open('/tmp/test_issue.md', 'r') as f:
     issue_content = f.read()
@@ -66,8 +72,10 @@ print(f'🐙 GitHub: {config.github_username}')
 # Step 4: Test Verilog generation
 echo "4️⃣  Testing Verilog generation..."
 python3 -c "
-from scripts.config_parser import SPIConfigParser
-from scripts.verilog_generator import VerilogGenerator
+import sys
+sys.path.insert(0, '$PROJECT_ROOT/scripts')
+from config_parser import SPIConfigParser
+from verilog_generator import VerilogGenerator
 
 with open('/tmp/test_issue.md', 'r') as f:
     issue_content = f.read()

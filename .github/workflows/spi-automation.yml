@@ -32,6 +32,7 @@ jobs:
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
 
     - name: Send Email Results
+      if: github.event.issue.number != null
       run: |
         python3 scripts/email_sender.py
       env:
@@ -43,7 +44,7 @@ jobs:
 
     - name: Upload Results
       uses: actions/upload-artifact@v4
-      if: always()
+      if: github.event.issue.number != null
       with:
         name: spi-results-${{ github.event.issue.number }}
         path: |
