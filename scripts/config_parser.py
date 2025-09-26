@@ -14,6 +14,7 @@ from dataclasses import dataclass
 @dataclass
 class SPIConfig:
     """SPI Configuration parameters"""
+    issue_number: int
     mode: int
     clock_frequency: float
     data_width: int
@@ -107,7 +108,7 @@ class SPIConfigParser:
         # Validate configuration
         self._validate_config(params)
 
-        config = SPIConfig(**params)
+        config = SPIConfig(issue_number=issue_number, **params)
         print(f"✅ Successfully parsed configuration: Mode {config.mode}, {config.clock_frequency}MHz, {config.data_width}-bit")
         return config
 
@@ -181,9 +182,15 @@ def main():
         parser = SPIConfigParser()
         config = parser.parse_issue(sample_issue, int(sys.argv[1]))
 
+        # Create issue-specific results directory
+        issue_dir = f'results/issue-{issue_number}'
+        os.makedirs(issue_dir, exist_ok=True)
+
         # Save configuration to JSON
-        with open('results/spi_config.json', 'w') as f:
+        config_file = os.path.join(issue_dir, 'spi_config.json')
+        with open(config_file, 'w') as f:
             json.dump({
+                'issue_number': issue_number,
                 'mode': config.mode,
                 'clock_frequency': config.clock_frequency,
                 'data_width': config.data_width,
@@ -201,7 +208,7 @@ def main():
                 'github_username': config.github_username
             }, f, indent=2)
 
-        print("✅ Configuration saved to results/spi_config.json")
+        print(f"✅ Configuration saved to {config_file}")
 
     except Exception as e:
         print(f"❌ Error parsing configuration: {e}")

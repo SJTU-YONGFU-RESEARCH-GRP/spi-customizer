@@ -129,6 +129,7 @@ def test_simulator_setup():
 
         # Test file generation
         config = SPIConfig(
+            issue_number=999,
             mode=0,
             clock_frequency=25.0,
             data_width=16,
@@ -158,6 +159,7 @@ def test_json_config():
 
     try:
         config = SPIConfig(
+            issue_number=789,
             mode=1,
             clock_frequency=10.0,
             data_width=8,

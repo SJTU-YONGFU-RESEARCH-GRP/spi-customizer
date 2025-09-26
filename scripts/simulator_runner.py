@@ -259,7 +259,11 @@ async def test_spi_transmission(dut):
     print(f"✅ SPI transmission test passed for {config.data_width}-bit data: 0x{data_str}")
 '''
 
-        test_file = self.results_dir / 'test_spi.py'
+        # Ensure issue-specific results directory exists
+        issue_dir = self.results_dir / f'issue-{config.issue_number}'
+        issue_dir.mkdir(exist_ok=True)
+
+        test_file = issue_dir / 'test_spi.py'
         with open(test_file, 'w') as f:
             f.write(test_content)
 
@@ -272,6 +276,7 @@ def main():
 
     # Create sample configuration
     config = SPIConfig(
+        issue_number=456,
         mode=0,
         clock_frequency=25.0,
         data_width=16,

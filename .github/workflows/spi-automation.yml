@@ -28,6 +28,16 @@ jobs:
         python3 scripts/process_issue.py ${{ github.event.issue.number }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+
+    - name: Send Email Results
+      run: |
+        python3 scripts/email_sender.py
+      env:
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      continue-on-error: true  # Don't fail if email fails
 
     - name: Upload Results
       uses: actions/upload-artifact@v3
@@ -35,5 +45,5 @@ jobs:
       with:
         name: spi-results-${{ github.event.issue.number }}
         path: |
-          results/
+          results/issue-${{ github.event.issue.number }}/
           plots/

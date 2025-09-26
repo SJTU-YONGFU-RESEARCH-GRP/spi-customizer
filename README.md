@@ -80,13 +80,23 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 
 ### Generated Files
 
-For each configuration, the system generates:
+For each issue, the system creates an organized folder structure:
 
-- **SPI Core** (`spi_master_modeX_freqY_widthZ.v`): Custom Verilog module
-- **Testbench** (`spi_master_tb_modeX_freqY.v`): Comprehensive test suite
-- **Cocotb Test** (`test_spi.py`): Python-based verification
-- **Configuration** (`spi_config.json`): JSON specification
-- **Waveforms** (`spi_waveform.vcd`): Timing diagrams
+```
+results/issue-<id>/
+├── spi_master_modeX_freqY_widthZ.v    # Custom SPI core
+├── spi_master_tb_modeX_freqY.v        # Verilog testbench
+├── test_spi.py                        # Python/Cocotb test
+└── spi_config.json                    # Configuration specification
+```
+
+### File Organization
+
+- **Issue-specific folders**: `results/issue-<github_issue_number>/`
+- **SPI Core**: `spi_master_mode{mode}_{frequency}MHz_{width}bit.v`
+- **Testbench**: `spi_master_tb_mode{mode}_{frequency}MHz.v`
+- **Configuration**: `spi_config.json` (includes issue metadata)
+- **Waveforms**: Generated during simulation (if tools available)
 
 ## Installation
 
@@ -185,6 +195,15 @@ module spi_master #(
 );
     // Implementation...
 endmodule
+```
+
+### File Structure Example
+```
+results/issue-123/
+├── spi_master_mode3_25MHz_16bit.v
+├── spi_master_tb_mode3_25MHz.v
+├── test_spi.py
+└── spi_config.json
 ```
 
 ### Test Results

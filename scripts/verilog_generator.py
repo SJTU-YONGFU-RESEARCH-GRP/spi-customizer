@@ -85,10 +85,11 @@ class VerilogGenerator:
 
         verilog_code = self.generate_spi_core(config)
 
-        # Ensure results directory exists
-        os.makedirs('results', exist_ok=True)
+        # Ensure issue-specific results directory exists
+        issue_dir = f'results/issue-{config.issue_number}'
+        os.makedirs(issue_dir, exist_ok=True)
 
-        filepath = os.path.join('results', filename)
+        filepath = os.path.join(issue_dir, filename)
         with open(filepath, 'w') as f:
             f.write(verilog_code)
 
@@ -233,10 +234,11 @@ endmodule
 
         testbench_code = self.generate_testbench(config)
 
-        # Ensure results directory exists
-        os.makedirs('results', exist_ok=True)
+        # Ensure issue-specific results directory exists
+        issue_dir = f'results/issue-{config.issue_number}'
+        os.makedirs(issue_dir, exist_ok=True)
 
-        filepath = os.path.join('results', filename)
+        filepath = os.path.join(issue_dir, filename)
         with open(filepath, 'w') as f:
             f.write(testbench_code)
 
@@ -249,6 +251,7 @@ def main():
 
     # Create sample configuration
     config = SPIConfig(
+        issue_number=123,
         mode=0,
         clock_frequency=25.0,
         data_width=16,
