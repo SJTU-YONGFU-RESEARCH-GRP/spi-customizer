@@ -24,9 +24,9 @@ class GitHubIssueProcessor:
     def __init__(self, token: str, issue_number: int):
         self.token = token
         self.issue_number = issue_number
-        self.api_base = "https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer"
-        self.repo_owner = "yongfu-li"  # Update this with your repo details
-        self.repo_name = "spi-customizer"  # Update this with your repo details
+        self.api_base = "https://api.github.com/repos"
+        self.repo_owner = "SJTU-YONGFU-RESEARCH-GRP"
+        self.repo_name = "spi-customizer"
 
     def get_issue_content(self) -> Optional[str]:
         """Fetch issue content from GitHub API"""
@@ -57,11 +57,13 @@ class GitHubIssueProcessor:
 
         if status == 'processing':
             data['labels'] = ['in-progress']
+            # Don't change state when setting to processing
         elif status == 'completed':
             data['labels'] = ['completed']
             data['state'] = 'closed'
         elif status == 'failed':
             data['labels'] = ['failed']
+            # Don't change state when failing, keep it open for debugging
 
         url = f"{self.api_base}/{self.repo_owner}/{self.repo_name}/issues/{self.issue_number}"
         response = requests.patch(url, headers=headers, json=data)
@@ -70,6 +72,14 @@ class GitHubIssueProcessor:
             print(f"✅ Issue #{self.issue_number} updated with status: {status}")
         else:
             print(f"❌ Failed to update issue: {response.status_code}")
+            try:
+                error_data = response.json()
+                print(f"   Error message: {error_data.get('message', 'No message')}")
+                if 'errors' in error_data:
+                    for error in error_data['errors']:
+                        print(f"   Field error: {error}")
+            except:
+                print(f"   Response body: {response.text}")
 
     def process_issue(self) -> bool:
         """Main issue processing workflow"""
@@ -154,9 +164,28 @@ class GitHubIssueProcessor:
 
             issue_dir = f'results/issue-{self.issue_number}'
             os.makedirs(issue_dir, exist_ok=True)
+
+            # Ensure plots directory exists (even if no plots generated)
+            plots_dir = 'plots'
+            os.makedirs(plots_dir, exist_ok=True)
+
             config_file = os.path.join(issue_dir, 'spi_config.json')
             with open(config_file, 'w') as f:
                 json.dump(config_dict, f, indent=2)
+
+            # Create a simple status file to indicate completion
+            status_file = os.path.join(issue_dir, 'processing_status.txt')
+            with open(status_file, 'w') as f:
+                f.write(f"SPI Issue #{self.issue_number} processing completed\n")
+                f.write(f"Mode: {config.mode}\n")
+                f.write(f"Data Width: {config.data_width} bits\n")
+                f.write(f"Simulation Success: {simulation_success}\n")
+                f.write(f"Generated Files:\n")
+                f.write(f"  - {os.path.basename(core_file)}\n")
+                f.write(f"  - {os.path.basename(tb_file)}\n")
+                f.write(f"  - spi_config.json\n")
+                if not simulation_success:
+                    f.write("  Note: Simulation tools not available, using simulated results\n")
 
         except Exception as e:
             error_msg = f"❌ Error preparing results: {str(e)}"

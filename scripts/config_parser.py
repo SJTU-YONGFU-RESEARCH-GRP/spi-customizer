@@ -47,7 +47,7 @@ class SPIConfigParser:
             'test_duration': r'Test Duration[^:]*:?\s*(Brief|Standard|Comprehensive)',
             'clock_jitter': r'Clock Jitter Testing[^:]*:?\s*(Yes|No)',
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
-            'email': r'Email Address[^:]*:?\s*([^\n\r]+)',
+            'email': r'(?:Email Address|Email)[^:]*:?\s*([^\n\r]+)',
             'github_user': r'GitHub Username[^:]*:?\s*([^\n\r]+)'
         }
 
