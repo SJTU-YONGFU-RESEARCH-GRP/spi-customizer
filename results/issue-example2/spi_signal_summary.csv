@@ -1,8 +1,0 @@
-Signal Name,Width (bits),Total Changes,Current Value
-spi_master_tb.sclk,1,51,1
-spi_master_tb.mosi,1,51,0
-spi_master_tb.miso,1,41,1
-spi_master_tb.ss_n,1,4,1
-spi_master_tb.busy,1,4,0
-spi_master_tb.irq,1,4,0
-spi_master_tb.data,8,1,x

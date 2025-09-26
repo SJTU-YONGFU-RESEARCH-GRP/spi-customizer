@@ -1,0 +1,89 @@
+# Generated CSV files and data analysis files
+*.csv
+results/**/*.csv
+
+# VCD waveform files
+*.vcd
+results/**/*.vcd
+
+# Generated Verilog and testbench files
+*spi_master*.v
+*spi_master*.sv
+*spi_master_tb*.v
+*spi_master_tb*.sv
+generated/**/*.v
+generated/**/*.sv
+
+# Results directories (but keep the structure for organization)
+# results/
+# results/**/* (commented out to keep generated files organized)
+
+# Plot and analysis files
+*.png
+*.pdf
+*.svg
+*.txt
+results/**/*.png
+results/**/*.pdf
+results/**/*.svg
+results/**/*.txt
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# Email and notification files
+email_results/
+notifications/
+
+# Test output files
+test_output/
+test_results/
+
+# Configuration backups
+*.bak
+*.backup
+config.bak

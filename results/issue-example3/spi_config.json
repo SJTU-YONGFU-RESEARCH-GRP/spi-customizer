@@ -1,0 +1,14 @@
+{
+  "issue_number": "example3",
+  "mode": 1,
+  "data_width": 16,
+  "num_slaves": 8,
+  "slave_active_low": false,
+  "msb_first": false,
+  "interrupts": false,
+  "fifo_buffers": false,
+  "dma_support": false,
+  "multi_master": false,
+  "test_duration": "standard",
+  "simulation_success": true
+}

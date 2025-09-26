@@ -1,0 +1,14 @@
+{
+  "issue_number": "complex_1",
+  "mode": 3,
+  "data_width": 32,
+  "num_slaves": 8,
+  "slave_active_low": false,
+  "msb_first": false,
+  "interrupts": true,
+  "fifo_buffers": true,
+  "dma_support": true,
+  "multi_master": false,
+  "test_duration": "standard",
+  "simulation_success": true
+}
