@@ -1,8 +1,8 @@
 # SPI Customizer: An Automated GitHub-Based System for Custom SPI Core Generation and Verification
 
-- **Authors:** [Your Name], [Co-authors]
-- **Institution:** Shanghai Jiao Tong University, YONGFU Research Group
-- **Conference:** [IEEE Conference Name], 2025
+**Authors:** [Your Name], [Co-authors]
+**Institution:** Shanghai Jiao Tong University, YONGFU Research Group
+**Conference:** [IEEE Conference Name], 2025
 
 ## Abstract
 
@@ -10,7 +10,7 @@ This paper presents SPI Customizer, an innovative GitHub-based automation system
 
 The system particularly addresses the challenges faced by **analog designers** who lack digital protocol expertise but need robust SPI interfaces for digital-assisted analog circuits. By eliminating the knowledge gap and reducing complex testing requirements, SPI Customizer enables analog engineers to focus on core analog design challenges while ensuring professional-grade digital interface implementation.
 
-**Keywords:** SPI, RTL Generation, GitHub Automation, Hardware Design, FPGA, Verification, CI/CD, Analog-Digital Interface, Mixed-Signal Systems
+**Keywords:** SPI, RTL Generation, GitHub Automation, Hardware Design, FPGA, Verification, CI/CD, Analog-Digital Interface, Mixed-Signal Systems, Open Source
 
 ## 1. Introduction
 
@@ -37,6 +37,19 @@ The motivation for developing SPI Customizer stems from the need to democratize 
 
 **Particular attention is given to analog designers** who face unique challenges when implementing digital interfaces in mixed-signal systems. The knowledge gap between analog circuit design and digital protocol implementation creates significant barriers, particularly in digital-assisted analog circuits where precise timing and verification are critical.
 
+### 1.2.1 Open Source Philosophy
+
+We chose to develop SPI Customizer as an **open source project** for several strategic reasons:
+
+1. **Accessibility for Resource-Constrained Environments**: Analog designers often work in academic institutions or small companies with limited budgets for commercial EDA tools
+2. **Customization Flexibility**: Open source allows analog designers to modify the tool to support their specific mixed-signal testing requirements
+3. **Integration with Existing Workflows**: Researchers can integrate the tool into their custom verification environments
+4. **Community-Driven Improvement**: Collective expertise from analog and digital design communities enhances the tool's capabilities
+5. **Educational Value**: Students and educators can study and learn from the implementation
+6. **No Licensing Barriers**: Eliminates cost and access restrictions that prevent widespread adoption
+
+**The open source nature directly addresses analog designers' needs** by providing a cost-effective, customizable solution that eliminates licensing barriers while ensuring they can adapt the tool to their specific mixed-signal verification challenges.
+
 ### 1.3 Innovation and Contribution
 
 This work introduces several key innovations:
@@ -45,6 +58,7 @@ This work introduces several key innovations:
 - **Template-Driven RTL Generation**: Scalable Verilog code generation supporting 61,440+ theoretical configurations
 - **Automated Verification Pipeline**: Complete end-to-end testing with waveform generation and analysis
 - **Professional Delivery System**: Email-based result delivery with comprehensive documentation
+- **Open Source Accessibility**: Democratizes access to professional-grade hardware design tools
 
 ## 2. Related Work
 
@@ -71,7 +85,7 @@ Traditional SPI core design involves:
 - HDL code generators (limited scope)
 - IP-XACT based tools (complex setup requirements)
 
-**Gap:** No existing solution provides GitHub-integrated, user-friendly customization with automated verification.
+**Gap:** No existing solution provides GitHub-integrated, user-friendly customization with automated verification, particularly lacking support for analog designers' specific needs.
 
 ## 3. System Architecture
 
@@ -275,7 +289,7 @@ jobs:
 - **Benefit**: Accessible hardware design and verification platform
 - **Use Case**: Teaching digital design, research prototyping
 
-### 6.1.5 Analog Design Engineers
+#### 6.1.5 Analog Design Engineers
 - **Problem Solved**: Knowledge gap in digital protocols and complex testing requirements
 - **Benefit**: Bridge between analog and digital domains with automated verification
 - **Use Case**: Digital-assisted analog circuits requiring custom SPI interfaces
@@ -302,6 +316,13 @@ jobs:
 - **Testing Simplification**: Reduces complex verification burden in mixed-signal systems
 - **Integration Acceleration**: Speeds up development of digital-assisted analog circuits
 - **Risk Reduction**: Eliminates protocol implementation errors in critical mixed-signal interfaces
+
+#### 6.2.5 Open Source Benefits for Analog Designers
+- **Cost-Effective Access**: No licensing fees for academic institutions or small companies
+- **Customization Capability**: Modify source code to support specific mixed-signal requirements
+- **Integration Flexibility**: Adapt to existing verification workflows and tools
+- **Community Support**: Leverage collective expertise for mixed-signal design challenges
+- **Educational Resources**: Study and learn from the implementation for training purposes
 
 ## 7. Technical Validation
 
@@ -408,6 +429,7 @@ jobs:
 - **Reduced Testing Burden**: Automated comprehensive verification eliminates manual testing
 - **Faster Time-to-Market**: From weeks to hours for interface development
 - **Risk Mitigation**: Eliminates protocol implementation errors in critical data paths
+- **Open Source Advantage**: Free access, customization capability, and community support
 
 **Results**: Analog designer receives a fully verified, timing-accurate SPI interface with professional documentation, enabling focus on core analog design challenges rather than digital interface implementation.
 
@@ -451,12 +473,16 @@ SPI Customizer represents a paradigm shift in hardware design automation by succ
 - **Particularly valuable for analog designers** who can now implement complex digital interfaces without protocol expertise
 - **Reduces mixed-signal testing complexity** by providing pre-verified digital components
 - **Bridges the analog-digital knowledge gap** in modern mixed-signal system design
+- **Open source accessibility** eliminates cost barriers and enables customization for specific needs
+
+**Open Source Advantage for Analog Designers:**
+The open source nature of SPI Customizer provides unique benefits for analog designers who often work in resource-constrained environments. By eliminating licensing costs and enabling customization, the tool becomes accessible to academic institutions, small companies, and individual researchers. The community-driven development model ensures continuous improvement and adaptation to emerging mixed-signal design challenges.
 
 The system successfully bridges the gap between software automation practices and hardware design, paving the way for future innovations in automated hardware generation and verification.
 
 ## Acknowledgments
 
-This work was supported by the YONGFU Research Group at Shanghai Jiao Tong University. The authors acknowledge the contributions of the open-source community and the GitHub platform for enabling this innovative approach to hardware design automation.
+This work was supported by the YONGFU Research Group at Shanghai Jiao Tong University. The authors acknowledge the contributions of the open-source community and the GitHub platform for enabling this innovative approach to hardware design automation. Special thanks to analog design engineers whose feedback and requirements shaped the development of this tool.
 
 ## References
 
@@ -472,4 +498,5 @@ This work was supported by the YONGFU Research Group at Shanghai Jiao Tong Unive
 - **Total Configurations Supported**: 61,440 theoretical, 99%+ practical coverage
 - **Performance Improvement**: 16x-32x faster than manual implementation
 - **Verification Coverage**: 100% of individual parameters, 95%+ of feature combinations
-- **Target Audience**: Hardware engineers, FPGA developers, embedded systems designers, educators
+- **Target Audience**: Hardware engineers, FPGA developers, embedded systems designers, educators, and analog designers
+- **Open Source Benefits**: Free access, customization, community support, no licensing barriers
