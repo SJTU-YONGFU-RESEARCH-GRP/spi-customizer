@@ -1,0 +1,39 @@
+name: SPI Customizer Automation
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+
+jobs:
+  spi-customization:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Icarus Verilog and Cocotb
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y iverilog
+        pip install cocotb pytest matplotlib
+
+    - name: Install GTKWave for waveform generation
+      run: |
+        sudo apt-get install -y gtkwave
+
+    - name: Process SPI Issue
+      run: |
+        python3 scripts/process_issue.py ${{ github.event.issue.number }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: spi-results-${{ github.event.issue.number }}
+        path: |
+          results/
+          plots/

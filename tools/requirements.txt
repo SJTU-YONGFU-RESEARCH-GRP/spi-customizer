@@ -1,0 +1,22 @@
+# Core dependencies
+Jinja2>=3.1.0
+PyYAML>=6.0
+
+# RTL Simulation and Testing
+cocotb>=1.8.0
+pytest>=7.0.0
+pytest-cocotb>=0.5.0
+
+# Plotting and Visualization
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# Email functionality
+smtplib  # Built-in with Python
+
+# HTTP requests for GitHub API
+requests>=2.31.0
+
+# Additional utilities
+pathlib  # Built-in with Python 3.8+
+typing  # Built-in with Python 3.8+
