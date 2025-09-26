@@ -50,3 +50,44 @@ jobs:
         path: |
           results/issue-${{ github.event.issue.number }}/
           plots/
+
+    - name: Commit and Push Results
+      if: success() && github.event.issue.number != null
+      run: |
+        # Configure git
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+        # Check if there are changes to commit
+        if [ -d "results/issue-${{ github.event.issue.number }}" ]; then
+          echo "📁 Found results for issue #${{ github.event.issue.number }}"
+
+          # Add results to git
+          git add results/issue-${{ github.event.issue.number }}/
+
+          # Add any new plot files
+          if [ -d "plots" ]; then
+            git add plots/ || echo "⚠️  No plot files to add"
+          fi
+
+          # Check if there are any changes to commit
+          if ! git diff --staged --quiet; then
+            echo "📝 Committing results..."
+            git commit -m "🤖 Auto-generated results for issue #${{ github.event.issue.number }}
+
+            - Generated custom SPI core
+            - Created testbench files
+            - Added simulation results
+            - Included timing diagrams
+
+            Triggered by: ${{ github.event.issue.title }}"
+
+            # Push changes
+            git push origin main || git push origin master || echo "⚠️  Push failed - may not have permissions"
+            echo "✅ Results committed and pushed successfully!"
+          else
+            echo "ℹ️  No changes to commit"
+          fi
+        else
+          echo "⚠️  No results folder found for issue #${{ github.event.issue.number }}"
+        fi

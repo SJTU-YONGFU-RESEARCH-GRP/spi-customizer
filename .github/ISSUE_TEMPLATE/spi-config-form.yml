@@ -1,5 +1,5 @@
 name: SPI Configuration Request
-description: Request a custom SPI (Serial Peripheral Interface) configuration
+description: Request a custom SPI (Serial Peripheral Interface) configuration with specific technical parameters
 title: "SPI Config: [Brief description of your configuration]"
 labels: ["spi-customization", "enhancement"]
 assignees: []
