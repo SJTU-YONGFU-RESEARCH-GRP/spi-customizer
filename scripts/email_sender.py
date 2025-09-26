@@ -199,13 +199,101 @@ def send_test_email():
     return sender.send_results_email(test_config, test_attachments)
 
 
+def send_workflow_email():
+    """Send email for workflow execution"""
+    import os
+    import sys
+    import json
+    from pathlib import Path
+
+    # Add current directory to path for imports
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+
+    from config_parser import SPIConfigParser
+
+    sender = EmailSender()
+
+    # Get issue number from environment (set by workflow)
+    issue_number = os.environ.get('ISSUE_NUMBER')
+    if not issue_number:
+        print("⚠️  No issue number found - running test mode")
+        return send_test_email()
+
+    print(f"📧 Processing email for issue #{issue_number}")
+
+    # Parse the issue to get configuration
+    try:
+        # Get issue content from GitHub API
+        import requests
+
+        token = os.environ.get('GITHUB_TOKEN')
+        repo_owner = "SJTU-YONGFU-RESEARCH-GRP"
+        repo_name = "spi-customizer"
+
+        if not token:
+            print("⚠️  No GitHub token found")
+            return False
+
+        headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+
+        url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/issues/{issue_number}"
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            print(f"⚠️  Failed to fetch issue #{issue_number}: {response.status_code}")
+            return False
+
+        issue_data = response.json()
+        issue_body = issue_data.get('body', '')
+
+        # Parse configuration from issue
+        parser = SPIConfigParser()
+        config = parser.parse_issue(issue_body, int(issue_number))
+
+        # Look for result files
+        issue_dir = f'results/issue-{issue_number}'
+        attachments = []
+
+        # Add generated files if they exist
+        for filename in ['spi_config.json', 'spi_master.v', 'spi_master_tb.v']:
+            filepath = os.path.join(issue_dir, filename)
+            if os.path.exists(filepath):
+                attachments.append(filepath)
+
+        success = sender.send_results_email(config.__dict__, attachments)
+
+        if success:
+            print(f"✅ Email sent successfully to {config.email}")
+        else:
+            print("❌ Email failed to send")
+
+        return success
+
+    except Exception as e:
+        print(f"⚠️  Error processing workflow email: {e}")
+        return False
+
+
 if __name__ == "__main__":
     print("📧 SPI Customizer Email System")
-    print("Testing email functionality...")
 
-    success = send_test_email()
+    # Check if we have workflow environment variables
+    import os
+
+    if os.environ.get('ISSUE_NUMBER') or os.environ.get('GITHUB_TOKEN'):
+        print("Running in workflow mode...")
+        success = send_workflow_email()
+    else:
+        print("Testing email functionality...")
+        success = send_test_email()
 
     if success:
-        print("✅ Test email sent successfully!")
+        print("✅ Email sent successfully!")
     else:
-        print("❌ Test email failed - check SMTP configuration")
+        print("❌ Email failed - check SMTP configuration")

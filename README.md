@@ -5,7 +5,11 @@
 [![Verilog](https://img.shields.io/badge/Verilog-IEEE%201364-orange.svg)](https://en.wikipedia.org/wiki/Verilog)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-green.svg)](https://github.com/features/actions)
 [![Issues](https://img.shields.io/github/issues/SJTU-YONGFU-RESEARCH-GRP/spi-customizer)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/issues)
-[![Stars](https://img.shields.io/github/stars/SJTU-YONGFU-RESEARCH-GRP/spi-customizer?style=social)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer)
+[![GitHub Stars](https://img.shields.io/github/stars/SJTU-YONGFU-RESEARCH-GRP/spi-customizer?style=flat-square&logo=github&color=ffdd00&label=⭐%20Stars&v=1)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/stargazers)
+
+<!-- Fallback static badge (uncomment if dynamic badge has issues):
+[![Stars](https://img.shields.io/badge/⭐%20GitHub%20Stars-1-yellow?style=flat-square&logo=github)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/stargazers)
+-->
 
 A GitHub-based system for automatic generation of custom SPI (Serial Peripheral Interface) cores with RTL simulation and testing.
 
