@@ -19,6 +19,14 @@ body:
     validations:
       required: true
   - type: input
+    id: data-width
+    attributes:
+      label: Data Width
+      description: Number of bits for testing
+      placeholder: "8, 16, 32"
+    validations:
+      required: true
+  - type: input
     id: email
     attributes:
       label: Email

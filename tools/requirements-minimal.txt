@@ -1,0 +1,10 @@
+# Essential dependencies for venv environment
+Jinja2>=3.1.0
+PyYAML>=6.0
+
+# Core RTL testing (required)
+cocotb>=1.8.0
+pytest>=7.0.0
+
+# HTTP requests for GitHub API (required)
+requests>=2.31.0

@@ -1,22 +1,19 @@
-# Core dependencies
+# Core dependencies (Required)
 Jinja2>=3.1.0
 PyYAML>=6.0
-
-# RTL Simulation and Testing
-cocotb>=1.8.0
-pytest>=7.0.0
-pytest-cocotb>=0.5.0
-
-# Plotting and Visualization
-matplotlib>=3.7.0
-numpy>=1.24.0
-
-# Email functionality
-smtplib  # Built-in with Python
-
-# HTTP requests for GitHub API
 requests>=2.31.0
 
-# Additional utilities
-pathlib  # Built-in with Python 3.8+
-typing  # Built-in with Python 3.8+
+# RTL Simulation and Testing (Required)
+cocotb>=1.8.0
+pytest>=7.0.0
+
+# Email functionality (Built-in with Python)
+# smtplib is built into Python - no installation needed
+
+# Additional utilities (Built-in with Python)
+# pathlib and typing are built into Python 3.8+ - no installation needed
+
+# Optional packages (commented out - install manually if needed)
+# matplotlib>=3.7.0  # For advanced plotting
+# numpy>=1.24.0     # For numerical computations
+# cocotb-test>=0.2.0  # For enhanced pytest integration with cocotb

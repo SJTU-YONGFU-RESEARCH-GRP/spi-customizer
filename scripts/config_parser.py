@@ -16,7 +16,6 @@ class SPIConfig:
     """SPI Configuration parameters"""
     issue_number: int
     mode: int
-    clock_frequency: float
     data_width: int
     num_slaves: int = 1
     slave_active_low: bool = True
@@ -27,6 +26,7 @@ class SPIConfig:
     multi_master: bool = False
     test_duration: str = "standard"
     clock_jitter_test: bool = False
+    clock_frequency: float = 25.0
     waveform_capture: bool = True
     email: str = ""
     github_username: str = ""
@@ -38,9 +38,9 @@ class SPIConfigParser:
     def __init__(self):
         self.patterns = {
             'mode': r'SPI Mode[^0-9]*(\d)',
-            'clock_freq': r'Clock Frequency[^0-9]*(\d+(?:\.\d+)?)',
             'data_width': r'Data Width[^0-9]*(\d+)',
             'num_slaves': r'Number of Slaves[^0-9]*(\d+)',
+            'clock_freq': r'Clock Frequency[^0-9]*(\d+(?:\.\d+)?)',
             'slave_active': r'\[[^\]]*\]\s*Active (Low|High)',
             'data_order': r'\[[^\]]*\]\s*(MSB|LSB) First',
             'features': r'Special Features[^:]*:([\s\S]*?)(?=###|\n\n|\Z)',
@@ -73,13 +73,13 @@ class SPIConfigParser:
         # Required parameters
         try:
             params['mode'] = int(self._extract_single(issue_body, self.patterns['mode']))
-            params['clock_frequency'] = float(self._extract_single(issue_body, self.patterns['clock_freq']))
             params['data_width'] = int(self._extract_single(issue_body, self.patterns['data_width']))
         except (ValueError, TypeError) as e:
             raise ValueError(f"Missing or invalid required parameters: {e}")
 
         # Optional parameters with defaults
         params['num_slaves'] = int(self._extract_single(issue_body, self.patterns['num_slaves']) or 1)
+        params['clock_frequency'] = float(self._extract_single(issue_body, self.patterns['clock_freq']) or 25.0)
 
         # Parse slave select behavior - find the line with checked checkbox
         slave_matches = re.findall(r'(\[[^\]]*\]\s*Active (Low|High))', issue_body, re.IGNORECASE | re.MULTILINE)
@@ -109,7 +109,7 @@ class SPIConfigParser:
         self._validate_config(params)
 
         config = SPIConfig(issue_number=issue_number, **params)
-        print(f"✅ Successfully parsed configuration: Mode {config.mode}, {config.clock_frequency}MHz, {config.data_width}-bit")
+        print(f"✅ Successfully parsed configuration: Mode {config.mode}, {config.data_width}-bit")
         return config
 
     def _extract_single(self, text: str, pattern: str) -> Optional[str]:
@@ -123,10 +123,6 @@ class SPIConfigParser:
         # Validate SPI mode
         if params['mode'] not in [0, 1, 2, 3]:
             raise ValueError(f"Invalid SPI mode: {params['mode']}. Must be 0, 1, 2, or 3.")
-
-        # Validate clock frequency
-        if not (0.1 <= params['clock_frequency'] <= 200):
-            raise ValueError(f"Clock frequency {params['clock_frequency']}MHz is out of range (0.1-200MHz)")
 
         # Validate data width
         if params['data_width'] not in [8, 16, 32] and not (1 <= params['data_width'] <= 64):
@@ -153,7 +149,6 @@ def main():
 
     ### Basic Configuration
     - **SPI Mode**: 0
-    - **Clock Frequency**: 25
     - **Data Width**: 16
 
     ### Advanced Configuration
@@ -192,7 +187,6 @@ def main():
             json.dump({
                 'issue_number': issue_number,
                 'mode': config.mode,
-                'clock_frequency': config.clock_frequency,
                 'data_width': config.data_width,
                 'num_slaves': config.num_slaves,
                 'slave_active_low': config.slave_active_low,
@@ -203,6 +197,7 @@ def main():
                 'multi_master': config.multi_master,
                 'test_duration': config.test_duration,
                 'clock_jitter_test': config.clock_jitter_test,
+                'clock_frequency': config.clock_frequency,
                 'waveform_capture': config.waveform_capture,
                 'email': config.email,
                 'github_username': config.github_username

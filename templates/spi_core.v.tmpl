@@ -1,6 +1,5 @@
 module spi_master #(
     parameter MODE = {{ MODE }},              // SPI Mode (0-3)
-    parameter CLK_FREQ = {{ CLK_FREQ | int }},         // Clock frequency in MHz
     parameter DATA_WIDTH = {{ DATA_WIDTH }},       // Data width in bits
     parameter NUM_SLAVES = {{ NUM_SLAVES }},        // Number of slave devices
     parameter SLAVE_ACTIVE_LOW = {{ SLAVE_ACTIVE_LOW | int }},  // Slave select active level
@@ -27,7 +26,7 @@ module spi_master #(
 );
 
     // Local parameters
-    localparam SCLK_HALF_PERIOD = (50000000 / (2 * CLK_FREQ * 1000000)); // Half SCLK period in clock cycles
+    localparam SCLK_HALF_PERIOD = 250; // Fixed half SCLK period (assumes 50MHz system clock, 100kHz SPI clock)
 
     // State machine states
     localparam IDLE = 3'd0;

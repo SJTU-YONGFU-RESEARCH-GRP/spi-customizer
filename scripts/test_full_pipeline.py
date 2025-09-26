@@ -23,7 +23,6 @@ def test_config_parsing():
 
     ### Basic Configuration
     - **SPI Mode**: 3
-    - **Clock Frequency**: 50
     - **Data Width**: 32
 
     ### Advanced Configuration
@@ -56,7 +55,6 @@ def test_config_parsing():
 
         # Verify parsed values
         assert config.mode == 3
-        assert config.clock_frequency == 50.0
         assert config.data_width == 32
         assert config.num_slaves == 4
         assert config.slave_active_low == False  # Active High
@@ -100,7 +98,6 @@ def test_verilog_generation(config: SPIConfig):
             core_content = f.read()
             assert 'module spi_master' in core_content
             assert f'parameter MODE = {config.mode}' in core_content
-            assert f'parameter CLK_FREQ = {int(config.clock_frequency)}' in core_content
             assert f'parameter DATA_WIDTH = {config.data_width}' in core_content
             assert f'parameter NUM_SLAVES = {config.num_slaves}' in core_content
 
@@ -131,7 +128,6 @@ def test_simulator_setup():
         config = SPIConfig(
             issue_number=999,
             mode=0,
-            clock_frequency=25.0,
             data_width=16,
             num_slaves=1
         )
@@ -161,7 +157,6 @@ def test_json_config():
         config = SPIConfig(
             issue_number=789,
             mode=1,
-            clock_frequency=10.0,
             data_width=8,
             num_slaves=2,
             slave_active_low=True,
@@ -180,7 +175,6 @@ def test_json_config():
         # Test JSON serialization
         config_dict = {
             'mode': config.mode,
-            'clock_frequency': config.clock_frequency,
             'data_width': config.data_width,
             'num_slaves': config.num_slaves,
             'slave_active_low': config.slave_active_low,
@@ -205,7 +199,6 @@ def test_json_config():
             loaded_config = json.load(f)
 
         assert loaded_config['mode'] == config.mode
-        assert loaded_config['clock_frequency'] == config.clock_frequency
         assert loaded_config['data_width'] == config.data_width
 
         print("✅ JSON configuration test PASSED")

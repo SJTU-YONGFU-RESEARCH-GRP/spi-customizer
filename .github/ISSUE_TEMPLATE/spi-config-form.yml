@@ -19,14 +19,6 @@ body:
     validations:
       required: true
   - type: input
-    id: clock-frequency
-    attributes:
-      label: Clock Frequency
-      description: Target frequency in MHz
-      placeholder: "10, 25, 50"
-    validations:
-      required: true
-  - type: input
     id: data-width
     attributes:
       label: Data Width

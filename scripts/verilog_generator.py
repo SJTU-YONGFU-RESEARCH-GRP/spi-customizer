@@ -38,35 +38,17 @@ class VerilogGenerator:
 
         template = Template(template_content)
 
-        # Calculate derived parameters
-        derived_params = self._calculate_derived_params(config)
-
         # Generate code
         verilog_code = template.render(
             MODE=config.mode,
-            CLK_FREQ=config.clock_frequency,
             DATA_WIDTH=config.data_width,
             NUM_SLAVES=config.num_slaves,
             SLAVE_ACTIVE_LOW=config.slave_active_low,
-            MSB_FIRST=config.msb_first,
-            derived_params=derived_params
+            MSB_FIRST=config.msb_first
         )
 
         return verilog_code
 
-    def _calculate_derived_params(self, config: SPIConfig) -> dict:
-        """Calculate derived parameters for the Verilog module"""
-
-        # SCLK half period calculation (assuming 50MHz system clock)
-        system_clock = 50_000_000  # 50 MHz
-        target_sclk = config.clock_frequency * 1_000_000  # Convert to Hz
-        sclk_half_period = system_clock // (2 * target_sclk)
-
-        return {
-            'sclk_half_period': sclk_half_period,
-            'system_clock': system_clock,
-            'target_sclk': target_sclk
-        }
 
     def save_verilog_file(self, config: SPIConfig, filename: str = None) -> str:
         """
@@ -86,7 +68,7 @@ class VerilogGenerator:
                 filename = f"{config.issue_number}.v"
             else:
                 # Use detailed naming for numeric issue numbers
-                filename = f"spi_master_mode{config.mode}_{config.clock_frequency}MHz_{config.data_width}bit.v"
+                filename = f"spi_master_mode{config.mode}_{config.data_width}bit.v"
 
         verilog_code = self.generate_spi_core(config)
 
@@ -101,7 +83,7 @@ class VerilogGenerator:
         print(f"✅ Generated Verilog code: {filepath}")
         return filepath
 
-    def generate_testbench(self, config: SPIConfig) -> str:
+    def generate_testbench(self, config: SPIConfig, vcd_filename: str = "spi_waveform.vcd") -> str:
         """
         Generate testbench for the SPI core
 
@@ -119,7 +101,6 @@ module spi_master_tb;
 
     // Parameters
     parameter MODE = {{ config.mode }};
-    parameter CLK_FREQ = {{ config.clock_frequency | int }};
     parameter DATA_WIDTH = {{ config.data_width }};
     parameter NUM_SLAVES = {{ config.num_slaves }};
 
@@ -140,7 +121,6 @@ module spi_master_tb;
     // DUT instantiation
     spi_master #(
         .MODE(MODE),
-        .CLK_FREQ(CLK_FREQ),
         .DATA_WIDTH(DATA_WIDTH),
         .NUM_SLAVES(NUM_SLAVES)
     ) dut (
@@ -210,15 +190,16 @@ module spi_master_tb;
 
     // Waveform dumping
     initial begin
-        $dumpfile("spi_waveform.vcd");
+        $dumpfile("{{ vcd_filename }}");
         $dumpvars(0, spi_master_tb);
+        $dumpflush;  // Ensure all data is written
     end
 
 endmodule
 """
 
         template = Template(testbench_template)
-        testbench_code = template.render(config=config)
+        testbench_code = template.render(config=config, vcd_filename=vcd_filename)
 
         return testbench_code
 
@@ -240,13 +221,16 @@ endmodule
                 filename = f"{config.issue_number}_tb.v"
             else:
                 # Use detailed naming for numeric issue numbers
-                filename = f"spi_master_tb_mode{config.mode}_{config.clock_frequency}MHz.v"
-
-        testbench_code = self.generate_testbench(config)
+                filename = f"spi_master_tb_mode{config.mode}.v"
 
         # Ensure issue-specific results directory exists
         issue_dir = f'results/issue-{config.issue_number}'
         os.makedirs(issue_dir, exist_ok=True)
+
+        # Generate VCD filename for this issue
+        vcd_filename = f"{issue_dir}/spi_waveform.vcd"
+
+        testbench_code = self.generate_testbench(config, vcd_filename)
 
         filepath = os.path.join(issue_dir, filename)
         with open(filepath, 'w') as f:
@@ -263,7 +247,6 @@ def main():
     config = SPIConfig(
         issue_number=123,
         mode=0,
-        clock_frequency=25.0,
         data_width=16,
         num_slaves=2,
         slave_active_low=True,

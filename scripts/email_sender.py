@@ -75,7 +75,6 @@ class EmailSender:
     <h2>📋 Configuration Summary</h2>
     <div class="details">
         <div class="feature"><strong>SPI Mode:</strong> {config.get('mode', 'N/A')}</div>
-        <div class="feature"><strong>Clock Frequency:</strong> {config.get('clock_frequency', 'N/A')} MHz</div>
         <div class="feature"><strong>Data Width:</strong> {config.get('data_width', 'N/A')} bits</div>
         <div class="feature"><strong>Number of Slaves:</strong> {config.get('num_slaves', 'N/A')}</div>
         <div class="feature"><strong>Slave Select:</strong> {'Active High' if not config.get('slave_active_low', True) else 'Active Low'}</div>
@@ -92,8 +91,8 @@ class EmailSender:
 
     <h2>📁 Generated Files</h2>
     <div class="files">
-        <div class="feature">• <strong>spi_master_mode{config.get('mode', 'X')}_{config.get('clock_frequency', 'Y')}MHz_{config.get('data_width', 'Z')}bit.v</strong> - Custom SPI core</div>
-        <div class="feature">• <strong>spi_master_tb_mode{config.get('mode', 'X')}_{config.get('clock_frequency', 'Y')}MHz.v</strong> - Verilog testbench</div>
+        <div class="feature">• <strong>spi_master_mode{config.get('mode', 'X')}_{config.get('data_width', 'Z')}bit.v</strong> - Custom SPI core</div>
+        <div class="feature">• <strong>spi_master_tb_mode{config.get('mode', 'X')}.v</strong> - Verilog testbench</div>
         <div class="feature">• <strong>test_spi.py</strong> - Python/Cocotb test</div>
         <div class="feature">• <strong>spi_config.json</strong> - Configuration file</div>
         <div class="feature">• <strong>spi_waveform.vcd</strong> - Simulation waveforms</div>
@@ -121,7 +120,7 @@ class EmailSender:
         <ul>
             <li>📧 Reply to this email</li>
             <li>💬 Comment on the GitHub issue</li>
-            <li>🐛 Report bugs: <a href="https://github.com/luwangzilu/spi-customizer/issues">GitHub Issues</a></li>
+            <li>🐛 Report bugs: <a href="https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/issues">GitHub Issues</a></li>
         </ul>
     </div>
 
@@ -177,7 +176,6 @@ def send_test_email():
     test_config = {
         'issue_number': 123,
         'mode': 0,
-        'clock_frequency': 25.0,
         'data_width': 16,
         'num_slaves': 2,
         'slave_active_low': True,

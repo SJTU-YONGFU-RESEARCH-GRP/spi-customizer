@@ -27,7 +27,6 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 2. Select **SPI Configuration Request** template
 3. Fill in your SPI configuration:
    - **SPI Mode** (0-3)
-   - **Clock Frequency** (MHz)
    - **Data Width** (bits)
    - **Number of Slaves**
    - **Advanced options** (interrupts, DMA, etc.)
@@ -42,7 +41,6 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 
 ### Basic Configuration
 - **SPI Mode**: 3
-- **Clock Frequency**: 25
 - **Data Width**: 16
 
 ### Advanced Configuration
@@ -84,8 +82,8 @@ For each issue, the system creates an organized folder structure:
 
 ```
 results/issue-<id>/
-├── spi_master_modeX_freqY_widthZ.v    # Custom SPI core
-├── spi_master_tb_modeX_freqY.v        # Verilog testbench
+├── spi_master_modeX_widthY.v          # Custom SPI core
+├── spi_master_tb_modeX.v              # Verilog testbench
 ├── test_spi.py                        # Python/Cocotb test
 └── spi_config.json                    # Configuration specification
 ```
@@ -93,8 +91,8 @@ results/issue-<id>/
 ### File Organization
 
 - **Issue-specific folders**: `results/issue-<github_issue_number>/`
-- **SPI Core**: `spi_master_mode{mode}_{frequency}MHz_{width}bit.v`
-- **Testbench**: `spi_master_tb_mode{mode}_{frequency}MHz.v`
+- **SPI Core**: `spi_master_mode{mode}_{width}bit.v`
+- **Testbench**: `spi_master_tb_mode{mode}.v`
 - **Configuration**: `spi_config.json` (includes issue metadata)
 - **Waveforms**: Generated during simulation (if tools available)
 
@@ -158,7 +156,6 @@ python3 scripts/simulator_runner.py
 
 ### Basic Settings
 - **SPI Mode**: 0, 1, 2, or 3 (CPOL/CPHA combinations)
-- **Clock Frequency**: Target frequency in MHz (0.1-200)
 - **Data Width**: 8, 16, 32, or custom bits (1-64)
 
 ### Advanced Options
@@ -178,7 +175,6 @@ python3 scripts/simulator_runner.py
 ```verilog
 module spi_master #(
     parameter MODE = 3,
-    parameter CLK_FREQ = 25,
     parameter DATA_WIDTH = 16,
     parameter NUM_SLAVES = 2
 )(
@@ -200,8 +196,8 @@ endmodule
 ### File Structure Example
 ```
 results/issue-123/
-├── spi_master_mode3_25MHz_16bit.v
-├── spi_master_tb_mode3_25MHz.v
+├── spi_master_mode3_16bit.v
+├── spi_master_tb_mode3.v
 ├── test_spi.py
 └── spi_config.json
 ```
@@ -210,7 +206,7 @@ results/issue-123/
 - ✅ SPI transmission test passed for 16-bit data
 - ✅ Slave select correctly activated (Active High)
 - ✅ Interrupt generated on completion
-- ✅ Timing requirements met (25MHz clock)
+- ✅ Timing requirements met
 
 ## Requirements
 

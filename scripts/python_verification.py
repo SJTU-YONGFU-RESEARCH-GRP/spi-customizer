@@ -30,10 +30,10 @@ def analyze_verilog_structure(file_path: str) -> Dict[str, Any]:
         "has_ports": "input" in content or "output" in content,
         "has_logic": "always" in content or "assign" in content,
         "spi_specific": {
-            "has_spi_clock": "sclk" in content.lower() or "sck" in content.lower(),
+            "has_sclk": "sclk" in content.lower() or "sck" in content.lower(),
             "has_mosi": "mosi" in content.lower(),
             "has_miso": "miso" in content.lower(),
-            "has_ss": "ss" in content.lower() or "cs" in content.lower(),
+            "has_ss": "ss" in content.lower() or "cs" in content.lower() or "ss_n" in content.lower(),
             "has_spi_states": any(state in content.lower() for state in ["idle", "setup", "transmit", "receive"]),
             "has_clock_divider": "clk" in content.lower() and ("counter" in content.lower() or "divider" in content.lower()),
         }
@@ -71,9 +71,17 @@ def verify_spi_core(verilog_file: str) -> Dict[str, Any]:
     # SPI-specific checks
     spi_check = analysis["spi_specific"]
 
-    # Check for required SPI signals
+    # Check for required SPI signals (case-insensitive)
     required_signals = ["sclk", "mosi", "miso", "ss"]
-    missing_signals = [sig for sig in required_signals if not spi_check.get(f"has_{sig}", False)]
+    missing_signals = []
+    for sig in required_signals:
+        found = False
+        for check_name in [f"has_{sig}", f"has_{sig.upper()}"]:
+            if spi_check.get(check_name, False):
+                found = True
+                break
+        if not found:
+            missing_signals.append(sig)
 
     if missing_signals:
         verification["issues"].append(f"Missing SPI signals: {missing_signals}")
@@ -101,10 +109,6 @@ def verify_spi_core(verilog_file: str) -> Dict[str, Any]:
         if width < 8 or width > 64:
             verification["issues"].append(f"Unusual data width: {width} bits")
 
-    if "CLK_FREQ" in params:
-        freq = int(params["CLK_FREQ"])
-        if freq < 1 or freq > 200:
-            verification["issues"].append(f"Unusual clock frequency: {freq} MHz")
 
     # Generate recommendations
     if not spi_check["has_clock_divider"]:
@@ -137,7 +141,6 @@ def run_python_verification(config, issue_number) -> Dict[str, Any]:
         "config": {
             "issue_number": config.issue_number,
             "mode": config.mode,
-            "clock_frequency": config.clock_frequency,
             "data_width": config.data_width
         },
         "files": {},
@@ -147,8 +150,8 @@ def run_python_verification(config, issue_number) -> Dict[str, Any]:
 
     # Check each generated file
     files_to_check = [
-        "spi_master_mode" + str(config.mode) + "_" + str(config.clock_frequency) + "MHz_" + str(config.data_width) + "bit.v",
-        "spi_master_tb_mode" + str(config.mode) + "_" + str(config.clock_frequency) + "MHz.v"
+        "spi_master_mode" + str(config.mode) + "_" + str(config.data_width) + "bit.v",
+        "spi_master_tb_mode" + str(config.mode) + ".v"
     ]
 
     for filename in files_to_check:
@@ -225,7 +228,7 @@ def main():
         if os.path.exists(config_file):
             with open(config_file, 'r') as f:
                 config_data = json.load(f)
-                print(f"✅ Configuration loaded: Mode {config_data.get('mode', '?')}, {config_data.get('clock_frequency', '?')}MHz")
+                print(f"✅ Configuration loaded: Mode {config_data.get('mode', '?')}, {config_data.get('data_width', '?')}-bit")
         else:
             print("⚠️  Configuration file not found - using basic verification")
             config_data = None

@@ -91,7 +91,6 @@ class GitHubIssueProcessor:
 
 **Configuration Detected:**
 - SPI Mode: {config.mode}
-- Clock Frequency: {config.clock_frequency} MHz
 - Data Width: {config.data_width} bits
 - Number of Slaves: {config.num_slaves}
 - Slave Select: {'Active High' if not config.slave_active_low else 'Active Low'}
@@ -141,7 +140,6 @@ class GitHubIssueProcessor:
             config_dict = {
                 'issue_number': self.issue_number,
                 'mode': config.mode,
-                'clock_frequency': config.clock_frequency,
                 'data_width': config.data_width,
                 'num_slaves': config.num_slaves,
                 'slave_active_low': config.slave_active_low,
@@ -181,7 +179,6 @@ class GitHubIssueProcessor:
 ### 📁 **Core Files**
 - **SPI Master Core**: `{os.path.basename(core_file)}`
   - Mode: {config.mode}
-  - Frequency: {config.clock_frequency} MHz
   - Data Width: {config.data_width} bits
   - Slaves: {config.num_slaves}
 
