@@ -4,7 +4,7 @@ description: Request a custom SPI (Serial Peripheral Interface) configuration
 title: "SPI Config: [Brief description of your configuration]"
 labels: ["spi-customization", "enhancement"]
 assignees: []
----
+body:
 
 ## SPI Configuration Request
 
