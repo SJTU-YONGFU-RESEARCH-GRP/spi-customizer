@@ -31,6 +31,16 @@ class SPIConfig:
     email: str = ""
     github_username: str = ""
 
+    # New enhanced features
+    spi_role: str = "master"  # master, slave, dual
+    default_data_enabled: bool = False
+    default_data_pattern: str = "a5a5"  # a5a5, ffff, 0000, 5555, custom
+    default_data_value: str = "A5A5"  # Custom hex value
+    clock_divider: int = 2  # System clock divider for SCLK
+    fifo_depth: int = 16  # FIFO buffer depth
+    max_slaves: int = 8  # Maximum slaves supported
+    custom_features: Dict[str, Any] = None  # For future extensions
+
 
 class SPIConfigParser:
     """Parses GitHub issue text to extract SPI configuration"""
@@ -48,6 +58,15 @@ class SPIConfigParser:
             'clock_jitter': r'Clock Jitter Testing[^:]*:?\s*(Yes|No)',
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
             'email': r'(?:## Email Address|Email)\s*:?\s*\n?\s*([^\n\r]+)',
+
+            # New enhanced features
+            'spi_role': r'SPI Role[^:]*:?\s*(Master|Slave|Dual)',
+            'default_data': r'Default Data[^:]*:?\s*(Enabled|Disabled)',
+            'data_pattern': r'Data Pattern[^:]*:?\s*(A5A5|FFFF|0000|5555|Custom)',
+            'custom_data': r'Custom Data Value[^:]*:?\s*([0-9A-Fa-f]+)',
+            'clock_divider': r'Clock Divider[^0-9]*(\d+)',
+            'fifo_depth': r'FIFO Depth[^0-9]*(\d+)',
+            'max_slaves': r'Maximum Slaves[^0-9]*(\d+)',
             'github_user': r'GitHub Username[^:]*:?\s*([^\n\r]+)'
         }
 
@@ -121,6 +140,21 @@ class SPIConfigParser:
         params['clock_jitter_test'] = 'Yes' in (self._extract_single(issue_body, self.patterns['clock_jitter']) or 'No')
         params['waveform_capture'] = 'Yes' in (self._extract_single(issue_body, self.patterns['waveform']) or 'Yes')
 
+        # Enhanced features
+        params['spi_role'] = self._extract_single(issue_body, self.patterns['spi_role']) or 'master'
+        params['default_data_enabled'] = 'Enabled' in (self._extract_single(issue_body, self.patterns['default_data']) or 'Disabled')
+        params['default_data_pattern'] = self._extract_single(issue_body, self.patterns['data_pattern']) or 'a5a5'
+        params['default_data_value'] = self._extract_single(issue_body, self.patterns['custom_data']) or 'A5A5'
+
+        # Advanced configuration
+        clock_div_value = self._extract_single(issue_body, self.patterns['clock_divider'])
+        fifo_depth_value = self._extract_single(issue_body, self.patterns['fifo_depth'])
+        max_slaves_value = self._extract_single(issue_body, self.patterns['max_slaves'])
+
+        params['clock_divider'] = int(clock_div_value) if clock_div_value else 2
+        params['fifo_depth'] = int(fifo_depth_value) if fifo_depth_value else 16
+        params['max_slaves'] = int(max_slaves_value) if max_slaves_value else 8
+
         # Validate configuration
         self._validate_config(params)
 
@@ -151,6 +185,34 @@ class SPIConfigParser:
         # Validate test duration
         if params['test_duration'].lower() not in ['brief', 'standard', 'comprehensive']:
             raise ValueError(f"Invalid test duration: {params['test_duration']}")
+
+        # Validate SPI role
+        if params['spi_role'].lower() not in ['master', 'slave', 'dual']:
+            raise ValueError(f"Invalid SPI role: {params['spi_role']}")
+
+        # Validate data pattern
+        valid_patterns = ['a5a5', 'ffff', '0000', '5555', 'custom']
+        if params['default_data_pattern'].lower() not in valid_patterns:
+            raise ValueError(f"Invalid data pattern: {params['default_data_pattern']}")
+
+        # Validate custom data value if pattern is custom
+        if params['default_data_pattern'].lower() == 'custom':
+            try:
+                int(params['default_data_value'], 16)
+            except ValueError:
+                raise ValueError(f"Invalid custom data value: {params['default_data_value']}")
+
+        # Validate clock divider
+        if params['clock_divider'] < 1 or params['clock_divider'] > 1024:
+            raise ValueError(f"Clock divider {params['clock_divider']} out of range (1-1024)")
+
+        # Validate FIFO depth
+        if params['fifo_depth'] < 2 or params['fifo_depth'] > 1024:
+            raise ValueError(f"FIFO depth {params['fifo_depth']} out of range (2-1024)")
+
+        # Validate max slaves
+        if params['max_slaves'] < 1 or params['max_slaves'] > 32:
+            raise ValueError(f"Max slaves {params['max_slaves']} out of range (1-32)")
 
         # Validate email (required for email functionality)
         if not params['email'] or '@' not in params['email']:

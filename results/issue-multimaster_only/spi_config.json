@@ -1,0 +1,14 @@
+{
+  "issue_number": "multimaster_only",
+  "mode": 3,
+  "data_width": 16,
+  "num_slaves": 2,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": false,
+  "fifo_buffers": false,
+  "dma_support": false,
+  "multi_master": true,
+  "test_duration": "standard",
+  "simulation_success": true
+}

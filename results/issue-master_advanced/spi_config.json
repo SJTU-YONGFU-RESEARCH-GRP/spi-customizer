@@ -1,0 +1,14 @@
+{
+  "issue_number": "master_advanced",
+  "mode": 1,
+  "data_width": 16,
+  "num_slaves": 4,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": true,
+  "fifo_buffers": true,
+  "dma_support": true,
+  "multi_master": false,
+  "test_duration": "standard",
+  "simulation_success": true
+}

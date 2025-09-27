@@ -1,0 +1,14 @@
+{
+  "issue_number": "all_features",
+  "mode": 0,
+  "data_width": 32,
+  "num_slaves": 8,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": true,
+  "fifo_buffers": true,
+  "dma_support": true,
+  "multi_master": true,
+  "test_duration": "standard",
+  "simulation_success": false
+}

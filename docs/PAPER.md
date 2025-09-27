@@ -55,7 +55,7 @@ We chose to develop SPI Customizer as an **open source project** for several str
 This work introduces several key innovations:
 
 - **GitHub-Native Hardware Design**: First system to leverage GitHub Issues and Actions for hardware generation
-- **Template-Driven RTL Generation**: Scalable Verilog code generation supporting 61,440+ theoretical configurations
+- **Template-Driven RTL Generation**: Scalable Verilog code generation with jinja2 supporting 61,440+ theoretical configurations
 - **Automated Verification Pipeline**: Complete end-to-end testing with waveform generation and analysis
 - **Professional Delivery System**: Email-based result delivery with comprehensive documentation
 - **Open Source Accessibility**: Democratizes access to professional-grade hardware design tools
@@ -486,11 +486,11 @@ This work was supported by the YONGFU Research Group at Shanghai Jiao Tong Unive
 
 ## References
 
-[1] IEEE Standard for Serial Peripheral Interface (SPI), IEEE Std 1149.1-2013
-[2] Icarus Verilog Documentation, http://iverilog.icarus.com/
-[3] Cocotb Documentation, https://cocotb.readthedocs.io/
-[4] GitHub Actions Documentation, https://docs.github.com/en/actions
-[5] Jinja2 Template Engine, https://jinja.palletsprojects.com/
+- [1] IEEE Standard for Serial Peripheral Interface (SPI), IEEE Std 1149.1-2013
+- [2] Icarus Verilog Documentation, http://iverilog.icarus.com/
+- [3] Cocotb Documentation, https://cocotb.readthedocs.io/
+- [4] GitHub Actions Documentation, https://docs.github.com/en/actions
+- [5] Jinja2 Template Engine, https://jinja.palletsprojects.com/
 
 ---
 

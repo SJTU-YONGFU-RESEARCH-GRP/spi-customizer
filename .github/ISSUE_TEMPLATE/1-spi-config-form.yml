@@ -83,6 +83,69 @@ body:
       options:
         - label: Clock Jitter Testing (tests timing margins)
         - label: Waveform Capture (generates detailed timing diagrams)
+  - type: dropdown
+    id: spi-role
+    attributes:
+      label: SPI Role
+      description: Select the SPI operating mode
+      options:
+        - Master (default)
+        - Slave
+        - Dual (both master and slave)
+    validations:
+      required: true
+  - type: checkboxes
+    id: default-data
+    attributes:
+      label: Default Data Storage
+      description: Enable default data patterns for testing
+      options:
+        - label: Enable Default Data Patterns
+  - type: dropdown
+    id: data-pattern
+    attributes:
+      label: Default Data Pattern
+      description: Select the default data pattern to use
+      options:
+        - A5A5 (alternating pattern)
+        - FFFF (all ones)
+        - 0000 (all zeros)
+        - 5555 (walking pattern)
+        - Custom (user specified)
+    validations:
+      required: false
+  - type: input
+    id: custom-data
+    attributes:
+      label: Custom Data Value (Hex)
+      description: Custom hexadecimal data value (e.g., A5A5)
+      placeholder: "A5A5"
+    validations:
+      required: false
+  - type: input
+    id: clock-divider
+    attributes:
+      label: Clock Divider
+      description: System clock divider for SPI clock (1-1024)
+      placeholder: "2"
+    validations:
+      required: false
+  - type: input
+    id: fifo-depth
+    attributes:
+      label: FIFO Depth
+      description: FIFO buffer depth (2-1024)
+      placeholder: "16"
+    validations:
+      required: false
+  - type: input
+    id: max-slaves
+    attributes:
+      label: Maximum Slaves
+      description: Maximum number of slaves supported (1-32)
+      placeholder: "8"
+    validations:
+      required: false
   - type: input
     id: email
     attributes:

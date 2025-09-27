@@ -294,7 +294,7 @@ class RTLSimulator:
                             cmd,
                             capture_output=True,
                             text=True,
-                            timeout=120,  # 120 second timeout for comprehensive tests
+                            timeout=900,  # 900 second timeout for comprehensive tests
                             env={**os.environ, 'VCD_FILE': vcd_file}
                         )
 
@@ -341,55 +341,40 @@ class RTLSimulator:
                         return self._generate_simulated_vcd(vcd_file, test_duration)
 
                     except subprocess.TimeoutExpired:
-                        print("⏰ RTL Simulation timed out (60 seconds)")
+                        print("⏰ RTL Simulation timed out (900 seconds)")
                         with open(log_file, 'a') as f:
-                            f.write("TIMEOUT: Simulation exceeded 60 seconds\n")
-                        return self._generate_simulated_vcd(vcd_file, test_duration)
+                            f.write("TIMEOUT: Simulation exceeded 900 seconds\n")
+                        print("❌ Real simulation failed - no fallback to fake data")
+                        return False
                     except FileNotFoundError:
                         print("❌ vvp execution failed")
-                        return self._generate_simulated_vcd(vcd_file, test_duration)
+                        print("❌ Real simulation failed - no fallback to fake data")
+                        return False
                 else:
                     print("❌ vvp not found - cannot run simulation")
-                    # Use issue directory if available, otherwise root
-                    if issue_dir:
-                        vcd_file = str(issue_dir / 'spi_waveform.vcd')
-                    else:
-                        vcd_file = str(self.results_dir / 'spi_waveform.vcd')
-                    return self._generate_simulated_vcd(vcd_file, test_duration)
+                    print("❌ Real simulation failed - no fallback to fake data")
+                    return False
         else:
-            # No compiled simulation available - generate realistic VCD data
-            print("🔧 No compiled simulation found - generating realistic VCD data...")
+            # No compiled simulation available - fail the test
+            print("❌ No compiled simulation found - real simulation required")
+            print("❌ Real simulation failed - no fallback to fake data")
 
             # Ensure issue directory exists
             if not issue_dir:
                 issue_dir = self.results_dir
 
-            vcd_file = str(issue_dir / 'spi_waveform.vcd')
-            gtkw_file = str(issue_dir / 'spi_waveform.gtkw')
             log_file = str(issue_dir / 'simulation.log')
 
-            success = self._generate_simulated_vcd(vcd_file, test_duration)
+            # Log the failure
+            with open(log_file, 'w') as f:
+                f.write("RTL Simulation failed\n")
+                f.write("No compiled simulation available\n")
+                f.write("Real simulation required but not available\n")
+                f.write("Exit code: 1\n")
 
-            # Generate GTKWave save file for simulated data
-            if success:
-                with open(gtkw_file, 'w') as f:
-                    f.write("[*\n")
-                    f.write("[*]\n")
-                    f.write("[sst]\n")
-                    f.write(f"{issue_dir / 'spi_waveform.vcd'}\n")
-                    f.write("[timeline] 1\n")
-                    f.write("[analog] 0\n")
-                    f.write("[waves] 0\n")
+            return False
 
-                with open(log_file, 'w') as f:
-                    f.write("Icarus Verilog simulation log\n")
-                    f.write("=" * 50 + "\n")
-                    f.write("Simulated VCD generation (iverilog not available)\n")
-                    f.write(f"VCD file: {vcd_file}\n")
-                    f.write("Simulation: SUCCESS (simulated)\n")
-                    f.write("Exit code: 0\n")
-
-            return success
+            return False
 
     def _generate_simulated_vcd(self, vcd_file: str, test_duration: str) -> bool:
         """

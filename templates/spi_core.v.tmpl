@@ -3,7 +3,12 @@ module spi_master #(
     parameter DATA_WIDTH = {{ DATA_WIDTH }},       // Data width in bits
     parameter NUM_SLAVES = {{ NUM_SLAVES }},        // Number of slave devices
     parameter SLAVE_ACTIVE_LOW = {{ SLAVE_ACTIVE_LOW | int }},  // Slave select active level
-    parameter MSB_FIRST = {{ MSB_FIRST | int }}          // Data transmission order
+    parameter MSB_FIRST = {{ MSB_FIRST | int }},          // Data transmission order
+    parameter FIFO_DEPTH = {{ FIFO_DEPTH }},        // FIFO buffer depth
+    parameter CLOCK_DIVIDER = {{ CLOCK_DIVIDER }},  // System clock divider
+    parameter DEFAULT_DATA_ENABLED = {{ DEFAULT_DATA_ENABLED | int }},
+    parameter DEFAULT_DATA_PATTERN = "{{ DEFAULT_DATA_PATTERN }}",
+    parameter DEFAULT_DATA_VALUE = 16'h{{ DEFAULT_DATA_VALUE }}
 )(
     input  wire                  clk,        // System clock
     input  wire                  rst_n,      // Active low reset
@@ -26,7 +31,7 @@ module spi_master #(
 );
 
     // Local parameters
-    localparam SCLK_HALF_PERIOD = 250; // Fixed half SCLK period (assumes 50MHz system clock, 100kHz SPI clock)
+    localparam SCLK_HALF_PERIOD = CLOCK_DIVIDER; // Configurable SCLK period based on system clock
 
     // State machine states
     localparam IDLE = 3'd0;
@@ -51,6 +56,22 @@ module spi_master #(
 
     // Slave select active level
     wire SS_ACTIVE = SLAVE_ACTIVE_LOW ? 1'b0 : 1'b1;
+
+    // Default data generation
+    reg [DATA_WIDTH-1:0] default_data;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            default_data <= DEFAULT_DATA_VALUE;
+        end else if (DEFAULT_DATA_ENABLED) begin
+            case (DEFAULT_DATA_PATTERN)
+                "a5a5": default_data <= 16'hA5A5;
+                "ffff": default_data <= 16'hFFFF;
+                "0000": default_data <= 16'h0000;
+                "5555": default_data <= 16'h5555;
+                default: default_data <= DEFAULT_DATA_VALUE;
+            endcase
+        end
+    end
 
     // State machine
     always @(posedge clk or negedge rst_n) begin
@@ -164,7 +185,7 @@ module spi_master #(
                 busy = 1;
                 ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Activate slave select
                 bit_counter = 0;
-                tx_shift_reg = tx_data;
+                tx_shift_reg = DEFAULT_DATA_ENABLED ? default_data : tx_data;
                 rx_shift_reg = 0;
                 next_state = TRANSMIT;
             end
