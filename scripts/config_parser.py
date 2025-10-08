@@ -53,7 +53,7 @@ class SPIConfigParser:
             'clock_freq': r'(?:Clock Frequency|Frequency)[^0-9]*(\d+(?:\.\d+)?)',
             'slave_active': r'\[[^\]]*\]\s*Active (Low|High)',
             'data_order': r'\[[^\]]*\]\s*(MSB|LSB) First',
-            'features': r'Special Features[^:]*:([\s\S]*?)(?=###|\n\n|\Z)',
+            'features': r'Special Features([\s\S]*?)(?=###|\n\n|\Z)',
             'test_duration': r'(?:Test Duration|Testing Requirements)[^:]*:?\s*(Brief|Standard|Comprehensive)',
             'clock_jitter': r'Clock Jitter Testing[^:]*:?\s*(Yes|No)',
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
