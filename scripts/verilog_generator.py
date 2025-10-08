@@ -97,7 +97,7 @@ class VerilogGenerator:
                 filename = f"{config.issue_number}.v"
             else:
                 # Use detailed naming for numeric issue numbers
-                filename = f"spi_master_mode{config.mode}_{config.data_width}bit.v"
+                filename = f"spi_{config.spi_role.lower()}_mode{config.mode}_{config.data_width}bit.v"
 
         verilog_code = self.generate_spi_core(config)
 
