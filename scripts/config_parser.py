@@ -143,17 +143,28 @@ class SPIConfigParser:
         params['email'] = email_value.strip()
         params['github_username'] = self._extract_single(issue_body, self.patterns['github_user']) or ''
 
-        # Feature flags
-        features_text = self._extract_single(issue_body, self.patterns['features']) or ''
-        params['interrupts'] = 'Interrupt' in features_text
-        params['fifo_buffers'] = 'FIFO' in features_text
-        params['dma_support'] = 'DMA' in features_text
-        params['multi_master'] = 'Multi-master' in features_text
+        # Feature flags - check for checked checkboxes
+        interrupt_matches = re.findall(r'(\[[^\]]*\]\s*Interrupt Support)', issue_body, re.IGNORECASE | re.MULTILINE)
+        params['interrupts'] = len([m for m in interrupt_matches if '[x]' in m or '[X]' in m]) > 0
+
+        fifo_matches = re.findall(r'(\[[^\]]*\]\s*FIFO Buffers)', issue_body, re.IGNORECASE | re.MULTILINE)
+        params['fifo_buffers'] = len([m for m in fifo_matches if '[x]' in m or '[X]' in m]) > 0
+
+        dma_matches = re.findall(r'(\[[^\]]*\]\s*DMA Support)', issue_body, re.IGNORECASE | re.MULTILINE)
+        params['dma_support'] = len([m for m in dma_matches if '[x]' in m or '[X]' in m]) > 0
+
+        multi_master_matches = re.findall(r'(\[[^\]]*\]\s*Multi-master Support)', issue_body, re.IGNORECASE | re.MULTILINE)
+        params['multi_master'] = len([m for m in multi_master_matches if '[x]' in m or '[X]' in m]) > 0
 
         # Test configuration
         params['test_duration'] = self._extract_single(issue_body, self.patterns['test_duration']) or 'standard'
-        params['clock_jitter_test'] = 'Yes' in (self._extract_single(issue_body, self.patterns['clock_jitter']) or 'No')
-        params['waveform_capture'] = 'Yes' in (self._extract_single(issue_body, self.patterns['waveform']) or 'Yes')
+
+        # Parse testing options - find checked checkboxes
+        clock_jitter_matches = re.findall(r'(\[[^\]]*\]\s*Clock Jitter Testing)', issue_body, re.IGNORECASE | re.MULTILINE)
+        params['clock_jitter_test'] = len([m for m in clock_jitter_matches if '[x]' in m or '[X]' in m]) > 0
+
+        waveform_matches = re.findall(r'(\[[^\]]*\]\s*Waveform Capture)', issue_body, re.IGNORECASE | re.MULTILINE)
+        params['waveform_capture'] = len([m for m in waveform_matches if '[x]' in m or '[X]' in m]) > 0
 
         # Enhanced features
         params['default_data_enabled'] = 'Enabled' in (self._extract_single(issue_body, self.patterns['default_data']) or 'Disabled')
