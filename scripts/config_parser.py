@@ -54,7 +54,7 @@ class SPIConfigParser:
             'slave_active': r'\[[^\]]*\]\s*Active (Low|High)',
             'data_order': r'\[[^\]]*\]\s*(MSB|LSB) First',
             'features': r'Special Features[^:]*:([\s\S]*?)(?=###|\n\n|\Z)',
-            'test_duration': r'Test Duration[^:]*:?\s*(Brief|Standard|Comprehensive)',
+            'test_duration': r'(?:Test Duration|Testing Requirements)[^:]*:?\s*(Brief|Standard|Comprehensive)',
             'clock_jitter': r'Clock Jitter Testing[^:]*:?\s*(Yes|No)',
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
             'email': r'(?:## Email Address|Email)\s*:?\s*\n?\s*([^\n\r]+)',
@@ -64,9 +64,9 @@ class SPIConfigParser:
             'default_data': r'Default Data[^:]*:?\s*(Enabled|Disabled)',
             'data_pattern': r'Data Pattern[^:]*:?\s*(A5A5|FFFF|0000|5555|Custom)',
             'custom_data': r'Custom Data Value[^:]*:?\s*([0-9A-Fa-f]+)',
-            'clock_divider': r'Clock Divider[^0-9]*(\d+)',
-            'fifo_depth': r'FIFO Depth[^0-9]*(\d+)',
-            'max_slaves': r'Maximum Slaves[^0-9]*(\d+)',
+            'clock_divider': r'\*\*Clock Divider\*\*:\s*(\d+)',
+            'fifo_depth': r'\*\*FIFO Depth\*\*:\s*(\d+)',
+            'max_slaves': r'\*\*Maximum Slaves\*\*:\s*(\d+)',
             'github_user': r'GitHub Username[^:]*:?\s*([^\n\r]+)'
         }
 
@@ -124,6 +124,23 @@ class SPIConfigParser:
         data_order_matches = re.findall(r'(\[[^\]]*\]\s*(MSB|LSB) First)', issue_body, re.IGNORECASE | re.MULTILINE)
         data_order_checked = [full_line for full_line, value in data_order_matches if '[x]' in full_line or '[X]' in full_line]
         params['msb_first'] = len(data_order_checked) == 0 or 'MSB' in data_order_checked[0]  # Default to MSB if none checked or MSB is checked
+
+        # Parse SPI role - find the line with checked checkbox
+        spi_role_matches = re.findall(r'(\[[^\]]*\]\s*(Master|Slave|Dual))', issue_body, re.IGNORECASE | re.MULTILINE)
+        spi_role_checked = [value for full_line, value in spi_role_matches if '[x]' in full_line or '[X]' in full_line]
+        params['spi_role'] = spi_role_checked[0] if spi_role_checked else 'master'
+
+        # Normalize SPI role to canonical form
+        role_lower = params['spi_role'].lower()
+        if 'master' in role_lower:
+            params['spi_role'] = 'master'
+        elif 'slave' in role_lower:
+            params['spi_role'] = 'slave'
+        elif 'dual' in role_lower:
+            params['spi_role'] = 'dual'
+        else:
+            params['spi_role'] = 'master'
+
         email_value = self._extract_single(issue_body, self.patterns['email']) or ''
         params['email'] = email_value.strip()
         params['github_username'] = self._extract_single(issue_body, self.patterns['github_user']) or ''
@@ -141,7 +158,6 @@ class SPIConfigParser:
         params['waveform_capture'] = 'Yes' in (self._extract_single(issue_body, self.patterns['waveform']) or 'Yes')
 
         # Enhanced features
-        params['spi_role'] = self._extract_single(issue_body, self.patterns['spi_role']) or 'master'
         params['default_data_enabled'] = 'Enabled' in (self._extract_single(issue_body, self.patterns['default_data']) or 'Disabled')
         params['default_data_pattern'] = self._extract_single(issue_body, self.patterns['data_pattern']) or 'a5a5'
         params['default_data_value'] = self._extract_single(issue_body, self.patterns['custom_data']) or 'A5A5'
@@ -151,9 +167,47 @@ class SPIConfigParser:
         fifo_depth_value = self._extract_single(issue_body, self.patterns['fifo_depth'])
         max_slaves_value = self._extract_single(issue_body, self.patterns['max_slaves'])
 
-        params['clock_divider'] = int(clock_div_value) if clock_div_value else 2
-        params['fifo_depth'] = int(fifo_depth_value) if fifo_depth_value else 16
-        params['max_slaves'] = int(max_slaves_value) if max_slaves_value else 8
+        # Clock divider with validation
+        clock_div_value = self._extract_single(issue_body, self.patterns['clock_divider'])
+        clock_divider = 2  # Default value
+        if clock_div_value:
+            try:
+                value = int(clock_div_value)
+                if 1 <= value <= 1024:
+                    clock_divider = value
+                else:
+                    print(f"⚠️ Clock divider {value} out of range (1-1024), using default 2")
+            except ValueError:
+                print(f"⚠️ Invalid clock divider value: '{clock_div_value}', using default 2")
+        params['clock_divider'] = clock_divider
+
+        # FIFO depth with validation
+        fifo_depth_value = self._extract_single(issue_body, self.patterns['fifo_depth'])
+        fifo_depth = 16  # Default value
+        if fifo_depth_value:
+            try:
+                value = int(fifo_depth_value)
+                if 2 <= value <= 1024:
+                    fifo_depth = value
+                else:
+                    print(f"⚠️ FIFO depth {value} out of range (2-1024), using default 16")
+            except ValueError:
+                print(f"⚠️ Invalid FIFO depth value: '{fifo_depth_value}', using default 16")
+        params['fifo_depth'] = fifo_depth
+
+        # Maximum slaves with validation
+        max_slaves_value = self._extract_single(issue_body, self.patterns['max_slaves'])
+        max_slaves = 8  # Default value
+        if max_slaves_value:
+            try:
+                value = int(max_slaves_value)
+                if 1 <= value <= 32:
+                    max_slaves = value
+                else:
+                    print(f"⚠️ Maximum slaves {value} out of range (1-32), using default 8")
+            except ValueError:
+                print(f"⚠️ Invalid maximum slaves value: '{max_slaves_value}', using default 8")
+        params['max_slaves'] = max_slaves
 
         # Validate configuration
         self._validate_config(params)
