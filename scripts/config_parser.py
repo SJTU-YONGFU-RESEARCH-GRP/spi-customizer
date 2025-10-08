@@ -60,7 +60,7 @@ class SPIConfigParser:
             'email': r'(?:## Email Address|Email)\s*:?\s*\n?\s*([^\n\r]+)',
 
             # New enhanced features
-            'spi_role': r'SPI Role[^:]*:?\s*(Master|Slave|Dual)',
+            'spi_role': r'SPI Role\s*(Master|Slave|Dual)',
             'default_data': r'Default Data[^:]*:?\s*(Enabled|Disabled)',
             'data_pattern': r'Data Pattern[^:]*:?\s*(A5A5|FFFF|0000|5555|Custom)',
             'custom_data': r'Custom Data Value[^:]*:?\s*([0-9A-Fa-f]+)',
@@ -125,10 +125,8 @@ class SPIConfigParser:
         data_order_checked = [full_line for full_line, value in data_order_matches if '[x]' in full_line or '[X]' in full_line]
         params['msb_first'] = len(data_order_checked) == 0 or 'MSB' in data_order_checked[0]  # Default to MSB if none checked or MSB is checked
 
-        # Parse SPI role - find the line with checked checkbox
-        spi_role_matches = re.findall(r'(\[[^\]]*\]\s*(Master|Slave|Dual))', issue_body, re.IGNORECASE | re.MULTILINE)
-        spi_role_checked = [value for full_line, value in spi_role_matches if '[x]' in full_line or '[X]' in full_line]
-        params['spi_role'] = spi_role_checked[0] if spi_role_checked else 'master'
+        # Parse SPI role - for dropdown, extract the selected value
+        params['spi_role'] = self._extract_single(issue_body, self.patterns['spi_role']) or 'master'
 
         # Normalize SPI role to canonical form
         role_lower = params['spi_role'].lower()
