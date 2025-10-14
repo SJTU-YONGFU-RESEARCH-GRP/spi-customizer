@@ -259,7 +259,9 @@ class GitHubIssueProcessor:
                 'multi_master': config.multi_master,
                 'test_duration': config.test_duration,
                 'simulation_success': simulation_success,
-                'waveform_success': waveform_success
+                'waveform_success': waveform_success,
+                'email': config.email,
+                'github_username': config.github_username
             }
 
             issue_dir = f'results/issue-{self.issue_number}'
