@@ -181,8 +181,8 @@ def send_test_email():
         'slave_active_low': True,
         'msb_first': True,
         'interrupts': True,
-        'fifo_buffers': False,
-        'dma_support': True,
+        'fifo_buffers': True,
+        'dma_support': False,
         'multi_master': False,
         'test_duration': 'standard',
         'simulation_success': True,
@@ -191,9 +191,9 @@ def send_test_email():
 
     # Test with sample files
     test_attachments = [
-        'results/spi_config.json',
-        'results/test_core.v',
-        'results/test_tb.v'
+        'results/issue-123/spi_config.json',
+        'results/issue-123/spi_master_mode0_16bit.v',
+        'results/issue-123/spi_master_tb.v'
     ]
 
     return sender.send_results_email(test_config, test_attachments)
@@ -231,52 +231,40 @@ def send_workflow_email():
 
     print(f"📧 Processing email for issue #{issue_number_int}")
 
-    # Parse the issue to get configuration
+    # Read configuration from the already-parsed config file
     try:
-        # Get issue content from GitHub API
-        import requests
-
-        token = os.environ.get('GITHUB_TOKEN')
-        repo_owner = "SJTU-YONGFU-RESEARCH-GRP"
-        repo_name = "spi-customizer"
-
-        if not token:
-            print("⚠️  No GitHub token found")
+        issue_dir = f'results/issue-{issue_number_int}'
+        config_file = os.path.join(issue_dir, 'spi_config.json')
+        
+        if not os.path.exists(config_file):
+            print(f"⚠️  Config file not found: {config_file}")
             return False
-
-        headers = {
-            'Authorization': f'token {token}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-
-        url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/issues/{issue_number_int}"
-        response = requests.get(url, headers=headers)
-
-        if response.status_code != 200:
-            print(f"⚠️  Failed to fetch issue #{issue_number_int}: {response.status_code}")
-            return False
-
-        issue_data = response.json()
-        issue_body = issue_data.get('body', '')
-
-        # Parse configuration from issue
-        parser = SPIConfigParser()
-        config = parser.parse_issue(issue_body, issue_number_int)
+            
+        with open(config_file, 'r') as f:
+            config_dict = json.load(f)
+            
+        print(f"✅ Loaded configuration from {config_file}")
 
         # Look for result files
-        issue_dir = f'results/issue-{issue_number_int}'
         attachments = []
 
         # Add generated files if they exist
-        for filename in ['spi_config.json', 'spi_master.v', 'spi_master_tb.v']:
+        potential_files = [
+            'spi_config.json',
+            f'spi_master_mode{config_dict.get("mode", "0")}_{config_dict.get("data_width", "8")}bit.v',
+            'spi_master_tb.v',
+            'spi_waveform.vcd'
+        ]
+        
+        for filename in potential_files:
             filepath = os.path.join(issue_dir, filename)
             if os.path.exists(filepath):
                 attachments.append(filepath)
 
-        success = sender.send_results_email(config.__dict__, attachments)
+        success = sender.send_results_email(config_dict, attachments)
 
         if success:
-            print(f"✅ Email sent successfully to {config.email}")
+            print(f"✅ Email sent successfully to {config_dict.get('email', 'unknown')}")
         else:
             print("❌ Email failed to send")
 
@@ -284,6 +272,8 @@ def send_workflow_email():
 
     except Exception as e:
         print(f"⚠️  Error processing workflow email: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
