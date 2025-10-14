@@ -1,0 +1,4 @@
+Time (ns),spi_dual_tb.dut.ss_in
+0,1
+1000000,0
+1500000,1

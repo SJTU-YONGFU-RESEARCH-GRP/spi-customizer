@@ -1,0 +1,490 @@
+$date
+	Tue Oct 14 12:13:28 2025
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1ps
+$end
+$scope module spi_dual_tb $end
+$var wire 1 ! irq $end
+$var wire 1 " tx_ready $end
+$var wire 3 # ss_n [2:0] $end
+$var wire 1 $ sclk $end
+$var wire 1 % rx_valid $end
+$var wire 8 & rx_data [7:0] $end
+$var wire 1 ' mosi $end
+$var wire 1 ( miso_out $end
+$var wire 1 ) busy $end
+$var parameter 32 * CLOCK_DIVIDER $end
+$var parameter 32 + DATA_WIDTH $end
+$var parameter 32 , DEFAULT_DATA_ENABLED $end
+$var parameter 48 - DEFAULT_DATA_PATTERN $end
+$var parameter 16 . DEFAULT_DATA_VALUE $end
+$var parameter 32 / FIFO_DEPTH $end
+$var parameter 32 0 MAX_SLAVES $end
+$var parameter 32 1 MODE $end
+$var parameter 32 2 MSB_FIRST $end
+$var parameter 32 3 NUM_SLAVES $end
+$var parameter 32 4 SLAVE_ACTIVE_LOW $end
+$var reg 1 5 clk $end
+$var reg 1 6 master_mode $end
+$var reg 1 7 miso $end
+$var reg 1 8 mosi_in $end
+$var reg 1 9 rst_n $end
+$var reg 1 : sclk_in $end
+$var reg 1 ; ss_in $end
+$var reg 8 < tx_data [7:0] $end
+$scope module dut $end
+$var wire 1 5 clk $end
+$var wire 1 ! irq $end
+$var wire 1 = irq_clear $end
+$var wire 1 6 master_mode $end
+$var wire 1 7 miso $end
+$var wire 1 8 mosi_in $end
+$var wire 1 9 rst_n $end
+$var wire 1 : sclk_in $end
+$var wire 1 ; ss_in $end
+$var wire 8 > tx_data [7:0] $end
+$var wire 1 " tx_valid $end
+$var wire 1 " tx_ready $end
+$var wire 3 ? ss_n [2:0] $end
+$var wire 1 $ sclk $end
+$var wire 1 % rx_valid $end
+$var wire 8 @ rx_data [7:0] $end
+$var wire 1 ' mosi $end
+$var wire 1 ( miso_out $end
+$var wire 1 ) busy $end
+$var parameter 32 A CLOCK_DIVIDER $end
+$var parameter 32 B DATA_WIDTH $end
+$var parameter 32 C DEFAULT_DATA_ENABLED $end
+$var parameter 48 D DEFAULT_DATA_PATTERN $end
+$var parameter 16 E DEFAULT_DATA_VALUE $end
+$var parameter 32 F FIFO_DEPTH $end
+$var parameter 32 G MAX_SLAVES $end
+$var parameter 32 H MODE $end
+$var parameter 32 I MSB_FIRST $end
+$var parameter 32 J NUM_SLAVES $end
+$var parameter 32 K SLAVE_ACTIVE_LOW $end
+$var reg 8 L default_data [7:0] $end
+$var reg 1 M master_busy $end
+$var reg 8 N master_rx_data_buffer [7:0] $end
+$var reg 1 O master_rx_valid_buffer $end
+$var reg 8 P master_sclk_counter [7:0] $end
+$var reg 1 Q master_sclk_en $end
+$var reg 1 R master_start_rx $end
+$var reg 1 S master_start_tx $end
+$var reg 1 T master_tx_ready_buffer $end
+$var reg 1 U slave_busy_buffer $end
+$var reg 8 V slave_rx_data_buffer [7:0] $end
+$var reg 1 W slave_rx_valid_buffer $end
+$var reg 1 X slave_tx_ready_buffer $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+$comment Show the parameter values. $end
+$dumpall
+b1 K
+b11 J
+b1 I
+b10 H
+b1000 G
+b10000 F
+b1110 E
+b10000110111010101110011011101000110111101101101 D
+b0 C
+b1000 B
+b10 A
+b1 4
+b11 3
+b1 2
+b10 1
+b1000 0
+b10000 /
+b1110 .
+b10000110111010101110011011101000110111101101101 -
+b0 ,
+b1000 +
+b10 *
+$end
+#0
+$dumpvars
+0X
+0W
+bx V
+0U
+xT
+0S
+0R
+0Q
+bx P
+xO
+bx N
+0M
+b1110 L
+bx @
+b111 ?
+b0 >
+0=
+b0 <
+1;
+0:
+09
+08
+07
+16
+05
+0)
+0(
+0'
+bx &
+x%
+0$
+b111 #
+x"
+0!
+$end
+#10000
+15
+#20000
+05
+#30000
+15
+#40000
+05
+#50000
+15
+#60000
+05
+#70000
+15
+#80000
+05
+#90000
+15
+#100000
+05
+19
+#110000
+15
+#120000
+05
+#130000
+15
+#140000
+05
+#150000
+15
+#160000
+05
+#170000
+15
+#180000
+05
+#190000
+15
+#200000
+05
+#210000
+15
+#220000
+05
+#230000
+15
+#240000
+05
+#250000
+15
+#260000
+05
+#270000
+15
+#280000
+05
+#290000
+15
+#300000
+05
+b10100101 <
+b10100101 >
+#310000
+15
+#320000
+05
+#330000
+15
+#340000
+05
+#350000
+15
+#360000
+05
+#370000
+15
+#380000
+05
+#390000
+15
+#400000
+05
+#410000
+15
+#420000
+05
+#430000
+15
+#440000
+05
+#450000
+15
+#460000
+05
+#470000
+15
+#480000
+05
+#490000
+15
+#500000
+05
+#510000
+15
+#520000
+05
+#530000
+15
+#540000
+05
+#550000
+15
+#560000
+05
+#570000
+15
+#580000
+05
+#590000
+15
+#600000
+05
+#610000
+15
+#620000
+05
+#630000
+15
+#640000
+05
+#650000
+15
+#660000
+05
+#670000
+15
+#680000
+05
+#690000
+15
+#700000
+05
+#710000
+15
+#720000
+05
+#730000
+15
+#740000
+05
+#750000
+15
+#760000
+05
+#770000
+15
+#780000
+05
+#790000
+15
+#800000
+05
+#810000
+15
+#820000
+05
+#830000
+15
+#840000
+05
+#850000
+15
+#860000
+05
+#870000
+15
+#880000
+05
+#890000
+15
+#900000
+0%
+0"
+05
+06
+#910000
+15
+#920000
+05
+#930000
+15
+#940000
+05
+#950000
+15
+#960000
+05
+#970000
+15
+#980000
+05
+#990000
+15
+#1000000
+05
+0;
+#1010000
+1%
+b1110 &
+b1110 @
+1"
+1)
+1W
+b1110 V
+1X
+1U
+15
+#1020000
+05
+#1025000
+1:
+#1030000
+15
+#1040000
+05
+#1050000
+15
+0:
+#1060000
+05
+#1070000
+15
+#1075000
+18
+1:
+#1080000
+05
+#1090000
+15
+#1100000
+05
+0:
+#1110000
+15
+#1120000
+05
+#1125000
+1:
+#1130000
+15
+#1140000
+05
+#1150000
+15
+0:
+#1160000
+05
+#1170000
+15
+#1175000
+1:
+#1180000
+05
+#1190000
+15
+#1200000
+05
+0:
+#1210000
+15
+#1220000
+05
+#1225000
+1:
+#1230000
+15
+#1240000
+05
+#1250000
+15
+0:
+#1260000
+05
+#1270000
+15
+#1275000
+1:
+#1280000
+05
+#1290000
+15
+#1300000
+05
+0:
+#1310000
+15
+#1320000
+05
+#1325000
+1:
+#1330000
+15
+#1340000
+05
+#1350000
+15
+0:
+#1360000
+05
+#1370000
+15
+#1375000
+08
+1:
+#1380000
+05
+#1390000
+15
+#1400000
+05
+0:
+#1410000
+15
+#1420000
+05
+#1430000
+15
+#1440000
+05
+#1450000
+15
+#1460000
+05
+#1470000
+15
+#1480000
+05
+#1490000
+15
+#1500000
+05
+1;
