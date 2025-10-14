@@ -1,0 +1,15 @@
+Icarus Verilog compilation log
+==================================================
+Command: iverilog -o results/issue-35/spi_simulation results/issue-35/spi_master_mode0_8bit.v results/issue-35/spi_master_tb.v
+Working directory: /home/runner/work/spi-customizer/spi-customizer
+Return code: 0
+STDERR:
+results/issue-35/spi_master_mode0_8bit.v:67: warning: Extra digits given for sized hex constant.
+results/issue-35/spi_master_mode0_8bit.v:67: warning: Numeric constant truncated to 8 bits.
+results/issue-35/spi_master_mode0_8bit.v:68: warning: Extra digits given for sized hex constant.
+results/issue-35/spi_master_mode0_8bit.v:68: warning: Numeric constant truncated to 8 bits.
+results/issue-35/spi_master_mode0_8bit.v:69: warning: Extra digits given for sized hex constant.
+results/issue-35/spi_master_mode0_8bit.v:70: warning: Extra digits given for sized hex constant.
+results/issue-35/spi_master_mode0_8bit.v:70: warning: Numeric constant truncated to 8 bits.
+
+Compilation: SUCCESS
