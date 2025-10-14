@@ -235,7 +235,7 @@ def send_workflow_email():
     # Read configuration from the already-parsed config file
     try:
         issue_dir = f'results/issue-{issue_number_int}'
-        config_file = os.path.join(issue_dir, 'spi_config.json')
+        config_file = os.path.join(issue_dir, 'code', 'spi_config.json')
         
         if not os.path.exists(config_file):
             print(f"⚠️  Config file not found: {config_file}")
