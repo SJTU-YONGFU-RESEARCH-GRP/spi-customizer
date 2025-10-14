@@ -4,6 +4,8 @@ on:
   issues:
     types: [opened, edited]
   workflow_dispatch:
+  push:
+    branches: [ test-plots ]
 
 jobs:
   spi-customization:
@@ -12,6 +14,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
 
     - name: Install Icarus Verilog and Cocotb
       run: |
@@ -83,7 +87,7 @@ jobs:
             Triggered by: ${{ github.event.issue.title }}"
 
             # Push changes
-            git push origin main || git push origin master || echo "⚠️  Push failed - may not have permissions"
+            git push origin ${{ github.ref_name }} || echo "⚠️  Push failed - may not have permissions"
             echo "✅ Results committed and pushed successfully!"
           else
             echo "ℹ️  No changes to commit"
