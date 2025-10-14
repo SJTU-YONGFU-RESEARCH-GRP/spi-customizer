@@ -91,7 +91,13 @@ jobs:
           # Also try adding plots directory if it exists
           if [ -d "plots" ]; then
             echo "📝 Adding plots/"
-            git add plots/** || git add -A plots/ || echo "⚠️  No plot files to add"
+            # Simple approach: add all files in plots directory individually
+            for plot_file in plots/*; do
+              if [ -f "$plot_file" ]; then
+                echo "Adding plot: $plot_file"
+                git add "$plot_file" || echo "Failed to add plot: $plot_file"
+              fi
+            done
           fi
 
           # Check what files are staged
@@ -106,6 +112,13 @@ jobs:
           # List all staged files with details
           echo "📋 Detailed staged files:"
           git diff --cached --name-status
+
+          # Summary of what was staged
+          echo "📊 Summary:"
+          echo "  - Total files staged: $staged_count"
+          if [ "$staged_count" -gt 0 ]; then
+            echo "  - Files include: $(git diff --cached --name-only | tr '\n' ' ' | head -c 100)..."
+          fi
 
           # Check if there are any changes to commit
           if ! git diff --staged --quiet; then
