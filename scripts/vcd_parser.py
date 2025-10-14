@@ -537,7 +537,7 @@ def main():
         return 1
 
     issue_number = os.sys.argv[1]
-    vcd_file = f"results/issue-{issue_number}/spi_waveform.vcd"
+    vcd_file = f"results/issue-{issue_number}/data/spi_waveform.vcd"
 
     if not os.path.exists(vcd_file):
         print(f"❌ VCD file not found: {vcd_file}")
@@ -619,6 +619,7 @@ class SignalPlotGenerator:
     def __init__(self, output_dir: str):
         self.output_dir = Path(output_dir)
         self.graphs_dir = self.output_dir / 'graphs'
+        self.data_dir = self.output_dir / 'data'
         self.graphs_dir.mkdir(exist_ok=True)
 
     def generate_all_plots(self) -> List[str]:
@@ -753,7 +754,7 @@ class SignalPlotGenerator:
     def _generate_signal_plot(self, signal_names: List[str], title: str, filename: str) -> Optional[str]:
         """Generate a plot with subplots for each signal with intelligent data handling"""
         try:
-            timing_csv = self.output_dir / 'spi_timing_data.csv'
+            timing_csv = self.data_dir / 'spi_timing_data.csv'
             if not timing_csv.exists():
                 print(f"⚠️  Timing CSV not found for {title}")
                 return None
@@ -823,7 +824,7 @@ class SignalPlotGenerator:
 
     def _preprocess_signal_data(self, signal_names: List[str]) -> Tuple[List[float], Dict[str, List[float]]]:
         """Preprocess signal data with intelligent sampling and activity detection"""
-        timing_csv = self.output_dir / 'data' / 'spi_timing_data.csv'
+        timing_csv = self.data_dir / 'spi_timing_data.csv'
 
         # First pass: analyze data characteristics
         total_samples = sum(1 for _ in open(timing_csv, 'r')) - 1  # Exclude header
