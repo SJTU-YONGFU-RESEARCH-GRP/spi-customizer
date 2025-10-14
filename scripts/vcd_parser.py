@@ -165,22 +165,22 @@ class CsvGenerator:
     SIGNAL_NAME_MAP = {
         'spi_core_tb.dut.sclk': 'SCLK',
         'spi_master_tb.sclk': 'SCLK',
-        '!': 'SCLK',  # VCD identifier for SCLK
+        '"': 'SCLK',  # VCD identifier for SCLK
         'spi_core_tb.dut.mosi': 'MOSI',
         'spi_master_tb.mosi': 'MOSI',
-        '"': 'MOSI',  # VCD identifier for MOSI
+        '$': 'MOSI',  # VCD identifier for MOSI
         'spi_core_tb.dut.miso': 'MISO',
         'spi_master_tb.miso': 'MISO',
-        '#': 'MISO',  # VCD identifier for MISO
+        '#': 'MISO',  # VCD identifier for MISO (actually rx_data, but used as MISO)
         'spi_core_tb.dut.ss_n': 'SS_N',
         'spi_master_tb.ss_n': 'SS_N',
-        '$': 'SS_N',  # VCD identifier for SS_N
+        '!': 'SS_N',  # VCD identifier for SS_N
         'spi_core_tb.dut.busy': 'BUSY',
         'spi_master_tb.busy': 'BUSY',
-        '%': 'BUSY',  # VCD identifier for BUSY
+        '&': 'BUSY',  # VCD identifier for BUSY
         'spi_core_tb.dut.irq': 'IRQ',
         'spi_master_tb.irq': 'IRQ',
-        '&': 'IRQ',   # VCD identifier for IRQ
+        '%': 'IRQ',   # VCD identifier for IRQ
         'spi_core_tb.dut.data': 'DATA',
         'spi_master_tb.data': 'DATA',
         "'": 'DATA',  # VCD identifier for DATA
