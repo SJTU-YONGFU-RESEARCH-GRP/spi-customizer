@@ -80,10 +80,10 @@ jobs:
 
           # Add all files in the results directory recursively
           echo "📝 Adding all files in results/issue-${{ github.event.issue.number }}/"
-          # Try multiple approaches to ensure files are added
-          git add "results/issue-${{ github.event.issue.number }}/" || true
-          git add -A "results/issue-${{ github.event.issue.number }}/" || true
-          find results/issue-${{ github.event.issue.number }}/ -type f -exec git add {} \; 2>/dev/null || true
+          # Use git add -A to add all changes in the specific directory
+          git add -A results/issue-${{ github.event.issue.number }} || true
+          # Also try adding with explicit path expansion
+          git add results/issue-${{ github.event.issue.number }}/**/* || true
 
           # Also try adding plots directory if it exists
           if [ -d "plots" ]; then
