@@ -152,6 +152,14 @@ class GitHubIssueProcessor:
             core_file = generator.save_verilog_file(config)
             tb_file = generator.save_testbench(config)
 
+            # Verify files were created
+            if not os.path.exists(core_file):
+                raise FileNotFoundError(f"Core file not created: {core_file}")
+            if not os.path.exists(tb_file):
+                raise FileNotFoundError(f"Testbench file not created: {tb_file}")
+
+            print(f"✅ Verilog files verified: {os.path.basename(core_file)}, {os.path.basename(tb_file)}")
+
         except Exception as e:
             error_msg = f"❌ Error generating Verilog code: {str(e)}"
             self.update_issue_status('failed', error_msg)
@@ -165,6 +173,15 @@ class GitHubIssueProcessor:
                 verilog_files = [core_file, tb_file]
                 top_module = "spi_master_tb"
                 simulation_success = simulator.run_full_simulation(config, verilog_files, top_module)
+
+                # Debug: List files after simulation
+                issue_dir = f'results/issue-{self.issue_number}'
+                if os.path.exists(issue_dir):
+                    print(f"📁 Files in {issue_dir} after simulation:")
+                    for f in os.listdir(issue_dir):
+                        filepath = os.path.join(issue_dir, f)
+                        size = os.path.getsize(filepath) if os.path.isfile(filepath) else "dir"
+                        print(f"  - {f} ({size} bytes)")
             else:
                 simulation_success = False
                 print("⚠️  RTL tools not available, skipping simulation")
