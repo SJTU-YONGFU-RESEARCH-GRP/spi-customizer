@@ -1,0 +1,17 @@
+{
+  "issue_number": 32,
+  "mode": 1,
+  "data_width": 8,
+  "num_slaves": 1,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": true,
+  "fifo_buffers": true,
+  "dma_support": false,
+  "multi_master": false,
+  "test_duration": "Standard",
+  "simulation_success": false,
+  "waveform_success": false,
+  "email": "jordancheah2000620@gmail.com",
+  "github_username": "_"
+}
