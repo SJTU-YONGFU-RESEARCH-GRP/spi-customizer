@@ -277,9 +277,9 @@ class SPIConfigParser:
         if params['max_slaves'] < 1 or params['max_slaves'] > 32:
             raise ValueError(f"Max slaves {params['max_slaves']} out of range (1-32)")
 
-        # Validate email (required for email functionality)
-        if not params['email'] or '@' not in params['email']:
-            raise ValueError("Valid email address is required for notification delivery")
+        # Validate email (optional for workflow functionality)
+        if params['email'] and '@' not in params['email']:
+            raise ValueError("Invalid email address format")
 
 
 def main():

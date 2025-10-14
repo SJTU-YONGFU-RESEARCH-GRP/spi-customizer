@@ -122,6 +122,8 @@ class GitHubIssueProcessor:
             parser = SPIConfigParser()
             config = parser.parse_issue(issue_body, self.issue_number)
 
+            print(f"✅ Configuration parsed successfully: Mode {config.mode}, {config.data_width} bits, Email: '{config.email}'")
+
             # Update issue with initial status
             status_msg = f"""🔄 Processing your SPI configuration...
 
@@ -137,6 +139,9 @@ class GitHubIssueProcessor:
             self.update_issue_status('processing', status_msg)
 
         except Exception as e:
+            print(f"❌ Configuration parsing failed: {e}")
+            import traceback
+            traceback.print_exc()
             error_msg = f"❌ Error parsing configuration: {str(e)}"
             self.update_issue_status('failed', error_msg)
             return False
