@@ -1,0 +1,15 @@
+{
+  "issue_number": 27,
+  "mode": 0,
+  "data_width": 16,
+  "num_slaves": 2,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": true,
+  "fifo_buffers": true,
+  "dma_support": false,
+  "multi_master": false,
+  "test_duration": "Standard",
+  "simulation_success": true,
+  "waveform_success": true
+}
