@@ -55,21 +55,31 @@ jobs:
     - name: Commit and Push Results
       if: success() && github.event.issue.number != null
       run: |
+        # Debug: List all files in results directory
+        echo "📁 Files in results/issue-${{ github.event.issue.number }}/:"
+        ls -la results/issue-${{ github.event.issue.number }}/ || echo "Directory not found"
+
         # Configure git
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
 
-        # Check if there are changes to commit
+        # Check if results directory exists
         if [ -d "results/issue-${{ github.event.issue.number }}" ]; then
           echo "📁 Found results for issue #${{ github.event.issue.number }}"
 
           # Add results to git
+          echo "📝 Adding results/issue-${{ github.event.issue.number }}/"
           git add results/issue-${{ github.event.issue.number }}/
 
           # Add any new plot files
           if [ -d "plots" ]; then
+            echo "📝 Adding plots/"
             git add plots/ || echo "⚠️  No plot files to add"
           fi
+
+          # Check what files are staged
+          echo "📋 Staged files:"
+          git diff --cached --name-only
 
           # Check if there are any changes to commit
           if ! git diff --staged --quiet; then
@@ -84,8 +94,14 @@ jobs:
             Triggered by: ${{ github.event.issue.title }}"
 
             # Push changes
-            git push origin main || git push origin master || echo "⚠️  Push failed - may not have permissions"
-            echo "✅ Results committed and pushed successfully!"
+            if git push origin main; then
+              echo "✅ Results committed and pushed successfully!"
+            elif git push origin master; then
+              echo "✅ Results committed and pushed to master successfully!"
+            else
+              echo "⚠️  Push failed - may not have permissions"
+              echo "📋 Commit created locally but not pushed"
+            fi
           else
             echo "ℹ️  No changes to commit"
           fi
