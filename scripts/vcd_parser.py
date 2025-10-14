@@ -898,6 +898,45 @@ class SignalPlotGenerator:
         # Add signal statistics
         self._add_signal_statistics(ax, signal_name, values)
 
+    def _add_signal_statistics(self, ax: plt.Axes, signal_name: str, values: List[float]) -> None:
+        """Add comprehensive signal statistics to the plot"""
+        # For SPI signals, calculate statistics during active transactions only
+        if signal_name in ['SCLK', 'MOSI', 'MISO', 'SS_N']:
+            # Find active transaction periods based on SS_N being active (any slave selected)
+            ss_n_values = self._get_signal_values('SS_N')
+            if ss_n_values:
+                # Identify transaction periods where SS_N has any slave active (not b111)
+                transaction_samples = []
+                for i, (val, ss_val) in enumerate(zip(values, ss_n_values)):
+                    # SS_N is active low per slave, so 'b0' means slave 0 is selected (active)
+                    ss_active = str(ss_val) == 'b0'  # b0 = slave 0 active, b111 = all inactive
+                    if ss_active:
+                        transaction_samples.append(val)
+
+                if transaction_samples:
+                    # Use transaction-only statistics
+                    values = transaction_samples
+
+        # Calculate statistics
+        high_count = sum(1 for v in values if v == 1)
+        low_count = sum(1 for v in values if v == 0)
+        unknown_count = sum(1 for v in values if v == 0.5)
+        transitions = sum(1 for j in range(1, len(values)) if values[j] != values[j-1])
+
+        total_samples = len(values)
+        high_pct = 100 * high_count / total_samples if total_samples > 0 else 0
+        low_pct = 100 * low_count / total_samples if total_samples > 0 else 0
+
+        # Create statistics text
+        stats_text = f'Samples: {total_samples:,}\nTransitions: {transitions}\nHigh: {high_count} ({high_pct:.1f}%)\nLow: {low_count} ({low_pct:.1f}%)'
+        if unknown_count > 0:
+            unknown_pct = 100 * unknown_count / total_samples
+            stats_text += f'\nUnknown: {unknown_count} ({unknown_pct:.1f}%)'
+
+        ax.text(0.02, 0.02, stats_text, transform=ax.transAxes,
+               fontsize=8, verticalalignment='bottom',
+               bbox=dict(boxstyle='round,pad=0.3', facecolor='lightcyan', alpha=0.8))
+
     def _get_signal_color(self, signal_name: str) -> str:
         """Get appropriate color for each signal type"""
         color_map = {
@@ -980,27 +1019,47 @@ class SignalPlotGenerator:
         ax.text(0.02, 0.85, 'Active Low', transform=ax.transAxes,
                fontsize=9, bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', alpha=0.8))
 
-    def _add_signal_statistics(self, ax: plt.Axes, signal_name: str, values: List[float]) -> None:
-        """Add comprehensive signal statistics to the plot"""
-        # Calculate statistics
-        high_count = sum(1 for v in values if v == 1)
-        low_count = sum(1 for v in values if v == 0)
-        unknown_count = sum(1 for v in values if v == 0.5)
-        transitions = sum(1 for j in range(1, len(values)) if values[j] != values[j-1])
+    def _get_signal_values(self, signal_name: str) -> Optional[List[float]]:
+        """Get processed values for a specific signal from the timing data"""
+        try:
+            timing_csv = self.data_dir / 'spi_timing_data.csv'
+            if not timing_csv.exists():
+                return None
 
-        total_samples = len(values)
-        high_pct = 100 * high_count / total_samples if total_samples > 0 else 0
-        low_pct = 100 * low_count / total_samples if total_samples > 0 else 0
+            signal_values = []
+            with open(timing_csv, 'r') as f:
+                reader = csv.reader(f)
+                header = next(reader)  # Skip header
 
-        # Create statistics text
-        stats_text = f'Samples: {total_samples:,}\nTransitions: {transitions}\nHigh: {high_count} ({high_pct:.1f}%)\nLow: {low_count} ({low_pct:.1f}%)'
-        if unknown_count > 0:
-            unknown_pct = 100 * unknown_count / total_samples
-            stats_text += f'\nUnknown: {unknown_count} ({unknown_pct:.1f}%)'
+                # Find column index for the signal
+                signal_idx = None
+                for i, col_name in enumerate(header):
+                    if col_name == signal_name:
+                        signal_idx = i
+                        break
 
-        ax.text(0.02, 0.02, stats_text, transform=ax.transAxes,
-               fontsize=8, verticalalignment='bottom',
-               bbox=dict(boxstyle='round,pad=0.3', facecolor='lightcyan', alpha=0.8))
+                if signal_idx is None:
+                    return None
+
+                # Read signal values
+                for row in reader:
+                    if len(row) > signal_idx:
+                        value = row[signal_idx]
+                        # For SS_N, return raw string values to detect 'b0' vs 'b111'
+                        if signal_name == 'SS_N':
+                            signal_values.append(value)
+                        else:
+                            # Convert to processed format (1, 0, 0.5) for other signals
+                            if value == '1':
+                                signal_values.append(1)
+                            elif value == '0':
+                                signal_values.append(0)
+                            else:
+                                signal_values.append(0.5)  # Unknown
+
+            return signal_values
+        except Exception:
+            return None
 
 
 class SummaryGenerator:
