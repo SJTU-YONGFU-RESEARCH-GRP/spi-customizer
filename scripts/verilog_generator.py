@@ -155,13 +155,14 @@ class VerilogGenerator:
 
         return testbench_code
 
-    def save_testbench(self, config: SPIConfig, filename: str = None) -> str:
+    def save_testbench(self, config: SPIConfig, filename: str = None, vcd_filename: str = "spi_waveform.vcd") -> str:
         """
         Generate and save testbench code to file
 
         Args:
             config: SPIConfig object
             filename: Output filename (optional)
+            vcd_filename: VCD output filename (optional)
 
         Returns:
             Path to generated file
@@ -175,7 +176,7 @@ class VerilogGenerator:
                 # Use detailed naming for numeric issue numbers
                 filename = f"spi_{config.spi_role.lower()}_tb.v"
 
-        testbench_code = self.generate_testbench(config)
+        testbench_code = self.generate_testbench(config, vcd_filename)
 
         # Ensure issue-specific results directory exists
         issue_dir = f'results/issue-{config.issue_number}'

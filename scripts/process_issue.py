@@ -149,8 +149,10 @@ class GitHubIssueProcessor:
         # Step 3: Generate Verilog code
         try:
             generator = VerilogGenerator()
+            # Generate VCD filename for testbench
+            vcd_filename = f"results/issue-{self.issue_number}/spi_waveform.vcd"
             core_file = generator.save_verilog_file(config)
-            tb_file = generator.save_testbench(config)
+            tb_file = generator.save_testbench(config, vcd_filename=vcd_filename)
 
             # Verify files were created
             if not os.path.exists(core_file):
