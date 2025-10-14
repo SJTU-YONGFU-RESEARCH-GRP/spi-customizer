@@ -80,14 +80,13 @@ jobs:
 
           # Add all files in the results directory recursively
           echo "📝 Adding all files in results/issue-${{ github.event.issue.number }}/"
-          # Use git add -A to add all changes in the specific directory
-          git add -A results/issue-${{ github.event.issue.number }} || true
-          # Force add all individual files as fallback
-          find results/issue-${{ github.event.issue.number }}/ -type f -name "*.v" -exec git add {} \; || true
-          find results/issue-${{ github.event.issue.number }}/ -type f -name "*.json" -exec git add {} \; || true
-          find results/issue-${{ github.event.issue.number }}/ -type f -name "*.log" -exec git add {} \; || true
-          find results/issue-${{ github.event.issue.number }}/ -type f -name "*.txt" -exec git add {} \; || true
-          find results/issue-${{ github.event.issue.number }}/ -type f -name "spi_simulation" -exec git add {} \; || true
+          # Simple approach: list all files and add them individually
+          for file in results/issue-${{ github.event.issue.number }}/*; do
+            if [ -f "$file" ]; then
+              echo "Adding: $file"
+              git add "$file" || echo "Failed to add: $file"
+            fi
+          done
 
           # Also try adding plots directory if it exists
           if [ -d "plots" ]; then
