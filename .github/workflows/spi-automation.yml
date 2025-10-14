@@ -67,14 +67,19 @@ jobs:
         if [ -d "results/issue-${{ github.event.issue.number }}" ]; then
           echo "📁 Found results for issue #${{ github.event.issue.number }}"
 
+          # List all files before adding
+          echo "📋 Files before git add:"
+          find results/issue-${{ github.event.issue.number }}/ -type f | head -20
+          echo "... (showing first 20 files)"
+
           # Add all files in the results directory recursively
           echo "📝 Adding all files in results/issue-${{ github.event.issue.number }}/"
-          git add -A results/issue-${{ github.event.issue.number }}/
+          git add results/issue-${{ github.event.issue.number }}/** || git add -A results/issue-${{ github.event.issue.number }}/
 
           # Also try adding plots directory if it exists
           if [ -d "plots" ]; then
             echo "📝 Adding plots/"
-            git add -A plots/ || echo "⚠️  No plot files to add"
+            git add plots/** || git add -A plots/ || echo "⚠️  No plot files to add"
           fi
 
           # Check what files are staged
@@ -85,6 +90,10 @@ jobs:
           # Count staged files
           staged_count=$(git diff --cached --name-only | wc -l)
           echo "📊 Total staged files: $staged_count"
+
+          # List all staged files with details
+          echo "📋 Detailed staged files:"
+          git diff --cached --name-status
 
           # Check if there are any changes to commit
           if ! git diff --staged --quiet; then
