@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 
 import os
 import csv
@@ -560,8 +560,12 @@ def main():
             print(f"   📊 {csv_file}")
 
         # Generate plots
-        plot_gen = PlotGenerator(f"results/issue-{issue_number}")
-        plot_files = plot_gen.generate_plots()
+        plot_gen = SignalPlotGenerator(f"results/issue-{issue_number}")
+        plot_files = plot_gen.generate_all_plots()
+
+        # Also generate individual signal plots
+        individual_plots = plot_gen.generate_individual_signal_plots()
+        plot_files.extend(individual_plots)
 
         print(f"✅ Generated {len(plot_files)} plot files:")
         for plot_file in plot_files:
@@ -739,42 +743,18 @@ class SignalPlotGenerator:
                                         "All Signals", "spi_all_signals.png")
 
     def _generate_signal_plot(self, signal_names: List[str], title: str, filename: str) -> Optional[str]:
-        """Generate a plot with subplots for each signal"""
+        """Generate a plot with subplots for each signal with intelligent data handling"""
         try:
             timing_csv = self.output_dir / 'spi_timing_data.csv'
             if not timing_csv.exists():
                 print(f"⚠️  Timing CSV not found for {title}")
                 return None
 
-            # Read timing data
-            time_data = []
-            signal_data = {name: [] for name in signal_names}
+            # Load and preprocess data with intelligent sampling
+            time_data, signal_data = self._preprocess_signal_data(signal_names)
 
-            with open(timing_csv, 'r') as f:
-                reader = csv.reader(f)
-                next(reader)  # Skip header
-
-                for row in reader:
-                    if len(row) < 8:  # Need at least time + 7 signals
-                        continue
-
-                    time_ns = int(row[0])
-                    time_data.append(time_ns / 1000)  # Convert to microseconds
-
-                    # Map CSV columns to signal names
-                    # CSV columns: Time, SCLK, MOSI, MISO, SS_N, BUSY, IRQ, DATA
-                    signal_mapping = {
-                        1: 'SCLK', 2: 'MOSI', 3: 'MISO', 4: 'SS_N',
-                        5: 'BUSY', 6: 'IRQ', 7: 'DATA'
-                    }
-
-                    for csv_idx, signal_name in signal_mapping.items():
-                        if signal_name in signal_names and csv_idx < len(row):
-                            value = row[csv_idx]
-                            signal_data[signal_name].append(1 if value == '1' else 0 if value == '0' else 0.5)
-
-            if not time_data:
-                print(f"⚠️  No data found for {title}")
+            if not time_data or not signal_data:
+                print(f"⚠️  No valid data found for {title}")
                 return None
 
             # Calculate optimal subplot layout
@@ -794,7 +774,7 @@ class SignalPlotGenerator:
 
             # Create figure with subplots
             fig, axes = plt.subplots(rows, cols, figsize=(16, 12))
-            fig.suptitle(f'SPI {title} - Individual Signal Analysis', fontsize=16, fontweight='bold')
+            fig.suptitle(f'SPI {title} - Protocol Analysis', fontsize=16, fontweight='bold')
 
             # Flatten axes for easier iteration
             if num_signals == 1:
@@ -804,34 +784,14 @@ class SignalPlotGenerator:
             else:
                 axes = axes.flatten()
 
-            # Plot each signal in its own subplot
+            # Plot each signal in its own subplot with SPI-aware visualization
             for i, signal_name in enumerate(signal_names):
                 if i >= len(axes):
                     break  # Safety check
 
                 ax = axes[i]
                 if signal_data[signal_name]:
-                    ax.plot(time_data, signal_data[signal_name], linewidth=2, color=f'C{i%10}')
-                    ax.set_title(f'{signal_name} Signal', fontsize=12, fontweight='bold')
-                    ax.set_xlabel('Time (μs)')
-                    ax.set_ylabel('Value')
-                    ax.grid(True, alpha=0.3)
-
-                    # Format y-axis ticks
-                    ax.set_yticks([0, 0.5, 1])
-                    ax.set_yticklabels(['0', 'X', '1'])
-
-                    # Add signal statistics as text
-                    signal_values = signal_data[signal_name]
-                    high_count = sum(1 for v in signal_values if v == 1)
-                    low_count = sum(1 for v in signal_values if v == 0)
-                    transitions = sum(1 for j in range(1, len(signal_values))
-                                    if signal_values[j] != signal_values[j-1])
-
-                    stats_text = f'Transitions: {transitions}\nHigh: {high_count}\nLow: {low_count}'
-                    ax.text(0.02, 0.98, stats_text, transform=ax.transAxes,
-                           fontsize=8, verticalalignment='top',
-                           bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', alpha=0.8))
+                    self._plot_spi_signal(ax, signal_name, time_data, signal_data[signal_name])
                 else:
                     ax.text(0.5, 0.5, f'No data for\n{signal_name}',
                            transform=ax.transAxes, ha='center', va='center', fontsize=10)
@@ -846,12 +806,192 @@ class SignalPlotGenerator:
             plt.savefig(plot_file, dpi=150, bbox_inches='tight')
             plt.close()
 
-            print(f"✅ Generated {title} subplot plot: {plot_file}")
+            print(f"✅ Generated {title} protocol plot: {plot_file}")
             return str(plot_file)
 
         except Exception as e:
             print(f"❌ Failed to generate {title} plot: {e}")
             return None
+
+    def _preprocess_signal_data(self, signal_names: List[str]) -> Tuple[List[float], Dict[str, List[float]]]:
+        """Preprocess signal data with intelligent sampling and activity detection"""
+        timing_csv = self.output_dir / 'spi_timing_data.csv'
+
+        # First pass: analyze data characteristics
+        total_samples = sum(1 for _ in open(timing_csv, 'r')) - 1  # Exclude header
+        print(f"📊 Processing {total_samples:,} total samples")
+
+        # For very large datasets, use adaptive sampling
+        if total_samples > 100000:
+            # Sample every Nth point to keep plots readable
+            sample_rate = max(1, total_samples // 50000)  # Target ~50k points max
+            print(f"🔄 Using adaptive sampling (1/{sample_rate}) for large dataset")
+        else:
+            sample_rate = 1
+
+        time_data = []
+        signal_data = {name: [] for name in signal_names}
+
+        with open(timing_csv, 'r') as f:
+            reader = csv.reader(f)
+            header = next(reader)  # Skip header
+
+            sample_counter = 0
+            for row in reader:
+                if len(row) < 8:  # Need at least time + 7 signals
+                    continue
+
+                sample_counter += 1
+                if sample_counter % sample_rate != 0:
+                    continue
+
+                time_ns = int(row[0])
+                time_data.append(time_ns / 1000)  # Convert to microseconds
+
+                # Map CSV columns to signal names
+                signal_mapping = {
+                    1: 'SCLK', 2: 'MOSI', 3: 'MISO', 4: 'SS_N',
+                    5: 'BUSY', 6: 'IRQ', 7: 'DATA'
+                }
+
+                for csv_idx, signal_name in signal_mapping.items():
+                    if signal_name in signal_names and csv_idx < len(row):
+                        value = row[csv_idx]
+                        signal_data[signal_name].append(1 if value == '1' else 0 if value == '0' else 0.5)
+
+        print(f"✅ Processed {len(time_data):,} samples after sampling")
+        return time_data, signal_data
+
+    def _plot_spi_signal(self, ax: plt.Axes, signal_name: str, time_data: List[float], values: List[float]) -> None:
+        """Plot a single SPI signal with protocol-aware visualization"""
+        # Plot the main signal
+        ax.plot(time_data, values, linewidth=2, color=self._get_signal_color(signal_name), alpha=0.8)
+
+        # Add SPI protocol-specific enhancements
+        if signal_name == 'SCLK':
+            self._enhance_clock_signal(ax, time_data, values)
+        elif signal_name in ['MOSI', 'MISO']:
+            self._enhance_data_signal(ax, signal_name, time_data, values)
+        elif signal_name == 'SS_N':
+            self._enhance_slave_select(ax, time_data, values)
+
+        # Configure axis
+        ax.set_title(f'{signal_name} Signal', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Time (μs)')
+        ax.set_ylabel('Logic Level')
+        ax.grid(True, alpha=0.3)
+
+        # Format y-axis for digital signals
+        ax.set_yticks([0, 0.5, 1])
+        ax.set_yticklabels(['0', 'X', '1'])
+        ax.set_ylim(-0.1, 1.1)
+
+        # Add signal statistics
+        self._add_signal_statistics(ax, signal_name, values)
+
+    def _get_signal_color(self, signal_name: str) -> str:
+        """Get appropriate color for each signal type"""
+        color_map = {
+            'SCLK': 'blue',
+            'MOSI': 'green',
+            'MISO': 'red',
+            'SS_N': 'orange',
+            'BUSY': 'purple',
+            'IRQ': 'brown',
+            'DATA': 'gray'
+        }
+        return color_map.get(signal_name, 'black')
+
+    def _enhance_clock_signal(self, ax: plt.Axes, time_data: List[float], values: List[float]) -> None:
+        """Add clock-specific enhancements like period markers"""
+        # Detect clock edges
+        rising_edges = []
+        falling_edges = []
+
+        for i in range(1, len(values)):
+            if values[i-1] == 0 and values[i] == 1:
+                rising_edges.append((time_data[i], values[i]))
+            elif values[i-1] == 1 and values[i] == 0:
+                falling_edges.append((time_data[i], values[i]))
+
+        # Mark first few edges
+        if rising_edges:
+            ax.plot(*zip(*rising_edges[:5]), 'ro', markersize=4, alpha=0.7, label='Rising Edge')
+        if falling_edges:
+            ax.plot(*zip(*falling_edges[:5]), 'bo', markersize=4, alpha=0.7, label='Falling Edge')
+
+        # Calculate approximate frequency if we have edges
+        if len(rising_edges) > 1:
+            periods = [rising_edges[i+1][0] - rising_edges[i][0] for i in range(min(5, len(rising_edges)-1))]
+            avg_period = sum(periods) / len(periods) if periods else 0
+            if avg_period > 0:
+                freq_khz = 1000 / avg_period
+                ax.text(0.02, 0.85, f'~{freq_khz:.1f} kHz', transform=ax.transAxes,
+                       fontsize=9, bbox=dict(boxstyle='round,pad=0.3', facecolor='lightblue', alpha=0.8))
+
+    def _enhance_data_signal(self, ax: plt.Axes, signal_name: str, time_data: List[float], values: List[float]) -> None:
+        """Add data signal enhancements like bit transitions"""
+        # Detect data transitions
+        transitions = []
+        for i in range(1, len(values)):
+            if values[i] != values[i-1] and values[i] != 0.5:  # Ignore X states
+                transitions.append((time_data[i], values[i]))
+
+        # Mark transitions
+        if transitions:
+            ax.plot(*zip(*transitions[:10]), 'k^', markersize=5, alpha=0.8, label='Data Change')
+
+        # Add data direction indicator
+        direction = "Master→Slave" if signal_name == 'MOSI' else "Slave→Master"
+        ax.text(0.02, 0.85, direction, transform=ax.transAxes,
+               fontsize=9, bbox=dict(boxstyle='round,pad=0.3', facecolor='lightgreen', alpha=0.8))
+
+    def _enhance_slave_select(self, ax: plt.Axes, time_data: List[float], values: List[float]) -> None:
+        """Add slave select specific enhancements"""
+        # Detect slave selection periods (active low)
+        active_periods = []
+        start_time = None
+
+        for i, (t, v) in enumerate(zip(time_data, values)):
+            if v == 0 and start_time is None:  # Going active (low)
+                start_time = t
+            elif v == 1 and start_time is not None:  # Going inactive (high)
+                active_periods.append((start_time, t))
+                start_time = None
+
+        # Handle case where signal ends while active
+        if start_time is not None:
+            active_periods.append((start_time, time_data[-1]))
+
+        # Highlight active periods
+        for start, end in active_periods[:3]:  # Show first 3 periods
+            ax.axvspan(start, end, alpha=0.2, color='yellow', label='Slave Active' if len(active_periods) == 1 else "")
+
+        # Add polarity indicator
+        ax.text(0.02, 0.85, 'Active Low', transform=ax.transAxes,
+               fontsize=9, bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', alpha=0.8))
+
+    def _add_signal_statistics(self, ax: plt.Axes, signal_name: str, values: List[float]) -> None:
+        """Add comprehensive signal statistics to the plot"""
+        # Calculate statistics
+        high_count = sum(1 for v in values if v == 1)
+        low_count = sum(1 for v in values if v == 0)
+        unknown_count = sum(1 for v in values if v == 0.5)
+        transitions = sum(1 for j in range(1, len(values)) if values[j] != values[j-1])
+
+        total_samples = len(values)
+        high_pct = 100 * high_count / total_samples if total_samples > 0 else 0
+        low_pct = 100 * low_count / total_samples if total_samples > 0 else 0
+
+        # Create statistics text
+        stats_text = f'Samples: {total_samples:,}\nTransitions: {transitions}\nHigh: {high_count} ({high_pct:.1f}%)\nLow: {low_count} ({low_pct:.1f}%)'
+        if unknown_count > 0:
+            unknown_pct = 100 * unknown_count / total_samples
+            stats_text += f'\nUnknown: {unknown_count} ({unknown_pct:.1f}%)'
+
+        ax.text(0.02, 0.02, stats_text, transform=ax.transAxes,
+               fontsize=8, verticalalignment='bottom',
+               bbox=dict(boxstyle='round,pad=0.3', facecolor='lightcyan', alpha=0.8))
 
 
 class SummaryGenerator:
@@ -882,32 +1022,32 @@ class SummaryGenerator:
         waveform_section = self._generate_waveform_section()
 
         # Generate summary content
-        summary_content = f"""# SPI RTL Simulation Summary - Issue {config.get('issue_number', 'Unknown')}
+        summary_content = """# SPI RTL Simulation Summary - Issue {issue_number}
 
 ## 📋 Configuration Summary
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| **Issue Number** | `{config.get('issue_number', 'Unknown')}` | GitHub issue identifier |
-| **SPI Mode** | `{config.get('mode', 'Unknown')}` | SPI protocol mode |
-| **Data Width** | `{config.get('data_width', 'Unknown')} bits` | Width of data bus |
-| **Number of Slaves** | `{config.get('num_slaves', 'Unknown')}` | Number of slave devices |
-| **Slave Select** | `{'Active Low' if config.get('slave_active_low') else 'Active High'}` | Slave select polarity |
-| **Data Order** | `{'MSB First' if config.get('msb_first') else 'LSB First'}` | Bit transmission order |
-| **Test Duration** | `{config.get('test_duration', 'Unknown')}` | Simulation duration |
-| **Simulation Status** | `{'✅ PASSED' if config.get('simulation_success') else '❌ FAILED'}` | Overall result |
+| **Issue Number** | `{issue_number}` | GitHub issue identifier |
+| **SPI Mode** | `{mode}` | SPI protocol mode |
+| **Data Width** | `{data_width} bits` | Width of data bus |
+| **Number of Slaves** | `{num_slaves}` | Number of slave devices |
+| **Slave Select** | `{slave_select}` | Slave select polarity |
+| **Data Order** | `{data_order}` | Bit transmission order |
+| **Test Duration** | `{test_duration}` | Simulation duration |
+| **Simulation Status** | `{simulation_status}` | Overall result |
 
 ### 🔧 Advanced Features
-- **Interrupts**: `{'✅ Enabled' if config.get('interrupts') else '❌ Disabled'}`
-- **FIFO Buffers**: `{'✅ Enabled' if config.get('fifo_buffers') else '❌ Disabled'}`
-- **DMA Support**: `{'✅ Enabled' if config.get('dma_support') else '❌ Disabled'}`
-- **Multi-master**: `{'✅ Enabled' if config.get('multi_master') else '❌ Disabled'}`
+- **Interrupts**: `{interrupts}`
+- **FIFO Buffers**: `{fifo_buffers}`
+- **DMA Support**: `{dma_support}`
+- **Multi-master**: `{multi_master}`
 
 ## 🎯 RTL Design Information
 
 ### SPI Protocol Characteristics
-- **Clock Polarity (CPOL)**: `{'High' if config.get('mode', 0) in [2,3] else 'Low'}` - Rest state of clock
-- **Clock Phase (CPHA)**: `{'Falling edge' if config.get('mode', 0) in [1,3] else 'Rising edge'}` - Data sampling edge
+- **Clock Polarity (CPOL)**: `{clock_polarity}` - Rest state of clock
+- **Clock Phase (CPHA)**: `{clock_phase}` - Data sampling edge
 - **Clock Frequency**: `~100kHz (derived from 50MHz system clock)` - SPI clock rate
 
 ### Signal Timing Analysis
@@ -933,35 +1073,35 @@ class SummaryGenerator:
 ## 📁 Generated Files Overview
 
 ### Core Files
-- **Verilog RTL**: `{self._get_file_info('example1.v')}`
-- **Testbench**: `{self._get_file_info('example1_tb.v')}`
-- **Simulation Executable**: `{self._get_file_info('spi_simulation')}`
-- **Compilation Log**: `{self._get_file_info('compilation.log')}`
+- **Verilog RTL**: `{core_file_info}`
+- **Testbench**: `{tb_file_info}`
+- **Simulation Executable**: `{sim_file_info}`
+- **Compilation Log**: `{log_file_info}`
 
 ### Waveform & Analysis
-- **VCD Waveform**: `{self._get_file_info('spi_waveform.vcd')}`
-- **GTKWave Save**: `{self._get_file_info('spi_waveform.gtkw')}`
-- **Timing Analysis CSV**: `{self._get_file_info('spi_timing_data.csv')}`
-- **Consolidated Signals CSV**: `{self._get_file_info('spi_consolidated_signals.csv')}`
+- **VCD Waveform**: `{vcd_file_info}`
+- **GTKWave Save**: `{gtkw_file_info}`
+- **Timing Analysis CSV**: `{timing_csv_info}`
+- **Consolidated Signals CSV**: `{consolidated_csv_info}`
 
 ### Visualization Files
-{self._get_visualization_summary()}
+{visualization_summary}
 
 ### Data Export Files
-{self._get_csv_summary()}
+{csv_summary}
 
 ## 🔍 Key Findings
 
 ### Performance Metrics
-- **Simulation Duration**: `{config.get('test_duration', 'standard')}`
-- **Total Signals Monitored**: `{len([f for f in self.issue_dir.glob('*.csv') if 'individual' not in f.name])}`
-- **VCD File Size**: `{self._get_file_size('spi_waveform.vcd')}`
-- **Signal Transitions**: `{self._get_total_transitions(signal_stats)}`
+- **Simulation Duration**: `{test_duration}`
+- **Total Signals Monitored**: `{total_signals}`
+- **VCD File Size**: `{vcd_size}`
+- **Signal Transitions**: `{total_transitions}`
 
 ### Signal Analysis
-- **Active Signals**: `{len([s for s in signal_stats.split('\n') if s.strip() and '|' in s])}`
-- **Data Transfer Events**: `{self._count_data_transfers()}`
-- **Clock Cycles**: `{self._get_clock_cycles()}`
+- **Active Signals**: `{active_signals}`
+- **Data Transfer Events**: `{data_transfers}`
+- **Clock Cycles**: `{clock_cycles}`
 - **Protocol Compliance**: `✅ Verified`
 
 ## 📈 Recommendations
@@ -982,22 +1122,65 @@ class SummaryGenerator:
 
 ## 📝 Technical Details
 
-### SPI Mode {config.get('mode', 0)} Specifications
-- **CPOL = {1 if config.get('mode', 0) in [2,3] else 0}**: Clock polarity
-- **CPHA = {config.get('mode', 0) % 2}**: Clock phase
-- **Data Rate**: `~{100000 // (config.get('data_width', 16) * config.get('num_slaves', 1))} bits/sec`
-- **Frame Size**: `{config.get('data_width', 16)} bits per transfer`
+### SPI Mode {mode} Specifications
+- **CPOL = {cpol}**: Clock polarity
+- **CPHA = {cpha}**: Clock phase
+- **Data Rate**: `~{data_rate} bits/sec`
+- **Frame Size**: `{frame_size} bits per transfer`
 
 ### Memory Requirements
-- **VCD Storage**: `{self._get_file_size('spi_waveform.vcd')}`
-- **CSV Data**: `{self._get_total_csv_size()}`
-- **Total Analysis**: `{self._get_total_analysis_size()}`
+- **VCD Storage**: `{vcd_storage}`
+- **CSV Data**: `{csv_data}`
+- **Total Analysis**: `{total_analysis}`
 
 ---
 
-*Generated by SPI RTL Analyzer - {self._get_timestamp()}*
+*Generated by SPI RTL Analyzer - {timestamp}*
 *Analysis based on real Icarus Verilog simulation data*
-"""
+""".format(
+            issue_number=config.get('issue_number', 'Unknown'),
+            mode=config.get('mode', 'Unknown'),
+            data_width=config.get('data_width', 'Unknown'),
+            num_slaves=config.get('num_slaves', 'Unknown'),
+            slave_select='Active Low' if config.get('slave_active_low') else 'Active High',
+            data_order='MSB First' if config.get('msb_first') else 'LSB First',
+            test_duration=config.get('test_duration', 'Unknown'),
+            simulation_status='✅ PASSED' if config.get('simulation_success') else '❌ FAILED',
+            interrupts='✅ Enabled' if config.get('interrupts') else '❌ Disabled',
+            fifo_buffers='✅ Enabled' if config.get('fifo_buffers') else '❌ Disabled',
+            dma_support='✅ Enabled' if config.get('dma_support') else '❌ Disabled',
+            multi_master='✅ Enabled' if config.get('multi_master') else '❌ Disabled',
+            clock_polarity='High' if config.get('mode', 0) in [2,3] else 'Low',
+            clock_phase='Falling edge' if config.get('mode', 0) in [1,3] else 'Rising edge',
+            timing_analysis=timing_analysis,
+            waveform_section=waveform_section,
+            sim_log=sim_log,
+            signal_stats=signal_stats,
+            core_file_info=self._get_file_info('example1.v'),
+            tb_file_info=self._get_file_info('example1_tb.v'),
+            sim_file_info=self._get_file_info('spi_simulation'),
+            log_file_info=self._get_file_info('compilation.log'),
+            vcd_file_info=self._get_file_info('spi_waveform.vcd'),
+            gtkw_file_info=self._get_file_info('spi_waveform.gtkw'),
+            timing_csv_info=self._get_file_info('spi_timing_data.csv'),
+            consolidated_csv_info=self._get_file_info('spi_consolidated_signals.csv'),
+            visualization_summary=self._get_visualization_summary(),
+            csv_summary=self._get_csv_summary(),
+            total_signals=len([f for f in self.issue_dir.glob('*.csv') if 'individual' not in f.name]),
+            vcd_size=self._get_file_size('spi_waveform.vcd'),
+            total_transitions=self._get_total_transitions(signal_stats),
+            active_signals=len([s for s in signal_stats.split('\n') if s.strip() and '|' in s]),
+            data_transfers=self._count_data_transfers(),
+            clock_cycles=self._get_clock_cycles(),
+            cpol=1 if config.get('mode', 0) in [2,3] else 0,
+            cpha=config.get('mode', 0) % 2,
+            data_rate=100000 // (config.get('data_width', 16) * config.get('num_slaves', 1)),
+            frame_size=config.get('data_width', 16),
+            vcd_storage=self._get_file_size('spi_waveform.vcd'),
+            csv_data=self._get_total_csv_size(),
+            total_analysis=self._get_total_analysis_size(),
+            timestamp=self._get_timestamp()
+        )
 
         # Write summary to file
         with open(self.output_file, 'w') as f:
@@ -1111,7 +1294,8 @@ class SummaryGenerator:
 """
 
             for i, row in enumerate(sample_data):
-                analysis += f"- **t={row[0]}ns**: SCLK={row[1]}, MOSI={row[2]}, MISO={row[3]}, SS_N={row[4]}\n"
+                analysis += f"- **t={row[0]}ns**: SCLK={row[1]}, MOSI={row[2]}, MISO={row[3]}, SS_N={row[4]}"
+                analysis += "\n"
 
             return analysis
         except Exception as e:
@@ -1119,7 +1303,7 @@ class SummaryGenerator:
 
     def _generate_waveform_section(self) -> str:
         """Generate detailed waveform analysis section"""
-        waveform_analysis = f"""
+        waveform_analysis = """
 ### Waveform Analysis Details
 
 #### Signal Group Analysis
@@ -1190,16 +1374,23 @@ For detailed signal examination, individual plots are provided for each signal:
 
 #### Signal Timing Analysis
 - **Clock Frequency**: Derived from system clock (50MHz → 100kHz SPI)
-- **Data Rate**: {self._get_data_rate()} bits per second
-- **Transaction Duration**: {self._get_transaction_duration()}
+- **Data Rate**: {data_rate} bits per second
+- **Transaction Duration**: {transaction_duration}
 - **Setup/Hold Times**: Verified against SPI specifications
 
 #### Bus Protocol Analysis
-- **Data Width**: {self._get_bus_width()} bits per transfer
-- **Transfer Mode**: {self._get_transfer_mode()}
-- **Endianness**: {self._get_endianness()}
-- **Flow Control**: {self._get_flow_control()}
-"""
+- **Data Width**: {bus_width} bits per transfer
+- **Transfer Mode**: {transfer_mode}
+- **Endianness**: {endianness}
+- **Flow Control**: {flow_control}
+""".format(
+            data_rate=self._get_data_rate(),
+            transaction_duration=self._get_transaction_duration(),
+            bus_width=self._get_bus_width(),
+            transfer_mode=self._get_transfer_mode(),
+            endianness=self._get_endianness(),
+            flow_control=self._get_flow_control()
+        )
         return waveform_analysis
 
     def _get_data_rate(self) -> str:

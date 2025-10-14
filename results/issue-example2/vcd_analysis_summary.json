@@ -1,0 +1,34 @@
+{
+  "vcd_file": "results/issue-example2/spi_waveform.vcd",
+  "signals_found": 7,
+  "max_simulation_time": 99800,
+  "timescale": [
+    1,
+    "ns"
+  ],
+  "csv_files": [
+    "results/issue-example2/spi_timing_data.csv",
+    "results/issue-example2/spi_signal_summary.csv",
+    "results/issue-example2/spi_consolidated_signals.csv",
+    "results/issue-example2/spi_SCLK_data.csv",
+    "results/issue-example2/spi_MOSI_data.csv",
+    "results/issue-example2/spi_MISO_data.csv",
+    "results/issue-example2/spi_SS_N_data.csv",
+    "results/issue-example2/spi_BUSY_data.csv",
+    "results/issue-example2/spi_IRQ_data.csv",
+    "results/issue-example2/spi_DATA_data.csv"
+  ],
+  "plot_files": [
+    "results/issue-example2/spi_input_ports.png",
+    "results/issue-example2/spi_output_ports.png",
+    "results/issue-example2/spi_io_ports.png",
+    "results/issue-example2/spi_all_signals.png",
+    "results/issue-example2/spi_sclk_individual.png",
+    "results/issue-example2/spi_mosi_individual.png",
+    "results/issue-example2/spi_miso_individual.png",
+    "results/issue-example2/spi_ss_n_individual.png",
+    "results/issue-example2/spi_busy_individual.png",
+    "results/issue-example2/spi_irq_individual.png",
+    "results/issue-example2/spi_data_individual.png"
+  ]
+}

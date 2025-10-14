@@ -10,5 +10,6 @@
   "dma_support": true,
   "multi_master": false,
   "test_duration": "Brief",
-  "simulation_success": true
+  "simulation_success": false,
+  "waveform_success": false
 }

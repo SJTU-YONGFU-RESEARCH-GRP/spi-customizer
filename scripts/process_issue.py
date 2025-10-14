@@ -21,7 +21,7 @@ from simulator_runner import RTLSimulator
 class GitHubIssueProcessor:
     """Processes GitHub issues for SPI customization"""
 
-    def __init__(self, token: str, issue_number: int):
+    def __init__(self, token: Optional[str], issue_number: int):
         self.token = token
         self.issue_number = issue_number
         self.api_base = "https://api.github.com/repos"
@@ -29,7 +29,26 @@ class GitHubIssueProcessor:
         self.repo_name = "spi-customizer"
 
     def get_issue_content(self) -> Optional[str]:
-        """Fetch issue content from GitHub API"""
+        """Fetch issue content from local overrides or GitHub API"""
+        # Local override for offline testing
+        local_body = os.environ.get("LOCAL_ISSUE_BODY")
+        local_file = os.environ.get("LOCAL_ISSUE_FILE")
+        if local_body:
+            print("🧪 Using LOCAL_ISSUE_BODY from environment (local test mode)")
+            return local_body
+        if local_file and os.path.isfile(local_file):
+            try:
+                with open(local_file, 'r', encoding='utf-8') as f:
+                    print(f"🧪 Using LOCAL_ISSUE_FILE: {local_file} (local test mode)")
+                    return f.read()
+            except Exception as e:
+                print(f"❌ Failed to read LOCAL_ISSUE_FILE '{local_file}': {e}")
+
+        # Fall back to GitHub API
+        if not self.token:
+            print("❌ GITHUB_TOKEN not provided and no LOCAL_ISSUE_* override found")
+            return None
+
         headers = {
             'Authorization': f'token {self.token}',
             'Accept': 'application/vnd.github.v3+json'
@@ -46,7 +65,16 @@ class GitHubIssueProcessor:
             return None
 
     def update_issue_status(self, status: str, body: str = ""):
-        """Update GitHub issue with processing status"""
+        """Update GitHub issue with processing status (no-op in local mode)"""
+        # In local test mode or without token, just print the update
+        if os.environ.get("LOCAL_DRY_RUN") == "1" or not self.token:
+            print(f"📝 [LOCAL] Would update issue #{self.issue_number} with status '{status}'")
+            if body:
+                print("── Status Body (truncated) ──")
+                print((body[:500] + '...') if len(body) > 500 else body)
+                print("────────────────────────────")
+            return
+
         headers = {
             'Authorization': f'token {self.token}',
             'Accept': 'application/vnd.github.v3+json',
@@ -57,13 +85,11 @@ class GitHubIssueProcessor:
 
         if status == 'processing':
             data['labels'] = ['in-progress']
-            # Don't change state when setting to processing
         elif status == 'completed':
             data['labels'] = ['completed']
             data['state'] = 'closed'
         elif status == 'failed':
             data['labels'] = ['failed']
-            # Don't change state when failing, keep it open for debugging
 
         url = f"{self.api_base}/{self.repo_owner}/{self.repo_name}/issues/{self.issue_number}"
         response = requests.patch(url, headers=headers, json=data)
@@ -142,9 +168,60 @@ class GitHubIssueProcessor:
             simulation_success = False
             print(f"⚠️  Simulation failed: {e}")
 
+        # Step 4.5: Process VCD file for waveform analysis (if simulation successful)
+        waveform_success = False
+        if simulation_success:
+            try:
+                issue_dir = f'results/issue-{self.issue_number}'
+                vcd_file = os.path.join(issue_dir, 'spi_waveform.vcd')
+                if os.path.exists(vcd_file):
+                    print("📊 Processing VCD file for waveform analysis...")
+                    # Import vcd_parser functions
+                    sys.path.append(os.path.dirname(__file__))
+                    from vcd_parser import VcdParser, CsvGenerator, PlotGenerator, SignalPlotGenerator, SummaryGenerator
+
+                    # Parse VCD file
+                    parser = VcdParser(vcd_file)
+                    vcd_data = parser.parse()
+
+                    if "error" in vcd_data:
+                        print(f"⚠️  VCD parsing failed: {vcd_data['error']}")
+                    else:
+                        print(f"✅ VCD parsed successfully: {len(vcd_data['signals'])} signals found")
+
+                        # Generate CSV files
+                        csv_gen = CsvGenerator(vcd_data, issue_dir)
+                        csv_files = csv_gen.generate_csv_files()
+                        print(f"✅ Generated {len(csv_files)} CSV files")
+
+                        # Generate plots
+                        plot_gen = PlotGenerator(issue_dir)
+                        plot_files = plot_gen.generate_plots()
+                        print(f"✅ Generated {len(plot_files)} plot files")
+
+                        # Generate individual signal plots
+                        signal_plot_gen = SignalPlotGenerator(issue_dir)
+                        individual_plots = signal_plot_gen.generate_all_plots()
+                        individual_plots.extend(signal_plot_gen.generate_individual_signal_plots())
+                        print(f"✅ Generated {len(individual_plots)} additional plots")
+
+                        # Generate summary
+                        summary_gen = SummaryGenerator(issue_dir)
+                        summary_file = summary_gen.generate_summary()
+                        print(f"✅ Generated analysis summary: {summary_file}")
+
+                        waveform_success = True
+                        print("🎉 Waveform analysis completed!")
+                else:
+                    print("⚠️  No VCD file found, skipping waveform analysis")
+
+            except Exception as e:
+                print(f"⚠️  Waveform processing failed: {e}")
+                waveform_success = False
+
         # Step 5: Prepare results
         try:
-            results_summary = self._generate_results_summary(config, core_file, tb_file, simulation_success)
+            results_summary = self._generate_results_summary(config, core_file, tb_file, simulation_success, waveform_success)
 
             # Save configuration JSON in issue-specific directory
             config_dict = {
@@ -159,7 +236,8 @@ class GitHubIssueProcessor:
                 'dma_support': config.dma_support,
                 'multi_master': config.multi_master,
                 'test_duration': config.test_duration,
-                'simulation_success': simulation_success
+                'simulation_success': simulation_success,
+                'waveform_success': waveform_success
             }
 
             issue_dir = f'results/issue-{self.issue_number}'
@@ -198,7 +276,7 @@ class GitHubIssueProcessor:
         print("✅ Issue processing completed successfully!")
         return True
 
-    def _generate_results_summary(self, config: SPIConfig, core_file: str, tb_file: str, sim_success: bool) -> str:
+    def _generate_results_summary(self, config: SPIConfig, core_file: str, tb_file: str, sim_success: bool, waveform_success: bool) -> str:
         """Generate summary of results for GitHub issue"""
 
         summary = f"""🎉 **SPI Customization Complete!**
@@ -237,7 +315,7 @@ class GitHubIssueProcessor:
 
 ### Testing Results
 - **RTL Simulation**: {'✅ Passed' if sim_success else '⚠️ Skipped (tools not available)'}
-- **Waveform Capture**: {'✅' if config.waveform_capture else '❌'}
+- **Waveform Capture**: {'✅ Generated' if waveform_success else '❌ Failed'}
 - **Test Duration**: {config.test_duration}
 
 ## Next Steps
@@ -273,10 +351,10 @@ def main():
         print("❌ Issue number must be an integer")
         sys.exit(1)
 
-    # Get GitHub token from environment
+    # Get GitHub token from environment (optional in local mode)
     token = os.environ.get('GITHUB_TOKEN')
-    if not token:
-        print("❌ GITHUB_TOKEN environment variable not set")
+    if not token and not (os.environ.get('LOCAL_ISSUE_FILE') or os.environ.get('LOCAL_ISSUE_BODY')):
+        print("❌ GITHUB_TOKEN not set and no LOCAL_ISSUE_FILE/LOCAL_ISSUE_BODY provided for local run")
         sys.exit(1)
 
     # Process the issue

@@ -1,0 +1,4 @@
+# Mock Icarus Verilog simulation file
+# Generated from: results/issue-123/spi_master_mode1_16bit_fixed.v, results/issue-123/spi_master_tb_fixed.v
+# Top module: spi_master_tb
+# This is a simulated compilation for environments without iverilog

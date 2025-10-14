@@ -8,7 +8,7 @@ module spi_master #(
     parameter CLOCK_DIVIDER = {{ CLOCK_DIVIDER }},  // System clock divider
     parameter DEFAULT_DATA_ENABLED = {{ DEFAULT_DATA_ENABLED | int }},
     parameter DEFAULT_DATA_PATTERN = "{{ DEFAULT_DATA_PATTERN }}",
-    parameter DEFAULT_DATA_VALUE = 16'h{{ DEFAULT_DATA_VALUE }}
+    parameter DEFAULT_DATA_VALUE = {{ DATA_WIDTH }}'h{{ DEFAULT_DATA_VALUE }}
 )(
     input  wire                  clk,        // System clock
     input  wire                  rst_n,      // Active low reset
@@ -61,14 +61,14 @@ module spi_master #(
     reg [DATA_WIDTH-1:0] default_data;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            default_data <= DEFAULT_DATA_VALUE;
+            default_data <= {{ DATA_WIDTH }}'h{{ DEFAULT_DATA_VALUE }};
         end else if (DEFAULT_DATA_ENABLED) begin
             case (DEFAULT_DATA_PATTERN)
-                "a5a5": default_data <= 16'hA5A5;
-                "ffff": default_data <= 16'hFFFF;
-                "0000": default_data <= 16'h0000;
-                "5555": default_data <= 16'h5555;
-                default: default_data <= DEFAULT_DATA_VALUE;
+                "a5a5": default_data <= {{ DATA_WIDTH }}'hA5A5;
+                "ffff": default_data <= {{ DATA_WIDTH }}'hFFFF;
+                "0000": default_data <= {{ DATA_WIDTH }}'h0000;
+                "5555": default_data <= {{ DATA_WIDTH }}'h5555;
+                default: default_data <= {{ DATA_WIDTH }}'h{{ DEFAULT_DATA_VALUE }};
             endcase
         end
     end
@@ -91,7 +91,29 @@ module spi_master #(
             state <= next_state;
             last_sclk <= sclk_gen;
 
-            // SCLK generation
+            // State-specific register updates
+            case (state)
+                IDLE: begin
+                    // Clear interrupt when acknowledged (optional)
+                    if (irq) begin
+                        irq <= 0;
+                    end
+                end
+
+                SETUP: begin
+                    // Initialize transmission
+                    bit_counter <= 0;
+                    tx_shift_reg <= DEFAULT_DATA_ENABLED ? default_data : tx_data;
+                    rx_shift_reg <= 0;
+                end
+
+                COMPLETE: begin
+                    // Capture received data
+                    rx_data <= rx_shift_reg;
+                end
+            endcase
+
+            // SCLK generation (runs during active transmission/reception)
             if (state == TRANSMIT || state == RECEIVE) begin
                 if (clk_counter >= SCLK_HALF_PERIOD - 1) begin
                     clk_counter <= 0;
@@ -104,11 +126,11 @@ module spi_master #(
                 sclk_gen <= CPOL;
             end
 
-            // Data transmission and reception
+            // Data transmission and reception (runs during TRANSMIT/RECEIVE)
             if (state == TRANSMIT || state == RECEIVE) begin
                 // Sample data on appropriate edge
                 if (CPHA == 0) begin
-                    // Sample on leading edge
+                    // Sample on leading edge (CPOL to ~CPOL transition)
                     if (sclk_gen != last_sclk && sclk_gen == ~CPOL) begin
                         if (bit_counter < DATA_WIDTH) begin
                             // Shift in received data
@@ -131,7 +153,7 @@ module spi_master #(
                         end
                     end
                 end else begin
-                    // Sample on trailing edge
+                    // Sample on trailing edge (CPOL transition)
                     if (sclk_gen != last_sclk && sclk_gen == CPOL) begin
                         if (bit_counter < DATA_WIDTH) begin
                             // Shift in received data
@@ -159,8 +181,12 @@ module spi_master #(
     end
 
     // SCLK output assignment
-    always @(posedge clk) begin
-        sclk <= sclk_gen;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            sclk <= CPOL;
+        end else begin
+            sclk <= sclk_gen;
+        end
     end
 
     // Next state logic
@@ -169,11 +195,6 @@ module spi_master #(
 
         case (state)
             IDLE: begin
-                busy = 0;
-                irq = 0;
-                ss_n = {NUM_SLAVES{1'b1}};
-                rx_data = 0;
-
                 if (start_tx) begin
                     next_state = SETUP;
                 end else if (start_rx) begin
@@ -182,37 +203,64 @@ module spi_master #(
             end
 
             SETUP: begin
-                busy = 1;
-                ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Activate slave select
-                bit_counter = 0;
-                tx_shift_reg = DEFAULT_DATA_ENABLED ? default_data : tx_data;
-                rx_shift_reg = 0;
                 next_state = TRANSMIT;
             end
 
             TRANSMIT: begin
-                busy = 1;
                 if (bit_counter >= DATA_WIDTH) begin
                     next_state = COMPLETE;
                 end
             end
 
             RECEIVE: begin
-                busy = 1;
                 if (bit_counter >= DATA_WIDTH) begin
-                    rx_data = rx_shift_reg;
                     next_state = COMPLETE;
                 end
+            end
+
+            COMPLETE: begin
+                next_state = IDLE;
+            end
+
+            default: next_state = IDLE;
+        endcase
+    end
+
+    // Output logic
+    always @(*) begin
+        case (state)
+            IDLE: begin
+                busy = 0;
+                irq = 0;
+                ss_n = {NUM_SLAVES{1'b1}};
+            end
+
+            SETUP: begin
+                busy = 1;
+                ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Activate slave select
+            end
+
+            TRANSMIT: begin
+                busy = 1;
+                ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Keep slave select active
+            end
+
+            RECEIVE: begin
+                busy = 1;
+                ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Keep slave select active
             end
 
             COMPLETE: begin
                 busy = 0;
                 ss_n = {NUM_SLAVES{1'b1}};  // Deactivate slave select
                 irq = 1;  // Generate interrupt
-                next_state = IDLE;
             end
 
-            default: next_state = IDLE;
+            default: begin
+                busy = 0;
+                irq = 0;
+                ss_n = {NUM_SLAVES{1'b1}};
+            end
         endcase
     end
 
