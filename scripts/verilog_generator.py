@@ -79,12 +79,13 @@ class VerilogGenerator:
         return verilog_code
 
 
-    def save_verilog_file(self, config: SPIConfig, filename: str = None) -> str:
+    def save_verilog_file(self, config: SPIConfig, output_dir: str = None, filename: str = None) -> str:
         """
         Generate and save Verilog code to file
 
         Args:
             config: SPIConfig object
+            output_dir: Output directory (optional, defaults to issue-specific dir)
             filename: Output filename (optional)
 
         Returns:
@@ -101,11 +102,12 @@ class VerilogGenerator:
 
         verilog_code = self.generate_spi_core(config)
 
-        # Ensure issue-specific results directory exists
-        issue_dir = f'results/issue-{config.issue_number}'
-        os.makedirs(issue_dir, exist_ok=True)
+        # Use provided output_dir or default to issue-specific directory
+        if output_dir is None:
+            output_dir = f'results/issue-{config.issue_number}/code'
+            os.makedirs(output_dir, exist_ok=True)
 
-        filepath = os.path.join(issue_dir, filename)
+        filepath = os.path.join(output_dir, filename)
         with open(filepath, 'w') as f:
             f.write(verilog_code)
 
@@ -155,12 +157,13 @@ class VerilogGenerator:
 
         return testbench_code
 
-    def save_testbench(self, config: SPIConfig, filename: str = None, vcd_filename: str = "spi_waveform.vcd") -> str:
+    def save_testbench(self, config: SPIConfig, output_dir: str = None, filename: str = None, vcd_filename: str = "spi_waveform.vcd") -> str:
         """
         Generate and save testbench code to file
 
         Args:
             config: SPIConfig object
+            output_dir: Output directory (optional, defaults to issue-specific dir)
             filename: Output filename (optional)
             vcd_filename: VCD output filename (optional)
 
@@ -178,11 +181,12 @@ class VerilogGenerator:
 
         testbench_code = self.generate_testbench(config, vcd_filename)
 
-        # Ensure issue-specific results directory exists
-        issue_dir = f'results/issue-{config.issue_number}'
-        os.makedirs(issue_dir, exist_ok=True)
+        # Use provided output_dir or default to issue-specific directory
+        if output_dir is None:
+            output_dir = f'results/issue-{config.issue_number}/code'
+            os.makedirs(output_dir, exist_ok=True)
 
-        filepath = os.path.join(issue_dir, filename)
+        filepath = os.path.join(output_dir, filename)
         with open(filepath, 'w') as f:
             f.write(testbench_code)
 

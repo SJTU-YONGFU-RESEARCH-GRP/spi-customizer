@@ -191,9 +191,10 @@ def send_test_email():
 
     # Test with sample files
     test_attachments = [
-        'results/issue-123/spi_config.json',
-        'results/issue-123/spi_master_mode0_16bit.v',
-        'results/issue-123/spi_master_tb.v'
+        'results/issue-123/code/spi_config.json',
+        'results/issue-123/code/spi_master_mode0_16bit.v',
+        'results/issue-123/code/spi_master_tb.v',
+        'results/issue-123/data/spi_waveform.vcd'
     ]
 
     return sender.send_results_email(test_config, test_attachments)
@@ -245,19 +246,22 @@ def send_workflow_email():
             
         print(f"✅ Loaded configuration from {config_file}")
 
-        # Look for result files
+        # Look for result files in organized subdirectories
         attachments = []
 
         # Add generated files if they exist
         potential_files = [
-            'spi_config.json',
-            f'spi_master_mode{config_dict.get("mode", "0")}_{config_dict.get("data_width", "8")}bit.v',
-            'spi_master_tb.v',
-            'spi_waveform.vcd'
+            ('code', 'spi_config.json'),
+            ('code', f'spi_master_mode{config_dict.get("mode", "0")}_{config_dict.get("data_width", "8")}bit.v'),
+            ('code', 'spi_master_tb.v'),
+            ('data', 'spi_waveform.vcd'),
+            ('logs', 'processing_status.txt'),
+            ('logs', 'simulation.log'),
+            ('logs', 'compilation.log')
         ]
         
-        for filename in potential_files:
-            filepath = os.path.join(issue_dir, filename)
+        for subdir, filename in potential_files:
+            filepath = os.path.join(issue_dir, subdir, filename)
             if os.path.exists(filepath):
                 attachments.append(filepath)
 

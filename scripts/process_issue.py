@@ -148,11 +148,16 @@ class GitHubIssueProcessor:
 
         # Step 3: Generate Verilog code
         try:
+            # Create issue directory and subdirectories
+            issue_dir = f'results/issue-{self.issue_number}'
+            code_dir = f'{issue_dir}/code'
+            os.makedirs(code_dir, exist_ok=True)
+
             generator = VerilogGenerator()
             # Generate VCD filename for testbench
-            vcd_filename = f"results/issue-{self.issue_number}/spi_waveform.vcd"
-            core_file = generator.save_verilog_file(config)
-            tb_file = generator.save_testbench(config, vcd_filename=vcd_filename)
+            vcd_filename = f"{issue_dir}/data/spi_waveform.vcd"
+            core_file = generator.save_verilog_file(config, output_dir=code_dir)
+            tb_file = generator.save_testbench(config, output_dir=code_dir, vcd_filename=vcd_filename)
 
             # Verify files were created
             if not os.path.exists(core_file):
@@ -197,7 +202,7 @@ class GitHubIssueProcessor:
         if simulation_success:
             try:
                 issue_dir = f'results/issue-{self.issue_number}'
-                vcd_file = os.path.join(issue_dir, 'spi_waveform.vcd')
+                vcd_file = os.path.join(issue_dir, 'data', 'spi_waveform.vcd')
                 if os.path.exists(vcd_file):
                     print("📊 Processing VCD file for waveform analysis...")
                     # Import vcd_parser functions
@@ -269,16 +274,26 @@ class GitHubIssueProcessor:
             issue_dir = f'results/issue-{self.issue_number}'
             os.makedirs(issue_dir, exist_ok=True)
 
+            # Create subdirectories for organization
+            code_dir = os.path.join(issue_dir, 'code')
+            graphs_dir = os.path.join(issue_dir, 'graphs')
+            logs_dir = os.path.join(issue_dir, 'logs')
+            data_dir = os.path.join(issue_dir, 'data')
+            os.makedirs(code_dir, exist_ok=True)
+            os.makedirs(graphs_dir, exist_ok=True)
+            os.makedirs(logs_dir, exist_ok=True)
+            os.makedirs(data_dir, exist_ok=True)
+
             # Ensure plots directory exists (even if no plots generated)
             plots_dir = 'plots'
             os.makedirs(plots_dir, exist_ok=True)
 
-            config_file = os.path.join(issue_dir, 'spi_config.json')
+            config_file = os.path.join(code_dir, 'spi_config.json')
             with open(config_file, 'w') as f:
                 json.dump(config_dict, f, indent=2)
 
             # Create a simple status file to indicate completion
-            status_file = os.path.join(issue_dir, 'processing_status.txt')
+            status_file = os.path.join(logs_dir, 'processing_status.txt')
             with open(status_file, 'w') as f:
                 f.write(f"SPI Issue #{self.issue_number} processing completed\n")
                 f.write(f"Mode: {config.mode}\n")

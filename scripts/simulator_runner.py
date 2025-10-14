@@ -100,9 +100,13 @@ class RTLSimulator:
             # Generate issue-specific directory
             issue_dir = self.results_dir / f"issue-{config.issue_number}" if hasattr(config, 'issue_number') else self.results_dir
             issue_dir.mkdir(exist_ok=True)
+            data_dir = issue_dir / 'data'
+            logs_dir = issue_dir / 'logs'
+            data_dir.mkdir(exist_ok=True)
+            logs_dir.mkdir(exist_ok=True)
 
-            # Compile to issue-specific directory
-            simulation_file = str(issue_dir / 'spi_simulation')
+            # Compile to issue-specific data directory
+            simulation_file = str(data_dir / 'spi_simulation')
             cmd = [iverilog_cmd, '-o', simulation_file]
             cmd.extend(verilog_files)
 
@@ -120,8 +124,8 @@ class RTLSimulator:
                     print("✅ Real compilation successful")
                     print(f"   Generated: {simulation_file}")
 
-                    # Generate compilation log in issue directory
-                    log_file = str(issue_dir / 'compilation.log')
+                    # Generate compilation log in logs directory
+                    log_file = str(logs_dir / 'compilation.log')
                     with open(log_file, 'w') as f:
                         f.write("Icarus Verilog compilation log\n")
                         f.write("=" * 50 + "\n")
@@ -168,8 +172,12 @@ class RTLSimulator:
             if config and hasattr(config, 'issue_number'):
                 issue_dir = self.results_dir / f"issue-{config.issue_number}"
                 issue_dir.mkdir(exist_ok=True)
-                simulation_file = str(issue_dir / 'spi_simulation')
-                log_file = str(issue_dir / 'compilation.log')
+                data_dir = issue_dir / 'data'
+                logs_dir = issue_dir / 'logs'
+                data_dir.mkdir(exist_ok=True)
+                logs_dir.mkdir(exist_ok=True)
+                simulation_file = str(data_dir / 'spi_simulation')
+                log_file = str(logs_dir / 'compilation.log')
             else:
                 simulation_file = str(self.results_dir / 'spi_simulation')
                 log_file = str(self.results_dir / 'compilation.log')
@@ -227,7 +235,11 @@ class RTLSimulator:
         issue_dir = None
         if hasattr(config, 'issue_number'):
             issue_dir = self.results_dir / f"issue-{config.issue_number}"
-            simulation_file = str(issue_dir / 'spi_simulation')
+            data_dir = issue_dir / 'data'
+            logs_dir = issue_dir / 'logs'
+            data_dir.mkdir(exist_ok=True)
+            logs_dir.mkdir(exist_ok=True)
+            simulation_file = str(data_dir / 'spi_simulation')
             if not os.path.exists(simulation_file):
                 simulation_file = str(self.results_dir / 'spi_simulation')
         else:
@@ -267,11 +279,14 @@ class RTLSimulator:
                 if vvp_exec:
                     # Ensure issue directory exists
                     if issue_dir:
-                        issue_dir.mkdir(exist_ok=True)
+                        data_dir = issue_dir / 'data'
+                        logs_dir = issue_dir / 'logs'
+                        data_dir.mkdir(exist_ok=True)
+                        logs_dir.mkdir(exist_ok=True)
 
                     # Run real RTL simulation with VCD dumping
-                    vcd_file = str(issue_dir / 'spi_waveform.vcd')
-                    simulation_file = str(issue_dir / 'spi_simulation')
+                    vcd_file = str(data_dir / 'spi_waveform.vcd')
+                    simulation_file = str(data_dir / 'spi_simulation')
                     cmd = [vvp_exec, '-n', simulation_file]
 
                     try:
@@ -280,8 +295,8 @@ class RTLSimulator:
                         print(f"   VCD output: {vcd_file}")
                         print(f"   Using vvp: {vvp_exec}")
 
-                        # Generate simulation log header in issue directory
-                        log_file = str(issue_dir / 'simulation.log')
+                        # Generate simulation log header in logs directory
+                        log_file = str(logs_dir / 'simulation.log')
                         with open(log_file, 'w') as f:
                             f.write("Icarus Verilog simulation log\n")
                             f.write("=" * 50 + "\n")
@@ -318,12 +333,12 @@ class RTLSimulator:
                                 print(f"✅ Simulation log: {log_file}")
 
                                 # Generate GTKWave save file
-                                gtkw_file = str(issue_dir / 'spi_waveform.gtkw')
+                                gtkw_file = str(data_dir / 'spi_waveform.gtkw')
                                 with open(gtkw_file, 'w') as f:
                                     f.write("[*\n")
                                     f.write("[*]\n")
                                     f.write("[sst]\n")
-                                    f.write(f"{issue_dir / 'spi_waveform.vcd'}\n")
+                                    f.write(f"{data_dir / 'spi_waveform.vcd'}\n")
                                     f.write("[timeline] 1\n")
                                     f.write("[analog] 0\n")
                                     f.write("[waves] 0\n")
@@ -362,8 +377,12 @@ class RTLSimulator:
             # Ensure issue directory exists
             if not issue_dir:
                 issue_dir = self.results_dir
+                data_dir = issue_dir / 'data'
+                logs_dir = issue_dir / 'logs'
+                data_dir.mkdir(exist_ok=True)
+                logs_dir.mkdir(exist_ok=True)
 
-            log_file = str(issue_dir / 'simulation.log')
+            log_file = str(logs_dir / 'simulation.log')
 
             # Log the failure
             with open(log_file, 'w') as f:
@@ -403,7 +422,11 @@ class RTLSimulator:
         try:
             # Extract issue directory from VCD file path
             vcd_path = Path(vcd_file)
-            issue_dir = vcd_path.parent  # Get the parent directory of the VCD file
+            issue_dir = vcd_path.parent.parent  # Get the issue directory (parent of data/)
+            data_dir = issue_dir / 'data'
+            logs_dir = issue_dir / 'logs'
+            data_dir.mkdir(exist_ok=True)
+            logs_dir.mkdir(exist_ok=True)
 
             with open(vcd_file, 'w') as f:
                 f.write(vcd_content)
@@ -413,8 +436,8 @@ class RTLSimulator:
             print(f"   Simulation time: {total_time}ns")
             print(f"   Data points: {num_points}")
 
-            # Generate log file in the same issue directory as the VCD file
-            log_file = str(issue_dir / 'simulation.log')
+            # Generate log file in the logs directory
+            log_file = str(logs_dir / 'simulation.log')
             with open(log_file, 'w') as f:
                 f.write("Icarus Verilog simulation log\n")
                 f.write("=" * 40 + "\n")
@@ -611,7 +634,8 @@ class RTLSimulator:
 
         # Generate GTKWave save file in the same directory as the VCD file
         vcd_path = Path(vcd_file)
-        save_file = str(vcd_path.parent / 'spi_waveform.gtkw')
+        data_dir = vcd_path.parent
+        save_file = str(data_dir / 'spi_waveform.gtkw')
 
         # Create basic GTKWave save file
         gtkw_content = f"""[*
@@ -657,7 +681,8 @@ class RTLSimulator:
         # Step 3: Check for generated files in issue directory
         if hasattr(config, 'issue_number'):
             issue_dir = self.results_dir / f"issue-{config.issue_number}"
-            vcd_file = str(issue_dir / 'spi_waveform.vcd')
+            data_dir = issue_dir / 'data'
+            vcd_file = str(data_dir / 'spi_waveform.vcd')
             if os.path.exists(vcd_file):
                 self.generate_waveform(vcd_file)
                 print("🎉 RTL simulation completed successfully!")
@@ -747,8 +772,10 @@ async def test_spi_transmission(dut):
         # Ensure issue-specific results directory exists
         issue_dir = self.results_dir / f'issue-{config.issue_number}'
         issue_dir.mkdir(exist_ok=True)
+        code_dir = issue_dir / 'code'
+        code_dir.mkdir(exist_ok=True)
 
-        test_file = issue_dir / 'test_spi.py'
+        test_file = code_dir / 'test_spi.py'
         with open(test_file, 'w') as f:
             f.write(test_content)
 

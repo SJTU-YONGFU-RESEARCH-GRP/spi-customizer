@@ -49,8 +49,7 @@ jobs:
       with:
         name: spi-results-${{ github.event.issue.number }}
         path: |
-          results/issue-${{ github.event.issue.number }}/
-          plots/
+          results/issue-${{ github.event.issue.number }}/**
 
     - name: Commit and Push Results
       if: success() && github.event.issue.number != null
@@ -80,24 +79,13 @@ jobs:
 
           # Add all files in the results directory recursively
           echo "📝 Adding all files in results/issue-${{ github.event.issue.number }}/"
-          # Simple approach: list all files and add them individually (force add to override .gitignore)
-          for file in results/issue-${{ github.event.issue.number }}/*; do
-            if [ -f "$file" ]; then
-              echo "Adding: $file"
-              git add -f "$file" || echo "Failed to add: $file"
-            fi
-          done
+          # Use find to recursively add all files (force add to override .gitignore)
+          find results/issue-${{ github.event.issue.number }}/ -type f -exec git add -f {} \; 2>/dev/null || echo "Some files may not have been added"
 
-          # Also try adding plots directory if it exists
+          # Also try adding plots directory if it exists (legacy support)
           if [ -d "plots" ]; then
-            echo "📝 Adding plots/"
-            # Simple approach: add all files in plots directory individually (force add to override .gitignore)
-            for plot_file in plots/*; do
-              if [ -f "$plot_file" ]; then
-                echo "Adding plot: $plot_file"
-                git add -f "$plot_file" || echo "Failed to add plot: $plot_file"
-              fi
-            done
+            echo "📝 Adding legacy plots/"
+            find plots/ -type f -exec git add -f {} \; 2>/dev/null || echo "No legacy plots to add"
           fi
 
           # Check what files are staged

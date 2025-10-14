@@ -189,7 +189,12 @@ class CsvGenerator:
     def __init__(self, vcd_data: Dict[str, Any], output_dir: str):
         self.vcd_data = vcd_data
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+        self.data_dir = self.output_dir / 'data'
+        self.graphs_dir = self.output_dir / 'graphs'
+        self.logs_dir = self.output_dir / 'logs'
+        self.data_dir.mkdir(exist_ok=True)
+        self.graphs_dir.mkdir(exist_ok=True)
+        self.logs_dir.mkdir(exist_ok=True)
 
     def generate_csv_files(self) -> List[str]:
         """Generate CSV files for plotting"""
@@ -218,7 +223,7 @@ class CsvGenerator:
 
     def _generate_timing_csv(self) -> Optional[str]:
         """Generate CSV with timing information for all signals"""
-        csv_file = self.output_dir / 'spi_timing_data.csv'
+        csv_file = self.data_dir / 'spi_timing_data.csv'
 
         # Get signals data early
         signals = self.vcd_data.get('signals', {})
@@ -292,7 +297,7 @@ class CsvGenerator:
 
     def _generate_summary_csv(self) -> Optional[str]:
         """Generate CSV with signal summary information"""
-        csv_file = self.output_dir / 'spi_signal_summary.csv'
+        csv_file = self.data_dir / 'spi_signal_summary.csv'
 
         with open(csv_file, 'w', newline='') as f:
             writer = csv.writer(f)
@@ -324,7 +329,7 @@ class CsvGenerator:
 
             # Create filename with meaningful name (replace special chars)
             safe_name = meaningful_name.replace(' ', '_').replace('/', '_')
-            csv_file = self.output_dir / f'spi_{safe_name}_data.csv'
+            csv_file = self.data_dir / f'spi_{safe_name}_data.csv'
 
             with open(csv_file, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -349,7 +354,7 @@ class CsvGenerator:
             return None
 
         try:
-            consolidated_csv = self.output_dir / 'spi_consolidated_signals.csv'
+            consolidated_csv = self.data_dir / 'spi_consolidated_signals.csv'
 
             # Read the timing CSV to get all time points
             with open(timing_csv, 'r') as f:
@@ -418,8 +423,10 @@ class PlotGenerator:
 
     def __init__(self, csv_dir: str):
         self.csv_dir = Path(csv_dir)
-        self.output_dir = self.csv_dir
-        self.output_dir.mkdir(exist_ok=True)
+        self.graphs_dir = self.csv_dir / 'graphs'
+        self.logs_dir = self.csv_dir / 'logs'
+        self.graphs_dir.mkdir(exist_ok=True)
+        self.logs_dir.mkdir(exist_ok=True)
 
     def generate_plots(self) -> List[str]:
         """Generate plots from CSV data"""
@@ -447,7 +454,7 @@ class PlotGenerator:
 
         try:
             # Create a simple text-based timing diagram
-            plot_file = self.output_dir / 'spi_timing_diagram.txt'
+            plot_file = self.logs_dir / 'spi_timing_diagram.txt'
 
             with open(timing_csv, 'r') as f:
                 reader = csv.reader(f)
@@ -496,7 +503,7 @@ class PlotGenerator:
             return None
 
         try:
-            plot_file = self.output_dir / 'spi_signal_analysis.txt'
+            plot_file = self.logs_dir / 'spi_signal_analysis.txt'
 
             with open(summary_csv, 'r') as f:
                 reader = csv.reader(f)
@@ -611,7 +618,8 @@ class SignalPlotGenerator:
 
     def __init__(self, output_dir: str):
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+        self.graphs_dir = self.output_dir / 'graphs'
+        self.graphs_dir.mkdir(exist_ok=True)
 
     def generate_all_plots(self) -> List[str]:
         """Generate all 4 types of plots"""
@@ -644,7 +652,7 @@ class SignalPlotGenerator:
         individual_plots = []
 
         try:
-            timing_csv = self.output_dir / 'spi_timing_data.csv'
+            timing_csv = self.output_dir / 'data' / 'spi_timing_data.csv'
             if not timing_csv.exists():
                 print(f"⚠️  Timing CSV not found for individual plots")
                 return individual_plots
@@ -710,7 +718,7 @@ class SignalPlotGenerator:
                         bbox=dict(boxstyle='round,pad=0.5', facecolor='lightcyan', alpha=0.8))
 
                 plt.tight_layout()
-                plot_file = self.output_dir / f'spi_{signal_name.lower()}_individual.png'
+                plot_file = self.graphs_dir / f'spi_{signal_name.lower()}_individual.png'
                 plt.savefig(plot_file, dpi=150, bbox_inches='tight')
                 plt.close()
 
@@ -802,7 +810,7 @@ class SignalPlotGenerator:
                 axes[i].set_visible(False)
 
             plt.tight_layout()
-            plot_file = self.output_dir / filename
+            plot_file = self.graphs_dir / filename
             plt.savefig(plot_file, dpi=150, bbox_inches='tight')
             plt.close()
 
@@ -815,7 +823,7 @@ class SignalPlotGenerator:
 
     def _preprocess_signal_data(self, signal_names: List[str]) -> Tuple[List[float], Dict[str, List[float]]]:
         """Preprocess signal data with intelligent sampling and activity detection"""
-        timing_csv = self.output_dir / 'spi_timing_data.csv'
+        timing_csv = self.output_dir / 'data' / 'spi_timing_data.csv'
 
         # First pass: analyze data characteristics
         total_samples = sum(1 for _ in open(timing_csv, 'r')) - 1  # Exclude header
@@ -999,7 +1007,9 @@ class SummaryGenerator:
 
     def __init__(self, issue_dir: str):
         self.issue_dir = Path(issue_dir)
-        self.output_file = self.issue_dir / 'SUMMARY.md'
+        self.logs_dir = self.issue_dir / 'logs'
+        self.logs_dir.mkdir(exist_ok=True)
+        self.output_file = self.logs_dir / 'SUMMARY.md'
 
     def generate_summary(self) -> str:
         """Generate comprehensive summary of RTL simulation results"""
@@ -1191,7 +1201,7 @@ class SummaryGenerator:
 
     def _read_config(self) -> Dict[str, Any]:
         """Read configuration from spi_config.json"""
-        config_file = self.issue_dir / 'spi_config.json'
+        config_file = self.issue_dir / 'code' / 'spi_config.json'
         if config_file.exists():
             with open(config_file, 'r') as f:
                 return json.load(f)
@@ -1199,7 +1209,7 @@ class SummaryGenerator:
 
     def _read_simulation_log(self) -> str:
         """Read and format simulation log"""
-        log_file = self.issue_dir / 'simulation.log'
+        log_file = self.issue_dir / 'logs' / 'simulation.log'
         if log_file.exists():
             with open(log_file, 'r') as f:
                 content = f.read()
@@ -1227,7 +1237,7 @@ class SummaryGenerator:
 
     def _read_signal_summary(self) -> str:
         """Read and format signal summary"""
-        summary_file = self.issue_dir / 'spi_signal_summary.csv'
+        summary_file = self.issue_dir / 'data' / 'spi_signal_summary.csv'
         if not summary_file.exists():
             return "No signal summary available"
 
@@ -1269,7 +1279,7 @@ class SummaryGenerator:
 
     def _analyze_timing_data(self) -> str:
         """Analyze timing data for key insights"""
-        timing_file = self.issue_dir / 'spi_timing_data.csv'
+        timing_file = self.issue_dir / 'data' / 'spi_timing_data.csv'
         if not timing_file.exists():
             return "No timing data available"
 
