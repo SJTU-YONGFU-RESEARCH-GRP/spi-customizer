@@ -80,22 +80,22 @@ jobs:
 
           # Add all files in the results directory recursively
           echo "📝 Adding all files in results/issue-${{ github.event.issue.number }}/"
-          # Simple approach: list all files and add them individually
+          # Simple approach: list all files and add them individually (force add to override .gitignore)
           for file in results/issue-${{ github.event.issue.number }}/*; do
             if [ -f "$file" ]; then
               echo "Adding: $file"
-              git add "$file" || echo "Failed to add: $file"
+              git add -f "$file" || echo "Failed to add: $file"
             fi
           done
 
           # Also try adding plots directory if it exists
           if [ -d "plots" ]; then
             echo "📝 Adding plots/"
-            # Simple approach: add all files in plots directory individually
+            # Simple approach: add all files in plots directory individually (force add to override .gitignore)
             for plot_file in plots/*; do
               if [ -f "$plot_file" ]; then
                 echo "Adding plot: $plot_file"
-                git add "$plot_file" || echo "Failed to add plot: $plot_file"
+                git add -f "$plot_file" || echo "Failed to add plot: $plot_file"
               fi
             done
           fi
