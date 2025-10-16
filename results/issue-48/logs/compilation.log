@@ -1,0 +1,8 @@
+Icarus Verilog compilation log
+==================================================
+Simulated compilation (iverilog not available)
+Verilog files: 2
+Files: results/issue-48/code/spi_dual_mode3_7bit.v, results/issue-48/code/spi_dual_tb.v
+Top module: spi_master_tb
+Compilation: SUCCESS (simulated)
+Exit code: 0

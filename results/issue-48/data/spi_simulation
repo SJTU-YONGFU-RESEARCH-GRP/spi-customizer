@@ -1,0 +1,4 @@
+# Mock Icarus Verilog simulation file
+# Generated from: results/issue-48/code/spi_dual_mode3_7bit.v, results/issue-48/code/spi_dual_tb.v
+# Top module: spi_master_tb
+# This is a simulated compilation for environments without iverilog

@@ -1,0 +1,17 @@
+{
+  "issue_number": 48,
+  "mode": 3,
+  "data_width": 7,
+  "num_slaves": 3,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": true,
+  "fifo_buffers": true,
+  "dma_support": true,
+  "multi_master": true,
+  "test_duration": "Comprehensive",
+  "simulation_success": true,
+  "waveform_success": true,
+  "email": "liyongfu.sg@gmail.com",
+  "github_username": "_"
+}
