@@ -1,0 +1,4 @@
+Time (ns),spi_master_tb.dut.start_rx
+0,0
+1830000,1
+1880000,0
