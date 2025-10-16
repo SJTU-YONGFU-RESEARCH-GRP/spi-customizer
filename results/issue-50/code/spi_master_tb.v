@@ -87,7 +87,7 @@ module spi_master_tb;
         // Test 1: Basic data transmission
         
         
-        tx_data = 2'b10;
+        tx_data = 3'b101;
         
         $display("TX Data: 0x%h", tx_data);
         start_tx = 1;
@@ -103,7 +103,7 @@ module spi_master_tb;
 
         // Test 2: Different data pattern (test MSB/LSB order)
         
-        tx_data = 2'b01;
+        tx_data = 3'b011;
         
         $display("TX Data: 0x%h", tx_data);
         start_tx = 1;
@@ -122,9 +122,16 @@ module spi_master_tb;
         #50;
         start_rx = 0;
 
-        // Simulate slave providing response data
+        // Simulate slave providing response data for 3-bit transaction
+        // For Mode 3: Slave data is sampled on falling edges
+        // Send 3'b110 as response (110 in binary)
         #200;
-        miso = 1'b1;  // Data bit based on CPHA
+        miso = 1'b1;  // Bit 2 (MSB first)
+        #100;  // Wait for falling edge sampling
+        miso = 1'b1;  // Bit 1
+        #100;  // Wait for falling edge sampling
+        miso = 1'b0;  // Bit 0 (LSB)
+        #100;  // Wait for falling edge sampling
 
         wait (!busy);
         $display("✓ Reception complete");

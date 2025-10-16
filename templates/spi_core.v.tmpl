@@ -257,6 +257,7 @@ module spi_master #(
                 busy = 0;
                 ss_n = {NUM_SLAVES{1'b1}};  // Deactivate slave select
                 irq = 1;  // Generate interrupt
+                rx_data = rx_shift_reg;  // Output received data
             end
 
             default: begin

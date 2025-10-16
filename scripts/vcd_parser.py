@@ -671,7 +671,7 @@ class SignalPlotGenerator:
                         continue
 
                     time_ns = int(row[0])
-                    time_data.append(time_ns / 1000)  # Convert to microseconds
+                    time_data.append(time_ns / 1000.0)  # Convert to microseconds (keep as float)
 
                     # Process each signal column
                     for i in range(1, len(header)):  # Skip time column
@@ -693,8 +693,8 @@ class SignalPlotGenerator:
 
                 plt.figure(figsize=(12, 6))
 
-                # Plot the signal
-                plt.plot(time_data, values, linewidth=2, color='blue')
+                # Plot the signal with step-style for sharp digital transitions
+                plt.plot(time_data, values, drawstyle='steps-post', linewidth=2, color='blue')
 
                 # Add signal statistics
                 high_count = sum(1 for v in values if v == 1)
@@ -830,11 +830,12 @@ class SignalPlotGenerator:
         total_samples = sum(1 for _ in open(timing_csv, 'r')) - 1  # Exclude header
         print(f"📊 Processing {total_samples:,} total samples")
 
-        # For very large datasets, use adaptive sampling
-        if total_samples > 100000:
-            # Sample every Nth point to keep plots readable
-            sample_rate = max(1, total_samples // 50000)  # Target ~50k points max
-            print(f"🔄 Using adaptive sampling (1/{sample_rate}) for large dataset")
+        # For digital signals, we want sharp transitions, so use minimal sampling
+        # Only sample if dataset is extremely large (>500k points)
+        if total_samples > 500000:
+            # Sample every Nth point to keep plots readable but preserve transitions
+            sample_rate = max(1, total_samples // 100000)  # Target ~100k points max
+            print(f"🔄 Using adaptive sampling (1/{sample_rate}) for very large dataset")
         else:
             sample_rate = 1
 
@@ -855,7 +856,7 @@ class SignalPlotGenerator:
                     continue
 
                 time_ns = int(row[0])
-                time_data.append(time_ns / 1000)  # Convert to microseconds
+                time_data.append(time_ns / 1000.0)  # Convert to microseconds (keep as float)
 
                 # Map CSV columns to signal names
                 signal_mapping = {
@@ -873,8 +874,9 @@ class SignalPlotGenerator:
 
     def _plot_spi_signal(self, ax: plt.Axes, signal_name: str, time_data: List[float], values: List[float]) -> None:
         """Plot a single SPI signal with protocol-aware visualization"""
-        # Plot the main signal
-        ax.plot(time_data, values, linewidth=2, color=self._get_signal_color(signal_name), alpha=0.8)
+        # Plot the main signal with step-style for sharp digital transitions
+        ax.plot(time_data, values, drawstyle='steps-post', linewidth=2,
+                color=self._get_signal_color(signal_name), alpha=0.9)
 
         # Add SPI protocol-specific enhancements
         if signal_name == 'SCLK':
@@ -962,18 +964,18 @@ class SignalPlotGenerator:
             elif values[i-1] == 1 and values[i] == 0:
                 falling_edges.append((time_data[i], values[i]))
 
-        # Mark first few edges
+        # Mark first few edges with step-style
         if rising_edges:
-            ax.plot(*zip(*rising_edges[:5]), 'ro', markersize=4, alpha=0.7, label='Rising Edge')
+            ax.plot(*zip(*rising_edges[:5]), 'ro', markersize=4, alpha=0.7, label='Rising Edge', drawstyle='steps-post')
         if falling_edges:
-            ax.plot(*zip(*falling_edges[:5]), 'bo', markersize=4, alpha=0.7, label='Falling Edge')
+            ax.plot(*zip(*falling_edges[:5]), 'bo', markersize=4, alpha=0.7, label='Falling Edge', drawstyle='steps-post')
 
         # Calculate approximate frequency if we have edges
         if len(rising_edges) > 1:
             periods = [rising_edges[i+1][0] - rising_edges[i][0] for i in range(min(5, len(rising_edges)-1))]
             avg_period = sum(periods) / len(periods) if periods else 0
             if avg_period > 0:
-                freq_khz = 1000 / avg_period
+                freq_khz = 1000.0 / avg_period
                 ax.text(0.02, 0.85, f'~{freq_khz:.1f} kHz', transform=ax.transAxes,
                        fontsize=9, bbox=dict(boxstyle='round,pad=0.3', facecolor='lightblue', alpha=0.8))
 
@@ -985,9 +987,9 @@ class SignalPlotGenerator:
             if values[i] != values[i-1] and values[i] != 0.5:  # Ignore X states
                 transitions.append((time_data[i], values[i]))
 
-        # Mark transitions
+        # Mark transitions with step-style
         if transitions:
-            ax.plot(*zip(*transitions[:10]), 'k^', markersize=5, alpha=0.8, label='Data Change')
+            ax.plot(*zip(*transitions[:10]), 'k^', markersize=5, alpha=0.8, label='Data Change', drawstyle='steps-post')
 
         # Add data direction indicator
         direction = "Master→Slave" if signal_name == 'MOSI' else "Slave→Master"
@@ -1011,9 +1013,9 @@ class SignalPlotGenerator:
         if start_time is not None:
             active_periods.append((start_time, time_data[-1]))
 
-        # Highlight active periods
+        # Highlight active periods with step-style
         for start, end in active_periods[:3]:  # Show first 3 periods
-            ax.axvspan(start, end, alpha=0.2, color='yellow', label='Slave Active' if len(active_periods) == 1 else "")
+            ax.axvspan(start, end, alpha=0.2, color='yellow', label='Slave Active' if len(active_periods) == 1 else "", step='post')
 
         # Add polarity indicator
         ax.text(0.02, 0.85, 'Active Low', transform=ax.transAxes,
