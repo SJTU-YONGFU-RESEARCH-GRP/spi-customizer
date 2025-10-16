@@ -90,8 +90,14 @@ module spi_master_tb;
         tx_data = 32'hAA55FF00;  // Simplified 32-bit test pattern
         {% elif data_width >= 16 %}
         tx_data = 16'hAA55;
-        {% else %}
+        {% elif data_width >= 8 %}
         tx_data = 8'hA5;
+        {% elif data_width >= 4 %}
+        tx_data = 4'hA;
+        {% elif data_width >= 2 %}
+        tx_data = 2'b10;
+        {% else %}
+        tx_data = 1'b1;
         {% endif %}
         $display("TX Data: 0x%h", tx_data);
         start_tx = 1;
@@ -110,8 +116,14 @@ module spi_master_tb;
         tx_data = 32'hFFFF0000;  // Alternative 32-bit test pattern
         {% elif data_width >= 16 %}
         tx_data = 16'h5555;
+        {% elif data_width >= 8 %}
+        tx_data = 8'h5A;
+        {% elif data_width >= 4 %}
+        tx_data = 4'h5;
+        {% elif data_width >= 2 %}
+        tx_data = 2'b01;
         {% else %}
-        tx_data = 8'h55;
+        tx_data = 1'b0;
         {% endif %}
         $display("TX Data: 0x%h", tx_data);
         start_tx = 1;

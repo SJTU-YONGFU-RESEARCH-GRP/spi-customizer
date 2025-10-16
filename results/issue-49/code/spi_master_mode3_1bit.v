@@ -32,6 +32,7 @@ module spi_master #(
 
     // Local parameters
     localparam SCLK_HALF_PERIOD = CLOCK_DIVIDER; // Configurable SCLK period based on system clock
+    localparam BIT_PERIOD = CLOCK_DIVIDER * 2; // Full SCLK period for one bit
 
     // State machine states
     localparam IDLE = 3'd0;
@@ -128,51 +129,31 @@ module spi_master #(
 
             // Data transmission and reception (runs during TRANSMIT/RECEIVE)
             if (state == TRANSMIT || state == RECEIVE) begin
-                // Sample data on appropriate edge
-                if (CPHA == 0) begin
-                    // Sample on leading edge (CPOL to ~CPOL transition)
-                    if (sclk_gen != last_sclk && sclk_gen == ~CPOL) begin
-                        if (bit_counter < DATA_WIDTH) begin
-                            // Shift in received data
-                            if (MSB_FIRST) begin
-                                rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
-                            end else begin
-                                rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
+                // SPI Mode 3 (CPHA=1): Sample on falling edge, change on rising edge
+                if (CPHA == 1) begin
+                    // For Mode 3: Change data on rising edge, sample on falling edge
+                    if (sclk_gen != last_sclk) begin
+                        if (sclk_gen == 1'b1) begin // Rising edge - change data
+                            if (bit_counter < DATA_WIDTH) begin
+                                // Shift out transmitted data
+                                if (MSB_FIRST) begin
+                                    mosi <= tx_shift_reg[DATA_WIDTH-1];
+                                    tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                                end else begin
+                                    mosi <= tx_shift_reg[0];
+                                    tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
+                                end
+                                bit_counter <= bit_counter + 1;
                             end
-
-                            // Shift out transmitted data
-                            if (MSB_FIRST) begin
-                                mosi <= tx_shift_reg[DATA_WIDTH-1];
-                                tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
-                            end else begin
-                                mosi <= tx_shift_reg[0];
-                                tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
+                        end else begin // Falling edge - sample data
+                            if (bit_counter < DATA_WIDTH && bit_counter > 0) begin
+                                // Shift in received data (sample on falling edge)
+                                if (MSB_FIRST) begin
+                                    rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
+                                end else begin
+                                    rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
+                                end
                             end
-
-                            bit_counter <= bit_counter + 1;
-                        end
-                    end
-                end else begin
-                    // Sample on trailing edge (CPOL transition)
-                    if (sclk_gen != last_sclk && sclk_gen == CPOL) begin
-                        if (bit_counter < DATA_WIDTH) begin
-                            // Shift in received data
-                            if (MSB_FIRST) begin
-                                rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
-                            end else begin
-                                rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
-                            end
-
-                            // Shift out transmitted data
-                            if (MSB_FIRST) begin
-                                mosi <= tx_shift_reg[DATA_WIDTH-1];
-                                tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
-                            end else begin
-                                mosi <= tx_shift_reg[0];
-                                tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
-                            end
-
-                            bit_counter <= bit_counter + 1;
                         end
                     end
                 end
@@ -180,12 +161,12 @@ module spi_master #(
         end
     end
 
-    // SCLK output assignment
+    // SCLK output assignment - XOR with CPOL for proper SPI mode behavior
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             sclk <= CPOL;
         end else begin
-            sclk <= sclk_gen;
+            sclk <= sclk_gen ^ CPOL;  // XOR for proper idle/active levels
         end
     end
 

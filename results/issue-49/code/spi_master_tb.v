@@ -87,7 +87,7 @@ module spi_master_tb;
         // Test 1: Basic data transmission
         
         
-        tx_data = 8'hA5;
+        tx_data = 1'b1;
         
         $display("TX Data: 0x%h", tx_data);
         start_tx = 1;
@@ -103,7 +103,7 @@ module spi_master_tb;
 
         // Test 2: Different data pattern (test MSB/LSB order)
         
-        tx_data = 8'h55;
+        tx_data = 1'b0;
         
         $display("TX Data: 0x%h", tx_data);
         start_tx = 1;
