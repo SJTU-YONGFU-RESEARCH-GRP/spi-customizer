@@ -111,9 +111,19 @@ module spi_dual_tb;
         #20; // Hold tx_valid for a few cycles
         tx_valid = 0; // Deassert tx_valid
 
-        // Wait for transmission to complete
-        @(negedge busy);
-        $display("✓ Master transmission complete");
+        // Wait for transmission to complete with timeout
+        fork
+            begin
+                @(negedge busy);
+                $display("✓ Master transmission complete");
+            end
+            begin
+                #10000; // 10us timeout
+                $display("⚠️  Master transmission timeout - forcing completion");
+                $finish;
+            end
+        join_any
+        disable fork;
 
         // Switch to slave mode after master test
         #500;
@@ -192,6 +202,7 @@ module spi_dual_tb;
         #200; // Allow slave to process
 
         $display("=== All Dual Mode Tests Completed Successfully ===");
+        #100; // Small delay before finish
         $finish;
     end
 

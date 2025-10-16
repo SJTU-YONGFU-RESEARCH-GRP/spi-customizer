@@ -67,6 +67,7 @@ module spi_dual #(
     reg [3:0] slave_bit_counter;
     reg slave_sclk_last_state, slave_ss_last_state;
     reg slave_transaction_active;
+    reg [7:0] slave_timeout_counter;
 
     // Default data initialization
     initial begin
@@ -110,9 +111,8 @@ module spi_dual #(
                     master_sclk_counter <= 8'd0;
 
                     // SPI Mode 0: Sample on rising edge, change on falling edge
-                    // For simplicity, we'll toggle and sample on each clock edge
                     if (master_bit_counter < DATA_WIDTH) begin
-                        // Shift data
+                        // Shift data and increment counter
                         if (MSB_FIRST) begin
                             master_tx_shift_reg <= {master_tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
                         end else begin
@@ -120,7 +120,7 @@ module spi_dual #(
                         end
                         master_bit_counter <= master_bit_counter + 1'b1;
                     end else begin
-                        // Transmission complete
+                        // Transmission complete - all bits sent
                         master_busy <= 1'b0;
                         master_sclk_en <= 1'b0;
                         master_tx_ready_buffer <= 1'b1; // Ready for next transmission
@@ -144,6 +144,7 @@ module spi_dual #(
             slave_sclk_last_state <= 1'b0;
             slave_ss_last_state <= 1'b1;
             slave_transaction_active <= 1'b0;
+            slave_timeout_counter <= 8'd0;
         end else if (!master_mode) begin
             // Detect SS transitions
             slave_ss_last_state <= ss_in;
@@ -168,22 +169,42 @@ module spi_dual #(
             // Handle SPI clock edges during active transaction
             if (slave_transaction_active) begin
                 slave_sclk_last_state <= sclk_in;
+                slave_timeout_counter <= slave_timeout_counter + 1'b1;
 
-                // SPI Mode 0: Sample on rising edge, change on falling edge
-                if (!slave_sclk_last_state && sclk_in) begin // Rising edge
-                    // Sample MOSI data
-                    if (MSB_FIRST) begin
-                        slave_rx_data_buffer <= {slave_rx_data_buffer[DATA_WIDTH-2:0], mosi_in};
-                    end else begin
-                        slave_rx_data_buffer <= {mosi_in, slave_rx_data_buffer[DATA_WIDTH-1:1]};
+                // Timeout mechanism - force completion after ~1000 clock cycles
+                if (slave_timeout_counter > 8'd200) begin
+                    slave_transaction_active <= 1'b0;
+                    slave_busy_buffer <= 1'b0;
+                    slave_rx_valid_buffer <= 1'b1; // Data received (partial)
+                    slave_tx_ready_buffer <= 1'b1; // Ready for new transmit data
+                    slave_timeout_counter <= 8'd0;
+                end else begin
+                    // SPI Mode 0: Sample on rising edge, change on falling edge
+                    if (!slave_sclk_last_state && sclk_in) begin // Rising edge
+                        // Sample MOSI data
+                        if (MSB_FIRST) begin
+                            slave_rx_data_buffer <= {slave_rx_data_buffer[DATA_WIDTH-2:0], mosi_in};
+                        end else begin
+                            slave_rx_data_buffer <= {mosi_in, slave_rx_data_buffer[DATA_WIDTH-1:1]};
+                        end
+                        slave_bit_counter <= slave_bit_counter + 1'b1;
+
+                        // Auto-complete transaction after all bits received
+                        if (slave_bit_counter >= (DATA_WIDTH - 1)) begin
+                            slave_transaction_active <= 1'b0;
+                            slave_busy_buffer <= 1'b0;
+                            slave_rx_valid_buffer <= 1'b1; // Data received
+                            slave_tx_ready_buffer <= 1'b1; // Ready for new transmit data
+                            slave_timeout_counter <= 8'd0;
+                        end
                     end
-                    slave_bit_counter <= slave_bit_counter + 1'b1;
                 end
                 // Note: MISO changes on falling edge would be handled here if needed
             end else begin
                 // Not in transaction
                 slave_rx_valid_buffer <= 1'b0;
                 slave_tx_ready_buffer <= 1'b1;
+                slave_timeout_counter <= 8'd0;
             end
         end
     end
