@@ -32,6 +32,18 @@ jobs:
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
 
+    - name: Create Results Zip
+      if: github.event.issue.number != null
+      run: |
+        # Create zip file of all results
+        if [ -d "results/issue-${{ github.event.issue.number }}" ]; then
+          cd results
+          zip -r "spi-results-issue-${{ github.event.issue.number }}.zip" "issue-${{ github.event.issue.number }}/"
+          echo "✅ Created zip file: results/spi-results-issue-${{ github.event.issue.number }}.zip"
+        else
+          echo "⚠️  No results directory found for zipping"
+        fi
+
     - name: Send Email Results
       if: github.event.issue.number != null
       run: |

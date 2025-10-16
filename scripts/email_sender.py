@@ -91,11 +91,8 @@ class EmailSender:
 
     <h2>📁 Generated Files</h2>
     <div class="files">
-        <div class="feature">• <strong>spi_master_mode{config.get('mode', 'X')}_{config.get('data_width', 'Z')}bit.v</strong> - Custom SPI core</div>
-        <div class="feature">• <strong>spi_master_tb_mode{config.get('mode', 'X')}.v</strong> - Verilog testbench</div>
-        <div class="feature">• <strong>test_spi.py</strong> - Python/Cocotb test</div>
-        <div class="feature">• <strong>spi_config.json</strong> - Configuration file</div>
-        <div class="feature">• <strong>spi_waveform.vcd</strong> - Simulation waveforms</div>
+        <div class="feature">📦 <strong>spi-results-issue-{config.get('issue_number', 'N/A')}.zip</strong> - Complete results package</div>
+        <div class="feature">└─ Contains: SPI core, testbench, configuration, waveforms, logs, and analysis data</div>
     </div>
 
     <h2>🧪 Testing Results</h2>
@@ -107,7 +104,7 @@ class EmailSender:
     <h2>📝 Next Steps</h2>
     <div class="details">
         <ol>
-            <li><strong>Download</strong> the generated files from the GitHub issue</li>
+            <li><strong>Download</strong> and <strong>extract</strong> the attached zip file</li>
             <li><strong>Simulate</strong> the design using Icarus Verilog or your preferred RTL tools</li>
             <li><strong>Integrate</strong> the SPI core into your FPGA/ASIC project</li>
             <li><strong>Test</strong> with your target hardware</li>
@@ -246,24 +243,30 @@ def send_workflow_email():
             
         print(f"✅ Loaded configuration from {config_file}")
 
-        # Look for result files in organized subdirectories
+        # Look for the zip file containing all results
         attachments = []
+        zip_file = f'results/spi-results-issue-{issue_number_int}.zip'
 
-        # Add generated files if they exist
-        potential_files = [
-            ('code', 'spi_config.json'),
-            ('code', f'spi_master_mode{config_dict.get("mode", "0")}_{config_dict.get("data_width", "8")}bit.v'),
-            ('code', 'spi_master_tb.v'),
-            ('data', 'spi_waveform.vcd'),
-            ('logs', 'processing_status.txt'),
-            ('logs', 'simulation.log'),
-            ('logs', 'compilation.log')
-        ]
-        
-        for subdir, filename in potential_files:
-            filepath = os.path.join(issue_dir, subdir, filename)
-            if os.path.exists(filepath):
-                attachments.append(filepath)
+        if os.path.exists(zip_file):
+            attachments.append(zip_file)
+            print(f"✅ Found zip attachment: {zip_file}")
+        else:
+            print(f"⚠️  Zip file not found: {zip_file}")
+            # Fallback to individual files if zip doesn't exist
+            potential_files = [
+                ('code', 'spi_config.json'),
+                ('code', f'spi_master_mode{config_dict.get("mode", "0")}_{config_dict.get("data_width", "8")}bit.v'),
+                ('code', 'spi_master_tb.v'),
+                ('data', 'spi_waveform.vcd'),
+                ('logs', 'processing_status.txt'),
+                ('logs', 'simulation.log'),
+                ('logs', 'compilation.log')
+            ]
+
+            for subdir, filename in potential_files:
+                filepath = os.path.join(issue_dir, subdir, filename)
+                if os.path.exists(filepath):
+                    attachments.append(filepath)
 
         success = sender.send_results_email(config_dict, attachments)
 
