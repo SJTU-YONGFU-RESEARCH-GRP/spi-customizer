@@ -1,0 +1,6 @@
+Time (ns),spi_master_tb.dut.tx_data
+0,b0
+300000,b10
+810000,b1
+1450000,b0
+1480000,b11

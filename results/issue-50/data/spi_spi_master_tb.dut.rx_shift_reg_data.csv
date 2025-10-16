@@ -1,0 +1,6 @@
+Time (ns),spi_master_tb.dut.rx_shift_reg
+0,b0
+1390000,b1
+1510000,b0
+1650000,b1
+1730000,b11
