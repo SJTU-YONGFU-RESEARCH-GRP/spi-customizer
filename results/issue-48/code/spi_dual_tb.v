@@ -86,7 +86,7 @@ module spi_dual_tb;
         tx_data = 0;
         tx_valid = 0;
         miso = 0;
-        sclk_in = 0;
+        sclk_in = 1; // Start high for Mode 3 (CPOL=1)
         mosi_in = 0;
         ss_in = 1;
 
@@ -140,59 +140,57 @@ module spi_dual_tb;
         ss_in = 0;
         $display("Slave selected (SS asserted low)");
 
-        // SPI Mode 0: CPOL=0, CPHA=0
-        // Data sampled on rising edge, changed on falling edge
+        // SPI Mode 3: CPOL=1, CPHA=1
+        // Clock high when idle, data sampled on falling edge, changed on rising edge
 
-        // Send test data (8'h5A = 01011010)
-        mosi_in = 0; // Bit 7 (MSB first)
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
+        // Send test data (7'h5A = 1011010 for 7-bit, but let's send 7'h2A = 0101010)
+        // For Mode 3: Start with clock high, change data on rising edges, sample on falling edges
+
+        // Clock should already be high (idle state for Mode 3)
+        // Send bit 6 (MSB first) - change data BEFORE rising edge
+        mosi_in = 0; // Bit 6 (MSB)
+        #50; // Setup time before rising edge
+        sclk_in = 0; // Falling edge - sample data
         #50; // Hold time
 
-        mosi_in = 1; // Bit 6
-        sclk_in = 0; // Falling edge - change data
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
+        mosi_in = 1; // Bit 5
+        sclk_in = 1; // Rising edge - change data
+        #50; // Setup time before falling edge
+        sclk_in = 0; // Falling edge - sample data
         #50; // Hold time
 
-        mosi_in = 0; // Bit 5
-        sclk_in = 0; // Falling edge - change data
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
-        #50; // Hold time
-
-        mosi_in = 1; // Bit 4
-        sclk_in = 0; // Falling edge - change data
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
+        mosi_in = 0; // Bit 4
+        sclk_in = 1; // Rising edge - change data
+        #50; // Setup time before falling edge
+        sclk_in = 0; // Falling edge - sample data
         #50; // Hold time
 
         mosi_in = 1; // Bit 3
-        sclk_in = 0; // Falling edge - change data
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
+        sclk_in = 1; // Rising edge - change data
+        #50; // Setup time before falling edge
+        sclk_in = 0; // Falling edge - sample data
         #50; // Hold time
 
         mosi_in = 0; // Bit 2
-        sclk_in = 0; // Falling edge - change data
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
+        sclk_in = 1; // Rising edge - change data
+        #50; // Setup time before falling edge
+        sclk_in = 0; // Falling edge - sample data
         #50; // Hold time
 
         mosi_in = 1; // Bit 1
-        sclk_in = 0; // Falling edge - change data
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
+        sclk_in = 1; // Rising edge - change data
+        #50; // Setup time before falling edge
+        sclk_in = 0; // Falling edge - sample data
         #50; // Hold time
 
         mosi_in = 0; // Bit 0 (LSB)
-        sclk_in = 0; // Falling edge - change data
-        #50; // Setup time
-        sclk_in = 1; // Rising edge - sample bit
+        sclk_in = 1; // Rising edge - change data
+        #50; // Setup time before falling edge
+        sclk_in = 0; // Falling edge - sample data
         #50; // Hold time
 
-        // Return clock to idle
-        sclk_in = 0;
+        // Return clock to idle (high for Mode 3)
+        sclk_in = 1;
 
         // End transaction: deassert SS
         #100;

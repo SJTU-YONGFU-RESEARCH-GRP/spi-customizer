@@ -59,6 +59,7 @@ module spi_dual #(
     reg master_cpol, master_cpha;
     reg [DATA_WIDTH-1:0] master_rx_data_buffer;
     reg master_rx_valid_buffer, master_tx_ready_buffer;
+    reg master_sclk_toggle;  // For generating proper SPI clock
 
     // Slave mode internal signals
     reg slave_rx_valid_buffer, slave_tx_ready_buffer, slave_busy_buffer;
@@ -87,6 +88,7 @@ module spi_dual #(
             master_sclk_counter <= 8'd0;
             master_tx_shift_reg <= {DATA_WIDTH{1'b0}};
             master_rx_shift_reg <= {DATA_WIDTH{1'b0}};
+            master_sclk_toggle <= 1'b1; // Start high for Mode 3 (CPOL=1)
         end else if (master_mode) begin
             // Master mode logic
             if (tx_valid && master_tx_ready_buffer && !master_busy) begin
@@ -110,24 +112,26 @@ module spi_dual #(
                 if (master_sclk_counter >= CLOCK_DIVIDER) begin
                     master_sclk_counter <= 8'd0;
 
-                    // SPI Mode 0: Sample on rising edge, change on falling edge
-                    // For simplicity, we'll toggle and sample on each clock edge
-                    if (master_bit_counter < DATA_WIDTH) begin
-                        // Shift data
-                        if (MSB_FIRST) begin
-                            master_tx_shift_reg <= {master_tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                    // SPI Mode 3: CPOL=1, CPHA=1 - Sample on falling edge, change on rising edge
+                    if (master_sclk_toggle) begin // Rising edge - change data
+                        if (master_bit_counter < DATA_WIDTH) begin
+                            // Shift data on rising edge for Mode 3
+                            if (MSB_FIRST) begin
+                                master_tx_shift_reg <= {master_tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                            end else begin
+                                master_tx_shift_reg <= {1'b0, master_tx_shift_reg[DATA_WIDTH-1:1]};
+                            end
+                            master_bit_counter <= master_bit_counter + 1'b1;
                         end else begin
-                            master_tx_shift_reg <= {1'b0, master_tx_shift_reg[DATA_WIDTH-1:1]};
+                            // Transmission complete - all bits sent
+                            master_busy <= 1'b0;
+                            master_sclk_en <= 1'b0;
+                            master_tx_ready_buffer <= 1'b1; // Ready for next transmission
+                            master_rx_valid_buffer <= 1'b1; // Data received
+                            master_rx_data_buffer <= master_rx_shift_reg;
                         end
-                        master_bit_counter <= master_bit_counter + 1'b1;
-                    end else begin
-                        // Transmission complete
-                        master_busy <= 1'b0;
-                        master_sclk_en <= 1'b0;
-                        master_tx_ready_buffer <= 1'b1; // Ready for next transmission
-                        master_rx_valid_buffer <= 1'b1; // Data received
-                        master_rx_data_buffer <= master_rx_shift_reg;
                     end
+                    // Note: Sampling would happen on falling edge if we were receiving
                 end
             end
         end
@@ -180,8 +184,8 @@ module spi_dual #(
                     slave_tx_ready_buffer <= 1'b1; // Ready for new transmit data
                     slave_timeout_counter <= 8'd0;
                 end else begin
-                    // SPI Mode 0: Sample on rising edge, change on falling edge
-                    if (!slave_sclk_last_state && sclk_in) begin // Rising edge
+                    // SPI Mode 3: Sample on falling edge, change on rising edge
+                    if (slave_sclk_last_state && !sclk_in) begin // Falling edge
                         // Sample MOSI data
                         if (MSB_FIRST) begin
                             slave_rx_data_buffer <= {slave_rx_data_buffer[DATA_WIDTH-2:0], mosi_in};
@@ -211,7 +215,8 @@ module spi_dual #(
     end
 
     // Output signal selection based on master_mode
-    assign sclk = master_mode ? (master_sclk_en ? master_sclk_counter[0] : 1'b0) : 1'b0;  // Simple clock toggle
+    // For SPI Mode 3 (CPOL=1, CPHA=1): Clock high when idle, sample on falling edge
+    assign sclk = master_mode ? (master_sclk_en ? master_sclk_toggle : 1'b1) : 1'b0;
     assign mosi = master_mode ? master_tx_shift_reg[MSB_FIRST ? DATA_WIDTH-1 : 0] : 1'b0;
     assign miso_out = master_mode ? 1'b0 : (slave_tx_ready_buffer ? default_data[MSB_FIRST ? DATA_WIDTH-1 : 0] : 1'b0);
 
