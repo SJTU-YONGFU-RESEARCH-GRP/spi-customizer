@@ -35,6 +35,10 @@ class EmailSender:
             True if email sent successfully
         """
 
+        print(f"📧 Email sender initialized with server: {self.smtp_server}:{self.smtp_port}")
+        print(f"📧 Username configured: {'YES' if self.username else 'NO'}")
+        print(f"📧 Password configured: {'YES' if self.password else 'NO'}")
+
         if not self.username or not self.password:
             print("⚠️  SMTP credentials not configured, skipping email")
             return False
@@ -148,6 +152,11 @@ class EmailSender:
 
         except Exception as e:
             print(f"❌ Failed to send email: {e}")
+            print("💡 Gmail SMTP Troubleshooting:")
+            print("   1. Enable 2FA on your Gmail account")
+            print("   2. Generate an App Password: https://support.google.com/accounts/answer/185833")
+            print("   3. Use the App Password (not your regular password) as SMTP_PASSWORD")
+            print("   4. Make sure SMTP_USERNAME is your full Gmail address")
             return False
 
     def _attach_file(self, msg: MIMEMultipart, file_path: str):
@@ -203,6 +212,11 @@ def send_workflow_email():
     import sys
     import json
     from pathlib import Path
+
+    print("📧 send_workflow_email() called")
+    print(f"📧 ISSUE_NUMBER: {os.environ.get('ISSUE_NUMBER')}")
+    print(f"📧 SMTP_USERNAME: {'SET' if os.environ.get('SMTP_USERNAME') else 'NOT SET'}")
+    print(f"📧 SMTP_PASSWORD: {'SET' if os.environ.get('SMTP_PASSWORD') else 'NOT SET'}")
 
     # Add current directory to path for imports
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -295,6 +309,12 @@ if __name__ == "__main__":
         success = send_workflow_email()
     else:
         print("Testing email functionality...")
+        print("📋 To set up Gmail SMTP:")
+        print("   1. Go to GitHub repository Settings > Secrets and variables > Actions")
+        print("   2. Add SMTP_USERNAME: your-gmail@gmail.com")
+        print("   3. Add SMTP_PASSWORD: your-app-password")
+        print("   4. Enable 2FA on Gmail and generate App Password")
+        print("")
         success = send_test_email()
 
     if success:

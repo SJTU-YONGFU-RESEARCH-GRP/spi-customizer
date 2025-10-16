@@ -13,8 +13,7 @@ module spi_dual #(
     parameter MAX_SLAVES = {{MAX_SLAVES}},        // Maximum slaves supported
     parameter CLOCK_DIVIDER = {{CLOCK_DIVIDER}},  // System clock divider
     parameter DEFAULT_DATA_ENABLED = {{DEFAULT_DATA_ENABLED|int}},
-    parameter DEFAULT_DATA_PATTERN = "{{DEFAULT_DATA_PATTERN}}",
-    parameter DEFAULT_DATA_VALUE = 16'h{{DEFAULT_DATA_VALUE}}
+    parameter DEFAULT_DATA_VALUE = {{DATA_WIDTH}}'h{{DEFAULT_DATA_VALUE}}
 )(
     // System signals
     input  wire clk,                    // System clock
@@ -66,72 +65,133 @@ module spi_dual #(
     reg [DATA_WIDTH-1:0] slave_rx_data_buffer;
     reg [DATA_WIDTH-1:0] slave_tx_shift_reg;
     reg [3:0] slave_bit_counter;
-    reg slave_sclk_last_state;
+    reg slave_sclk_last_state, slave_ss_last_state;
+    reg slave_transaction_active;
 
-    // Default data pattern generator
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            default_data <= DEFAULT_DATA_VALUE;
-        end else if (DEFAULT_DATA_ENABLED) begin
-            case (DEFAULT_DATA_PATTERN)
-                "a5a5": default_data <= 16'hA5A5;
-                "ffff": default_data <= 16'hFFFF;
-                "0000": default_data <= 16'h0000;
-                "5555": default_data <= 16'h5555;
-                default: default_data <= DEFAULT_DATA_VALUE;
-            endcase
-        end
+    // Default data initialization
+    initial begin
+        default_data <= DEFAULT_DATA_VALUE;
     end
 
-    // Master mode implementation (simplified)
+    // Master mode implementation
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             master_busy <= 1'b0;
             master_sclk_en <= 1'b0;
             master_start_tx <= 1'b0;
             master_start_rx <= 1'b0;
+            master_tx_ready_buffer <= 1'b1; // Ready to accept data initially
+            master_rx_valid_buffer <= 1'b0;
+            master_bit_counter <= 4'd0;
+            master_sclk_counter <= 8'd0;
+            master_tx_shift_reg <= {DATA_WIDTH{1'b0}};
+            master_rx_shift_reg <= {DATA_WIDTH{1'b0}};
         end else if (master_mode) begin
-            // Master mode logic - simplified SPI master
-            if (tx_valid && !master_busy) begin
-                master_start_tx <= 1'b1;
+            // Master mode logic
+            if (tx_valid && master_tx_ready_buffer && !master_busy) begin
+                // Start new transmission
+                master_tx_shift_reg <= tx_data;
+                master_tx_ready_buffer <= 1'b0; // Not ready during transmission
                 master_busy <= 1'b1;
                 master_sclk_en <= 1'b1;
+                master_bit_counter <= 4'd0;
+                master_sclk_counter <= 8'd0;
+                master_start_tx <= 1'b1;
             end else begin
                 master_start_tx <= 1'b0;
             end
 
-            // Basic clock generation
-            if (master_sclk_en) begin
-                master_sclk_counter <= master_sclk_counter + 1;
+            // SPI clock generation and data shifting
+            if (master_busy && master_sclk_en) begin
+                master_sclk_counter <= master_sclk_counter + 1'b1;
+
+                // Generate SPI clock (divide by CLOCK_DIVIDER)
+                if (master_sclk_counter >= CLOCK_DIVIDER) begin
+                    master_sclk_counter <= 8'd0;
+
+                    // SPI Mode 0: Sample on rising edge, change on falling edge
+                    // For simplicity, we'll toggle and sample on each clock edge
+                    if (master_bit_counter < DATA_WIDTH) begin
+                        // Shift data
+                        if (MSB_FIRST) begin
+                            master_tx_shift_reg <= {master_tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                        end else begin
+                            master_tx_shift_reg <= {1'b0, master_tx_shift_reg[DATA_WIDTH-1:1]};
+                        end
+                        master_bit_counter <= master_bit_counter + 1'b1;
+                    end else begin
+                        // Transmission complete
+                        master_busy <= 1'b0;
+                        master_sclk_en <= 1'b0;
+                        master_tx_ready_buffer <= 1'b1; // Ready for next transmission
+                        master_rx_valid_buffer <= 1'b1; // Data received
+                        master_rx_data_buffer <= master_rx_shift_reg;
+                    end
+                end
             end
         end
     end
 
-    // Slave mode implementation (simplified)
+    // Slave mode implementation - proper SPI protocol handling
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             slave_busy_buffer <= 1'b0;
             slave_rx_valid_buffer <= 1'b0;
             slave_tx_ready_buffer <= 1'b0;
+            slave_rx_data_buffer <= {DATA_WIDTH{1'b0}};
+            slave_tx_shift_reg <= default_data;
+            slave_bit_counter <= 4'd0;
+            slave_sclk_last_state <= 1'b0;
+            slave_ss_last_state <= 1'b1;
+            slave_transaction_active <= 1'b0;
         end else if (!master_mode) begin
-            // Slave mode logic - respond to transactions
-            if (!ss_in) begin  // Slave is selected
+            // Detect SS transitions
+            slave_ss_last_state <= ss_in;
+
+            // Start transaction on SS falling edge
+            if (slave_ss_last_state && !ss_in) begin
+                slave_transaction_active <= 1'b1;
                 slave_busy_buffer <= 1'b1;
-                slave_tx_ready_buffer <= 1'b1;
-                slave_rx_data_buffer <= default_data;
-                slave_rx_valid_buffer <= 1'b1;
-            end else begin
+                slave_bit_counter <= 4'd0;
+                slave_tx_shift_reg <= tx_data; // Load data to transmit
+                slave_tx_ready_buffer <= 1'b0; // Not ready for new data during transaction
+            end
+
+            // End transaction on SS rising edge
+            if (!slave_ss_last_state && ss_in && slave_transaction_active) begin
+                slave_transaction_active <= 1'b0;
                 slave_busy_buffer <= 1'b0;
+                slave_rx_valid_buffer <= 1'b1; // Data received
+                slave_tx_ready_buffer <= 1'b1; // Ready for new transmit data
+            end
+
+            // Handle SPI clock edges during active transaction
+            if (slave_transaction_active) begin
+                slave_sclk_last_state <= sclk_in;
+
+                // SPI Mode 0: Sample on rising edge, change on falling edge
+                if (!slave_sclk_last_state && sclk_in) begin // Rising edge
+                    // Sample MOSI data
+                    if (MSB_FIRST) begin
+                        slave_rx_data_buffer <= {slave_rx_data_buffer[DATA_WIDTH-2:0], mosi_in};
+                    end else begin
+                        slave_rx_data_buffer <= {mosi_in, slave_rx_data_buffer[DATA_WIDTH-1:1]};
+                    end
+                    slave_bit_counter <= slave_bit_counter + 1'b1;
+                end
+                // Note: MISO changes on falling edge would be handled here if needed
+            end else begin
+                // Not in transaction
                 slave_rx_valid_buffer <= 1'b0;
-                slave_tx_ready_buffer <= 1'b0;
+                slave_tx_ready_buffer <= 1'b1;
             end
         end
     end
 
     // Output signal selection based on master_mode
-    assign sclk = master_mode ? (master_sclk_en ? master_sclk_counter[7] : 1'b0) : 1'b0;
-    assign mosi = master_mode ? (master_start_tx ? tx_data[0] : 1'b0) : 1'b0;
-    assign miso_out = master_mode ? 1'b0 : (slave_tx_ready_buffer ? default_data[0] : 1'b0);
+    assign sclk = master_mode ? (master_sclk_en ? master_sclk_counter[0] : 1'b0) : 1'b0;  // Simple clock toggle
+    assign mosi = master_mode ? master_tx_shift_reg[MSB_FIRST ? DATA_WIDTH-1 : 0] : 1'b0;
+    assign miso_out = master_mode ? 1'b0 : (slave_tx_ready_buffer ? default_data[MSB_FIRST ? DATA_WIDTH-1 : 0] : 1'b0);
 
     // Slave select outputs (only active in master mode)
     assign ss_n = master_mode ? {NUM_SLAVES{1'b1}} : {NUM_SLAVES{1'b1}};  // Simplified

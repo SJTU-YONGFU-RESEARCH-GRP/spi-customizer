@@ -16,8 +16,7 @@ module spi_dual_tb;
     parameter MAX_SLAVES = 8;
     parameter CLOCK_DIVIDER = 2;
     parameter DEFAULT_DATA_ENABLED = 0;
-    parameter DEFAULT_DATA_PATTERN = "Custom";
-    parameter DEFAULT_DATA_VALUE = 16'he;
+    parameter DEFAULT_DATA_VALUE = 8'he;
 
     // Signals
     reg clk;
@@ -35,6 +34,7 @@ module spi_dual_tb;
     wire [DATA_WIDTH-1:0] rx_data;
     wire rx_valid;
     wire tx_ready;
+    reg tx_valid;
     wire busy;
     wire irq;
 
@@ -67,7 +67,7 @@ module spi_dual_tb;
         .tx_data(tx_data),
         .rx_valid(rx_valid),
         .tx_ready(tx_ready),
-        .tx_valid(tx_ready),  // Use tx_ready as tx_valid input
+        .tx_valid(tx_valid),
         .busy(busy),
         .irq(irq),
         .irq_clear(1'b0)
@@ -85,6 +85,7 @@ module spi_dual_tb;
         rst_n = 0;
         master_mode = 1;  // Start in master mode
         tx_data = 0;
+        tx_valid = 0;
         miso = 0;
         sclk_in = 0;
         mosi_in = 0;
@@ -103,38 +104,100 @@ module spi_dual_tb;
         // Test basic transmission in master mode
         tx_data = 8'hA5;
         $display("TX Data: 0x%h", tx_data);
-        #100;
+
+        // Wait for tx_ready, then start transmission
+        @(posedge tx_ready);
+        #10; // Small delay
+        tx_valid = 1; // Assert tx_valid to start transmission
+        #20; // Hold tx_valid for a few cycles
+        tx_valid = 0; // Deassert tx_valid
+
+        // Wait for transmission to complete
+        @(negedge busy);
+        $display("✓ Master transmission complete");
 
         // Switch to slave mode after master test
         #500;
         master_mode = 0;
         $display("--- Switched to Slave Mode ---");
 
-        // Test slave mode with simulated master transactions
+        // Test slave mode with proper SPI master simulation
         #100;
-        ss_in = 0;  // Select slave
-        $display("Slave selected - testing slave mode");
 
-        // Generate SPI clock cycles to test slave
-        repeat (16) begin  // 16 bits
-            #25;
-            sclk_in = ~sclk_in;
-            if (sclk_in) begin
-                mosi_in = $random % 2;  // Random data from simulated master
-            end
-        end
+        // Simulate a complete SPI transaction as master to our slave
+        $display("Simulating SPI master transaction to test slave mode");
 
+        // Start transaction: assert SS low
+        ss_in = 0;
+        $display("Slave selected (SS asserted low)");
+
+        // SPI Mode 0: CPOL=0, CPHA=0
+        // Data sampled on rising edge, changed on falling edge
+
+        // Send 8'h5A (01011010) as test data
+        mosi_in = 0; // Bit 7 (MSB first)
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        mosi_in = 1; // Bit 6
+        sclk_in = 0; // Falling edge - change data
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        mosi_in = 0; // Bit 5
+        sclk_in = 0; // Falling edge - change data
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        mosi_in = 1; // Bit 4
+        sclk_in = 0; // Falling edge - change data
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        mosi_in = 1; // Bit 3
+        sclk_in = 0; // Falling edge - change data
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        mosi_in = 0; // Bit 2
+        sclk_in = 0; // Falling edge - change data
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        mosi_in = 1; // Bit 1
+        sclk_in = 0; // Falling edge - change data
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        mosi_in = 0; // Bit 0 (LSB)
+        sclk_in = 0; // Falling edge - change data
+        #50; // Setup time
+        sclk_in = 1; // Rising edge - sample bit
+        #50; // Hold time
+
+        // Return clock to idle
+        sclk_in = 0;
+
+        // End transaction: deassert SS
         #100;
-        ss_in = 1;  // Deselect slave
-        $display("✓ Slave mode test complete");
+        ss_in = 1;
+        $display("✓ Slave mode SPI transaction complete - sent 0x5A");
 
+        #200; // Allow slave to process
         $display("=== All Dual Mode Tests Completed Successfully ===");
         $finish;
     end
 
     // VCD dumping
     initial begin
-        $dumpfile("results/issue-46/data/spi_waveform.vcd");
+        $dumpfile("spi_waveform.vcd");
         $dumpvars(0, spi_dual_tb);
     end
 

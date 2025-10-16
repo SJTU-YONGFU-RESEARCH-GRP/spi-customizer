@@ -47,6 +47,12 @@ jobs:
     - name: Send Email Results
       if: github.event.issue.number != null
       run: |
+        echo "📧 Starting email sending process..."
+        echo "Issue number: ${{ github.event.issue.number }}"
+        echo "SMTP_USERNAME configured: ${{ secrets.SMTP_USERNAME != '' && 'YES' || 'NO' }}"
+        echo "SMTP_PASSWORD configured: ${{ secrets.SMTP_PASSWORD != '' && 'YES' || 'NO' }}"
+        echo "GITHUB_TOKEN configured: ${{ secrets.GITHUB_TOKEN != '' && 'YES' || 'NO' }}"
+
         python3 scripts/email_sender.py
       env:
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
