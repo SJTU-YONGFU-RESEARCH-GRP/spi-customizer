@@ -1,0 +1,28 @@
+Icarus Verilog simulation log
+==================================================
+Command: /usr/bin/vvp -n results/issue-44/data/spi_simulation
+Simulation time: 100us
+VCD file: results/issue-44/data/spi_waveform.vcd
+Start time: /home/runner/work/spi-customizer/spi-customizer
+
+Return code: 0
+STDOUT:
+VCD info: dumpfile results/issue-44/data/spi_waveform.vcd opened for output.
+=== SPI Master RTL Testbench Starting ===
+Configuration: Mode           0,           8-bit data,           1 slaves
+--- Testing Core SPI Functionality ---
+TX Data: 0xa5
+✓ Transmission complete
+TX Data: 0x55
+✓ Second transmission complete
+--- Testing Reception ---
+✓ Reception complete
+--- Testing Burst Transmission ---
+Burst TX: 0xf0
+✓ Burst transmission complete
+--- Testing Configuration ---
+Config TX: 0xab
+✓ Configuration test complete
+=== All Master Tests Completed Successfully ===
+results/issue-44/code/spi_master_tb.v:158: $finish called at 3230000 (1ps)
+
