@@ -11,7 +11,7 @@ module spi_slave #(
     parameter MAX_SLAVES = {{MAX_SLAVES}},        // Maximum slaves supported
     parameter DEFAULT_DATA_ENABLED = {{DEFAULT_DATA_ENABLED|int}},
     parameter DEFAULT_DATA_PATTERN = "{{DEFAULT_DATA_PATTERN}}",
-    parameter DEFAULT_DATA_VALUE = 16'h{{DEFAULT_DATA_VALUE}}
+    parameter DEFAULT_DATA_VALUE = {{DATA_WIDTH}}'h{{DEFAULT_DATA_VALUE}}
 )(
     // System signals
     input  wire clk,                    // System clock
@@ -93,10 +93,10 @@ always @(posedge clk or negedge rst_n) begin
         default_data <= DEFAULT_DATA_VALUE;
     end else if (DEFAULT_DATA_ENABLED) begin
         case (DEFAULT_DATA_PATTERN)
-            "a5a5": default_data <= 16'hA5A5;
-            "ffff": default_data <= 16'hFFFF;
-            "0000": default_data <= 16'h0000;
-            "5555": default_data <= 16'h5555;
+            "a5a5": default_data <= {{DATA_WIDTH}}'hA5A5;
+            "ffff": default_data <= {{DATA_WIDTH}}'hFFFF;
+            "0000": default_data <= {{DATA_WIDTH}}'h0000;
+            "5555": default_data <= {{DATA_WIDTH}}'h5555;
             default: default_data <= DEFAULT_DATA_VALUE;
         endcase
     end

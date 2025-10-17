@@ -115,9 +115,17 @@ module spi_dual #(
                     if (master_bit_counter < DATA_WIDTH) begin
                         // Shift data
                         if (MSB_FIRST) begin
-                            master_tx_shift_reg <= {master_tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                            if (DATA_WIDTH > 1) begin
+                                master_tx_shift_reg <= {master_tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                            end else begin
+                                master_tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
+                            end
                         end else begin
-                            master_tx_shift_reg <= {1'b0, master_tx_shift_reg[DATA_WIDTH-1:1]};
+                            if (DATA_WIDTH > 1) begin
+                                master_tx_shift_reg <= {1'b0, master_tx_shift_reg[DATA_WIDTH-1:1]};
+                            end else begin
+                                master_tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
+                            end
                         end
                         master_bit_counter <= master_bit_counter + 1'b1;
                     end else begin
@@ -182,16 +190,24 @@ module spi_dual #(
                 end else begin
                     // SPI Mode 0: Sample on rising edge, change on falling edge
                     if (!slave_sclk_last_state && sclk_in) begin // Rising edge
-                        // Sample MOSI data
-                        if (MSB_FIRST) begin
+                    // Sample MOSI data
+                    if (MSB_FIRST) begin
+                        if (DATA_WIDTH > 1) begin
                             slave_rx_data_buffer <= {slave_rx_data_buffer[DATA_WIDTH-2:0], mosi_in};
                         end else begin
-                            slave_rx_data_buffer <= {mosi_in, slave_rx_data_buffer[DATA_WIDTH-1:1]};
+                            slave_rx_data_buffer <= mosi_in;  // For 1-bit, just set to received bit
                         end
+                    end else begin
+                        if (DATA_WIDTH > 1) begin
+                            slave_rx_data_buffer <= {mosi_in, slave_rx_data_buffer[DATA_WIDTH-1:1]};
+                        end else begin
+                            slave_rx_data_buffer <= mosi_in;  // For 1-bit, just set to received bit
+                        end
+                    end
                         slave_bit_counter <= slave_bit_counter + 1'b1;
 
                         // Auto-complete transaction after all bits received
-                        if (slave_bit_counter >= (DATA_WIDTH - 1)) begin
+                        if (slave_bit_counter >= DATA_WIDTH) begin
                             slave_transaction_active <= 1'b0;
                             slave_busy_buffer <= 1'b0;
                             slave_rx_valid_buffer <= 1'b1; // Data received

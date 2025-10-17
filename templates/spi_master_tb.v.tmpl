@@ -16,7 +16,7 @@ module spi_master_tb;
     parameter CLOCK_DIVIDER = {{ clock_divider }};
     parameter DEFAULT_DATA_ENABLED = {{ default_data_enabled | int }};
     parameter DEFAULT_DATA_PATTERN = "{{ default_data_pattern }}";
-    parameter DEFAULT_DATA_VALUE = 16'h{{ default_data_value }};
+    parameter DEFAULT_DATA_VALUE = {{ data_width }}'h{{ default_data_value }};
 
     // Signals
     reg clk;

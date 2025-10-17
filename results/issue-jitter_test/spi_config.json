@@ -9,6 +9,6 @@
   "fifo_buffers": false,
   "dma_support": false,
   "multi_master": false,
-  "test_duration": "standard",
+  "test_duration": "Standard",
   "simulation_success": true
 }

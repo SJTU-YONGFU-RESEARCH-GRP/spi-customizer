@@ -14,6 +14,21 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config_parser import SPIConfig
 
 
+def get_hex_pattern(base_pattern: str, data_width: int) -> str:
+    """Generate hex pattern appropriate for data width"""
+    # Calculate how many hex digits we need
+    hex_digits = (data_width + 3) // 4  # Round up to nearest hex digit
+
+    # Repeat the base pattern to fill the required digits
+    if len(base_pattern) == 1:
+        # For single digit patterns like 'A', 'F', '0', '5'
+        return base_pattern * hex_digits
+    else:
+        # For multi-digit patterns, repeat them
+        repeated = (base_pattern * ((hex_digits + len(base_pattern) - 1) // len(base_pattern)))[:hex_digits]
+        return repeated
+
+
 class VerilogGenerator:
     """Generates Verilog code from SPI configuration"""
 
@@ -65,6 +80,10 @@ class VerilogGenerator:
             DEFAULT_DATA_ENABLED=config.default_data_enabled,
             DEFAULT_DATA_PATTERN=config.default_data_pattern,
             DEFAULT_DATA_VALUE=config.default_data_value,
+            A5_PATTERN=get_hex_pattern('A5', config.data_width),
+            FF_PATTERN=get_hex_pattern('FF', config.data_width),
+            ZERO_PATTERN=get_hex_pattern('00', config.data_width),
+            FIVE_PATTERN=get_hex_pattern('55', config.data_width),
             CLOCK_DIVIDER=config.clock_divider,
             FIFO_DEPTH=config.fifo_depth,
             MAX_SLAVES=config.max_slaves,

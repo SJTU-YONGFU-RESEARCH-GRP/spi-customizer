@@ -56,8 +56,11 @@ def run_single_test(args):
         # Step 3: Generate Verilog code
         print("3️⃣  Generating Verilog Code...")
         generator = VerilogGenerator()
+
+        # Use issue-specific VCD filename to avoid conflicts in parallel execution
+        vcd_filename = f"results/issue-{issue_number}/data/spi_waveform.vcd"
         core_file = generator.save_verilog_file(config)
-        tb_file = generator.save_testbench(config)
+        tb_file = generator.save_testbench(config, vcd_filename=vcd_filename)
         print(f"   ✅ Generated: {os.path.basename(core_file)}")
         print(f"   ✅ Generated: {os.path.basename(tb_file)}")
 
@@ -81,13 +84,18 @@ def run_single_test(args):
             issue_dir = f"results/issue-{issue_number}"
             os.makedirs(issue_dir, exist_ok=True)
 
-            # Check for VCD file in issue directory
-            vcd_file = f"results/issue-{issue_number}/spi_waveform.vcd"
+            # Check for VCD file in the expected location
+            vcd_file = f"results/issue-{issue_number}/data/spi_waveform.vcd"
+
             if os.path.exists(vcd_file):
                 print(f"   📊 VCD file generated: {os.path.basename(vcd_file)}")
                 print(f"   📊 Size: {os.path.getsize(vcd_file)} bytes")
+            else:
+                print(f"   ⚠️  No VCD file found at {vcd_file}")
+                vcd_file = None
 
-                # Parse VCD and generate CSV files
+            # Parse VCD and generate CSV files
+            if vcd_file:
                 print("5️⃣  Processing VCD data...")
                 try:
                     from vcd_parser import VcdParser, CsvGenerator, PlotGenerator, SignalPlotGenerator

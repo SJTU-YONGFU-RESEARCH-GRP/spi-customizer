@@ -537,30 +537,34 @@ class RTLSimulator:
             # MOSI data pattern (different for different data widths)
             if in_transaction:
                 bit_position = (i - transaction_start) // clock_period
-                if data_width == 8:
-                    mosi = '1' if (0xA5 >> (7 - bit_position)) & 1 else '0'
-                elif data_width == 16:
-                    mosi = '1' if (0xAA55 >> (15 - bit_position)) & 1 else '0'
-                elif data_width == 32:
-                    mosi = '1' if (0xAA55FF00 >> (31 - bit_position)) & 1 else '0'
+                if bit_position < data_width:
+                    if data_width == 8:
+                        mosi = '1' if (0xA5 >> (7 - bit_position)) & 1 else '0'
+                    elif data_width == 16:
+                        mosi = '1' if (0xAA55 >> (15 - bit_position)) & 1 else '0'
+                    elif data_width == 32:
+                        mosi = '1' if (0xAA55FF00 >> (31 - bit_position)) & 1 else '0'
+                    else:
+                        mosi = '1' if (bit_position % 2) == 0 else '0'
                 else:
-                    mosi = '1' if (bit_position % 2) == 0 else '0'
-                mosi = mosi if bit_position < data_width else '0'
+                    mosi = '0'
             else:
                 mosi = '0'
-            
+
             # MISO response pattern (different from MOSI)
             if in_transaction:
                 bit_position = (i - transaction_start) // clock_period
-                if data_width == 8:
-                    miso = '1' if (0x5A >> (7 - bit_position)) & 1 else '0'
-                elif data_width == 16:
-                    miso = '1' if (0x5A5A >> (15 - bit_position)) & 1 else '0'
-                elif data_width == 32:
-                    miso = '1' if (0x5A5AFFFF >> (31 - bit_position)) & 1 else '0'
+                if bit_position < data_width:
+                    if data_width == 8:
+                        miso = '1' if (0x5A >> (7 - bit_position)) & 1 else '0'
+                    elif data_width == 16:
+                        miso = '1' if (0x5A5A >> (15 - bit_position)) & 1 else '0'
+                    elif data_width == 32:
+                        miso = '1' if (0x5A5AFFFF >> (31 - bit_position)) & 1 else '0'
+                    else:
+                        miso = '1' if (bit_position % 3) == 0 else '0'
                 else:
-                    miso = '1' if (bit_position % 3) == 0 else '0'
-                miso = miso if bit_position < data_width else '0'
+                    miso = '0'
             else:
                 miso = '0'
             

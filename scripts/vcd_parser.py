@@ -348,7 +348,7 @@ class CsvGenerator:
 
     def _generate_consolidated_csv(self) -> Optional[str]:
         """Generate a single consolidated CSV file with all signals"""
-        timing_csv = self.output_dir / 'spi_timing_data.csv'
+        timing_csv = self.data_dir / 'spi_timing_data.csv'
 
         if not timing_csv.exists():
             return None
@@ -421,10 +421,11 @@ class CsvGenerator:
 class PlotGenerator:
     """Generates plots from CSV data"""
 
-    def __init__(self, csv_dir: str):
-        self.csv_dir = Path(csv_dir)
-        self.graphs_dir = self.csv_dir / 'graphs'
-        self.logs_dir = self.csv_dir / 'logs'
+    def __init__(self, output_dir: str):
+        self.output_dir = Path(output_dir)
+        self.csv_dir = self.output_dir / 'data'  # CSV files are in the data subdirectory
+        self.graphs_dir = self.output_dir / 'graphs'
+        self.logs_dir = self.output_dir / 'logs'
         self.graphs_dir.mkdir(exist_ok=True)
         self.logs_dir.mkdir(exist_ok=True)
 
@@ -964,11 +965,11 @@ class SignalPlotGenerator:
             elif values[i-1] == 1 and values[i] == 0:
                 falling_edges.append((time_data[i], values[i]))
 
-        # Mark first few edges with step-style
+        # Mark first few edges
         if rising_edges:
-            ax.plot(*zip(*rising_edges[:5]), 'ro', markersize=4, alpha=0.7, label='Rising Edge', drawstyle='steps-post')
+            ax.plot(*zip(*rising_edges[:5]), 'ro', markersize=4, alpha=0.7, label='Rising Edge')
         if falling_edges:
-            ax.plot(*zip(*falling_edges[:5]), 'bo', markersize=4, alpha=0.7, label='Falling Edge', drawstyle='steps-post')
+            ax.plot(*zip(*falling_edges[:5]), 'bo', markersize=4, alpha=0.7, label='Falling Edge')
 
         # Calculate approximate frequency if we have edges
         if len(rising_edges) > 1:
@@ -987,9 +988,9 @@ class SignalPlotGenerator:
             if values[i] != values[i-1] and values[i] != 0.5:  # Ignore X states
                 transitions.append((time_data[i], values[i]))
 
-        # Mark transitions with step-style
+        # Mark transitions
         if transitions:
-            ax.plot(*zip(*transitions[:10]), 'k^', markersize=5, alpha=0.8, label='Data Change', drawstyle='steps-post')
+            ax.plot(*zip(*transitions[:10]), 'k^', markersize=5, alpha=0.8, label='Data Change')
 
         # Add data direction indicator
         direction = "Master→Slave" if signal_name == 'MOSI' else "Slave→Master"
@@ -1013,9 +1014,9 @@ class SignalPlotGenerator:
         if start_time is not None:
             active_periods.append((start_time, time_data[-1]))
 
-        # Highlight active periods with step-style
+        # Highlight active periods
         for start, end in active_periods[:3]:  # Show first 3 periods
-            ax.axvspan(start, end, alpha=0.2, color='yellow', label='Slave Active' if len(active_periods) == 1 else "", step='post')
+            ax.axvspan(start, end, alpha=0.2, color='yellow', label='Slave Active' if len(active_periods) == 1 else "")
 
         # Add polarity indicator
         ax.text(0.02, 0.85, 'Active Low', transform=ax.transAxes,
@@ -1477,7 +1478,7 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _get_transaction_duration(self) -> str:
         """Estimate transaction duration"""
-        timing_file = self.issue_dir / 'spi_timing_data.csv'
+        timing_file = self.issue_dir / 'data' / 'spi_timing_data.csv'
         if timing_file.exists():
             with open(timing_file, 'r') as f:
                 lines = f.readlines()
@@ -1621,7 +1622,7 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _get_clock_cycles(self) -> str:
         """Estimate clock cycles from timing data"""
-        timing_file = self.issue_dir / 'spi_timing_data.csv'
+        timing_file = self.issue_dir / 'data' / 'spi_timing_data.csv'
         if timing_file.exists():
             with open(timing_file, 'r') as f:
                 lines = f.readlines()

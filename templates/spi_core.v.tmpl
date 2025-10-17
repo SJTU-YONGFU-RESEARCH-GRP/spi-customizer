@@ -64,10 +64,10 @@ module spi_master #(
             default_data <= {{ DATA_WIDTH }}'h{{ DEFAULT_DATA_VALUE }};
         end else if (DEFAULT_DATA_ENABLED) begin
             case (DEFAULT_DATA_PATTERN)
-                "a5a5": default_data <= {{ DATA_WIDTH }}'hA5A5;
-                "ffff": default_data <= {{ DATA_WIDTH }}'hFFFF;
-                "0000": default_data <= {{ DATA_WIDTH }}'h0000;
-                "5555": default_data <= {{ DATA_WIDTH }}'h5555;
+                "a5a5": default_data <= {{ DATA_WIDTH }}'h{{ A5_PATTERN }};
+                "ffff": default_data <= {{ DATA_WIDTH }}'h{{ FF_PATTERN }};
+                "0000": default_data <= {{ DATA_WIDTH }}'h{{ ZERO_PATTERN }};
+                "5555": default_data <= {{ DATA_WIDTH }}'h{{ FIVE_PATTERN }};
                 default: default_data <= {{ DATA_WIDTH }}'h{{ DEFAULT_DATA_VALUE }};
             endcase
         end
@@ -135,18 +135,34 @@ module spi_master #(
                         if (bit_counter < DATA_WIDTH) begin
                             // Shift in received data
                             if (MSB_FIRST) begin
-                                rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
+                                if (DATA_WIDTH > 1) begin
+                                    rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
+                                end else begin
+                                    rx_shift_reg <= miso;  // For 1-bit, just set to received bit
+                                end
                             end else begin
-                                rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
+                                if (DATA_WIDTH > 1) begin
+                                    rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
+                                end else begin
+                                    rx_shift_reg <= miso;  // For 1-bit, just set to received bit
+                                end
                             end
 
                             // Shift out transmitted data
                             if (MSB_FIRST) begin
                                 mosi <= tx_shift_reg[DATA_WIDTH-1];
-                                tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                                if (DATA_WIDTH > 1) begin
+                                    tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                                end else begin
+                                    tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
+                                end
                             end else begin
                                 mosi <= tx_shift_reg[0];
-                                tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
+                                if (DATA_WIDTH > 1) begin
+                                    tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
+                                end else begin
+                                    tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
+                                end
                             end
 
                             bit_counter <= bit_counter + 1;
@@ -160,10 +176,18 @@ module spi_master #(
                                 // Shift out transmitted data
                                 if (MSB_FIRST) begin
                                     mosi <= tx_shift_reg[DATA_WIDTH-1];
-                                    tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                                    if (DATA_WIDTH > 1) begin
+                                        tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                                    end else begin
+                                        tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
+                                    end
                                 end else begin
                                     mosi <= tx_shift_reg[0];
-                                    tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
+                                    if (DATA_WIDTH > 1) begin
+                                        tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
+                                    end else begin
+                                        tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
+                                    end
                                 end
                                 bit_counter <= bit_counter + 1;
                             end
@@ -171,9 +195,17 @@ module spi_master #(
                             if (bit_counter < DATA_WIDTH && bit_counter > 0) begin
                                 // Shift in received data (sample on falling edge)
                                 if (MSB_FIRST) begin
-                                    rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
+                                    if (DATA_WIDTH > 1) begin
+                                        rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
+                                    end else begin
+                                        rx_shift_reg <= miso;  // For 1-bit, just set to received bit
+                                    end
                                 end else begin
-                                    rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
+                                    if (DATA_WIDTH > 1) begin
+                                        rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
+                                    end else begin
+                                        rx_shift_reg <= miso;  // For 1-bit, just set to received bit
+                                    end
                                 end
                             end
                         end
