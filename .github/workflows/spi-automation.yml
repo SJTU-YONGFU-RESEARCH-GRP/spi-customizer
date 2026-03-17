@@ -2,59 +2,23 @@ name: SPI Customizer (Agent-driven)
 
 on:
   workflow_dispatch:
-  issues:
-    types: [opened, labeled]
 
 jobs:
-  # Run the full SPI pipeline when an issue is opened/labeled with spec-intent
-  spi-pipeline:
-    if: |
-      contains(github.event.issue.labels.*.name, 'spec-intent') ||
-      (github.event_name == 'workflow_dispatch')
+  agent-driven-notice:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      contents: write
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install system dependencies (iverilog)
+    - name: Agent-driven workflow notice
       run: |
-        sudo apt-get update -qq
-        sudo apt-get install -y iverilog
-
-    - name: Install Python dependencies
-      run: |
-        pip install --quiet Jinja2 PyYAML requests matplotlib numpy
-
-    - name: Determine issue number
-      id: issue
-      run: |
-        if [ "${{ github.event_name }}" = "issues" ]; then
-          echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
-        else
-          echo "number=${ISSUE_NUMBER:-0}" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Run SPI pipeline
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        ISSUE_NUM="${{ steps.issue.outputs.number }}"
-        echo "🚀 Running SPI pipeline for issue #${ISSUE_NUM}"
-        python3 scripts/process_issue.py "${ISSUE_NUM}"
-
-    - name: Upload artifacts
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: spi-results-${{ steps.issue.outputs.number }}
-        path: results/issue-${{ steps.issue.outputs.number }}/
-        if-no-files-found: ignore
+        echo "This repository is pure agent-driven."
+        echo ""
+        echo "- GitHub Issues encode intent (use templates 5 / 6 / 7 for spec, verify, debug)."
+        echo "- Copilot (as a coding agent) reads the issue and the per-template instruction"
+        echo "  files under .github/instructions/ then performs generation, verification,"
+        echo "  and debugging directly — no scripts are auto-executed by CI."
+        echo ""
+        echo "Artifact packaging: if you want to bundle artifacts already produced under"
+        echo "results/issue-<n>/ extend this workflow with an upload-artifact step."
