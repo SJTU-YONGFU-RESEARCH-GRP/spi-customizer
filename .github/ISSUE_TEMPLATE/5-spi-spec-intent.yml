@@ -1,0 +1,167 @@
+name: 🧭 SPI Spec (intent-driven)
+description: Specify SPI behavior and acceptance intent (not just parameters)
+title: "SPI Spec: [device/use-case]"
+labels: ["spi-customization", "spec-intent"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Provide **intent** first, then parameters. This helps the agent generate RTL + a testbench that matches your device expectations, and produce explicit protocol checks.
+
+  - type: textarea
+    id: intent
+    attributes:
+      label: Design intent
+      description: Describe what you want the SPI core to do in plain language.
+      placeholder: |
+        Example:
+        - I need an SPI master to talk to an ADC that samples on the rising edge with clock idle low (Mode 0).
+        - SS_n must stay asserted for the full 16-bit frame.
+        - Transactions are single-frame (no continuous clocking between frames).
+    validations:
+      required: true
+
+  - type: textarea
+    id: transaction_examples
+    attributes:
+      label: Transaction examples (expected)
+      description: Provide 1–3 concrete examples of expected transactions.
+      placeholder: |
+        Example:
+        - TX: 0xA5A5 → expect MOSI to shift MSB-first, sampled on leading edge
+        - RX: capture MISO on sampling edge; rx_data should match slave response
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Core parameters (used for generation)
+
+  - type: input
+    id: spi-mode
+    attributes:
+      label: SPI Mode
+      description: Enter SPI mode (0, 1, 2, or 3)
+      placeholder: "0, 1, 2, or 3"
+    validations:
+      required: true
+
+  - type: input
+    id: data-width
+    attributes:
+      label: Data Width
+      description: Number of bits (1-64, common values 8/16/32)
+      placeholder: "8"
+    validations:
+      required: true
+
+  - type: input
+    id: num-slaves
+    attributes:
+      label: Number of Slaves
+      description: Number of slave devices (1-32)
+      placeholder: "1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: slave-select
+    attributes:
+      label: Slave Select Behavior
+      options:
+        - Active Low (most common)
+        - Active High
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data-order
+    attributes:
+      label: Data Order
+      options:
+        - MSB First (most common)
+        - LSB First
+    validations:
+      required: true
+
+  - type: dropdown
+    id: spi-role
+    attributes:
+      label: SPI Role
+      options:
+        - Master (default)
+        - Slave
+        - Dual (both master and slave)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: special-features
+    attributes:
+      label: Special Features
+      options:
+        - label: Interrupt Support
+        - label: FIFO Buffers
+        - label: DMA Support
+        - label: Multi-master Support
+
+  - type: dropdown
+    id: test-duration
+    attributes:
+      label: Testing Requirements
+      options:
+        - Brief
+        - Standard
+        - Comprehensive
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: testing-options
+    attributes:
+      label: Testing Options
+      options:
+        - label: Clock Jitter Testing (tests timing margins)
+        - label: Waveform Capture (generates detailed timing diagrams)
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (what must be proven)
+      description: List checks that must pass; the agent should turn these into explicit protocol checks tied to evidence.
+      placeholder: |
+        Example:
+        - SS_n is asserted before the first sampling edge and deasserted after the last bit
+        - MOSI changes only on the non-sampling edge for the chosen mode
+        - Bit order matches MSB-first
+    validations:
+      required: true
+
+  - type: input
+    id: email
+    attributes:
+      label: Email Address
+      description: Email for receiving results
+      placeholder: "you@example.com"
+    validations:
+      required: true
+
+  - type: input
+    id: github-username
+    attributes:
+      label: GitHub Username
+      description: Your GitHub username for issue updates
+      placeholder: "your-username"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Notes
+      placeholder: "Device quirks, timing constraints, or integration notes"
+    validations:
+      required: false
+

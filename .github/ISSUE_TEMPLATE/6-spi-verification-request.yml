@@ -1,0 +1,140 @@
+name: ✅ SPI Verification / Compliance
+description: Request protocol compliance checks for a generated SPI core
+title: "SPI Verify: [what to prove]"
+labels: ["spi-customization", "verification"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when you want the agent to **prove** specific protocol properties (edge semantics, SS framing, bit order) and produce a compliance report tied to simulation evidence.
+
+  - type: textarea
+    id: what-to-verify
+    attributes:
+      label: What must be verified
+      description: List protocol properties and acceptance criteria.
+      placeholder: |
+        Example:
+        - Mode 3: data sampled on rising edge with CPOL=1 idle high
+        - SS_n asserted for full frame and toggles only between frames
+        - MSB-first shifting
+        - IRQ asserted exactly once at transaction completion (if enabled)
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Configuration under test
+        Provide the configuration you want verified. If you already have a previous issue/run, copy its parameters here so the agent can reproduce.
+
+  - type: input
+    id: spi-mode
+    attributes:
+      label: SPI Mode
+      placeholder: "0"
+    validations:
+      required: true
+
+  - type: input
+    id: data-width
+    attributes:
+      label: Data Width
+      placeholder: "8"
+    validations:
+      required: true
+
+  - type: input
+    id: num-slaves
+    attributes:
+      label: Number of Slaves
+      placeholder: "1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: slave-select
+    attributes:
+      label: Slave Select Behavior
+      options:
+        - Active Low (most common)
+        - Active High
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data-order
+    attributes:
+      label: Data Order
+      options:
+        - MSB First (most common)
+        - LSB First
+    validations:
+      required: true
+
+  - type: dropdown
+    id: spi-role
+    attributes:
+      label: SPI Role
+      options:
+        - Master (default)
+        - Slave
+        - Dual (both master and slave)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: special-features
+    attributes:
+      label: Special Features
+      options:
+        - label: Interrupt Support
+        - label: FIFO Buffers
+        - label: DMA Support
+        - label: Multi-master Support
+
+  - type: dropdown
+    id: test-duration
+    attributes:
+      label: Testing Requirements
+      options:
+        - Brief
+        - Standard
+        - Comprehensive
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: testing-options
+    attributes:
+      label: Testing Options
+      options:
+        - label: Clock Jitter Testing (tests timing margins)
+        - label: Waveform Capture (generates detailed timing diagrams)
+
+  - type: input
+    id: reference-issue
+    attributes:
+      label: Reference issue number (optional)
+      description: If this verification should match a previous generated core, reference it here.
+      placeholder: "123"
+    validations:
+      required: false
+
+  - type: input
+    id: github-username
+    attributes:
+      label: GitHub Username
+      placeholder: "your-username"
+    validations:
+      required: true
+
+  - type: input
+    id: email
+    attributes:
+      label: Email Address (optional)
+      placeholder: "you@example.com"
+    validations:
+      required: false
+

@@ -1,13 +1,20 @@
-name: 🔧 SPI Configuration Request
-description: Request a custom SPI configuration with specific technical parameters (Mode, Width, Features, etc.)
-title: "SPI Config: [Brief description of your configuration]"
+name: 🗃️ Legacy: SPI Configuration (parameter-only)
+description: Legacy parameter-only form. Prefer intent-driven templates (Spec / Verification / Debug) for flexibility.
+title: "Legacy SPI Config (parameters only): [Brief description]"
 labels: ["spi-customization", "enhancement"]
 assignees: []
 body:
   - type: markdown
     attributes:
       value: |
-        ## SPI Configuration Request
+        ## Legacy SPI Configuration (parameter-only)
+
+        This legacy form is **parameter-only** and is less flexible than the intent-driven workflows.
+
+        Prefer these templates for most work:
+        - **SPI Spec (intent-driven)**: captures behavior + acceptance criteria
+        - **SPI Verification / Compliance**: captures what must be proven
+        - **SPI Debug / Triage**: captures symptoms + evidence
 
         Please provide the following details for your custom SPI configuration:
   - type: input
@@ -175,11 +182,9 @@ body:
       value: |
         ## What Happens Next?
 
-        1. 🤖 The automation system will parse your configuration
-        2. 🔧 Custom Verilog code will be generated for your specifications
-        3. 🧪 The design will be tested with comprehensive testbenches
-        4. 📊 Timing diagrams and performance plots will be created
-        5. 📧 Results will be emailed to you with downloadable files
-        6. ✅ This issue will be updated with the results and then closed
+        1. The agent will interpret the parameters
+        2. RTL + testbench will be generated (or templates updated if needed)
+        3. Simulation + evidence-based analysis will be produced under `results/issue-<n>/`
+        4. The agent will report results and artifacts back in the issue
 
         **Expected completion time: 5-10 minutes**
