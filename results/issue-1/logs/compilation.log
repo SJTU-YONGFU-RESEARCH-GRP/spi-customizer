@@ -1,0 +1,6 @@
+Icarus Verilog compilation log
+==================================================
+Command: /usr/bin/iverilog -g2012 -o results/issue-1/data/spi_simulation results/issue-1/code/spi_dual_mode3_8bit.v results/issue-1/code/spi_dual_tb.v
+Working directory: /home/runner/work/spi-customizer/spi-customizer
+Return code: 0
+Compilation: SUCCESS

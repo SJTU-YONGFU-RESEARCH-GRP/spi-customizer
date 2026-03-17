@@ -6,6 +6,9 @@ results/**/*.csv
 *.vcd
 results/**/*.vcd
 
+# Compiled simulation binaries
+results/**/spi_simulation
+
 # Generated Verilog and testbench files
 *spi_master*.v
 *spi_master*.sv

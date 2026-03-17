@@ -27,8 +27,11 @@ class GitHubIssueProcessor:
         self.token = token
         self.issue_number = issue_number
         self.api_base = "https://api.github.com/repos"
-        self.repo_owner = "SJTU-YONGFU-RESEARCH-GRP"
-        self.repo_name = "spi-customizer"
+        # Prefer environment variables set by GitHub Actions (GITHUB_REPOSITORY = "owner/repo")
+        gh_repo = os.environ.get('GITHUB_REPOSITORY', 'cylindercheah/spi-customizer')
+        parts = gh_repo.split('/', 1)
+        self.repo_owner = parts[0] if len(parts) == 2 else 'cylindercheah'
+        self.repo_name = parts[1] if len(parts) == 2 else 'spi-customizer'
 
     def get_issue_content(self) -> Optional[str]:
         """Fetch issue content from local overrides or GitHub API"""
@@ -448,6 +451,10 @@ def main():
     except ValueError:
         print("❌ Issue number must be an integer")
         sys.exit(1)
+
+    if issue_number == 0:
+        print("ℹ️  Issue number is 0 (workflow_dispatch without ISSUE_NUMBER). Nothing to process.")
+        sys.exit(0)
 
     # Get GitHub token from environment (optional in local mode)
     token = os.environ.get('GITHUB_TOKEN')

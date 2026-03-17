@@ -9,12 +9,33 @@ Treat GitHub Issues as the user interface to an AI engineer:
 - Users express **intent** (specification, verification goals, debugging observations).
 - You produce **engineered artifacts** (RTL, testbench, reports) with **traceability**.
 - You own the engineering reasoning that humans normally do when configuring, verifying, and debugging SPI designs.
+- **No CI scripts run automatically.** You do all the work yourself using your available tools (`bash`, file editors, git). Users submit an issue; you pick it up, follow the relevant instruction file, and commit results.
+
+### Mapping from issue templates to tasks
+
+Each issue template has a dedicated instruction file. When you receive an issue, identify its template from the labels and read the corresponding file **before doing anything else**.
+
+| Template | Label | Instruction file | Task |
+|----------|-------|-----------------|------|
+| `5-spi-spec-intent.yml` | `spec-intent` | `.github/instructions/SPEC.md` | Generate SPI RTL + testbench from behavioural intent |
+| `6-spi-verification-request.yml` | `verification` | `.github/instructions/VERIFY.md` | Prove protocol compliance with simulation evidence |
+| `7-spi-debug-request.yml` | `debug` | `.github/instructions/DEBUG.md` | Triage root cause and produce a minimal fix |
+
+### Instruction files (must follow)
+
+This repo keeps per-template instructions under `.github/instructions/`:
+
+- **`.github/instructions/SPEC.md`** — end-to-end workflow for template 5: ingest intent → generate RTL/TB → compile with `-g2012` → simulate → VCD analysis → compliance report → issue comment. Auto-applies to `results/issue-*/code/**/*.v` and `results/issue-*/logs/**`.
+- **`.github/instructions/VERIFY.md`** — compliance-checking workflow for template 6: map acceptance criteria to VCD evidence, produce a structured `protocol_compliance.md`. Auto-applies to `results/issue-*/logs/protocol_compliance.md`.
+- **`.github/instructions/DEBUG.md`** — triage and fix workflow for template 7: reproduce the symptom, localise the root cause, apply the minimal fix, verify before/after. Auto-applies to `results/issue-*/logs/triage.md`.
+
+> **Always read the matching instruction file first.** It defines the exact sequence of steps and quality gates you must satisfy before posting an issue comment.
 
 ### Ground rules
 
 - **Evidence-first**: Base conclusions on repo evidence (file paths and concrete outputs). Do not infer behavior from naming alone.
 - **No synthetic verification**: Protocol compliance and debugging claims must be supported by real simulation artifacts (logs, VCD-derived evidence). If simulation cannot run, report the limitation clearly and stop short of compliance claims.
-- **No “parameter-only” mindset**: When an issue asks for a design, translate intent into concrete protocol behavior (mode edges, SS_n framing, bit order) and verify that behavior explicitly.
+- **No "parameter-only" mindset**: When an issue asks for a design, translate intent into concrete protocol behavior (mode edges, SS_n framing, bit order) and verify that behavior explicitly.
 - **Traceability required**: Every issue workflow must emit a machine-readable manifest that ties together:
   - issue content hash
   - parsed configuration
@@ -35,7 +56,7 @@ Treat GitHub Issues as the user interface to an AI engineer:
 - **Simulation**: `scripts/simulator_runner.py`
 - **Post-processing and reporting**: `scripts/vcd_parser.py`
 - **Issue forms**: `.github/ISSUE_TEMPLATE/`
-- **Workflow**: This repo is pure agent-driven; do not rely on CI auto-execution.
+- **Workflow**: This repo is pure agent-driven; CI does not auto-execute scripts on issue events.
 
 ### Repo layout (deterministic per-issue workspace)
 
@@ -62,7 +83,7 @@ Do not write artifacts outside the issue directory for normal operation.
 
 ### Deterministic execution contract (must follow)
 
-For any issue that asks you to generate/verify/debug RTL, follow this fixed sequence and produce the required artifacts.
+For any issue that asks you to generate/verify/debug RTL, follow the steps in the matching instruction file (see table above). The high-level sequence is:
 
 1) **Ingest**
    - Read the issue intent and acceptance criteria.
@@ -79,7 +100,7 @@ For any issue that asks you to generate/verify/debug RTL, follow this fixed sequ
 
    Required commands (edit filenames to match generated outputs):
    - Compile:
-     - `iverilog -o results/issue-<n>/data/spi_simulation results/issue-<n>/code/<core>.v results/issue-<n>/code/<tb>.v`
+     - `iverilog -g2012 -o results/issue-<n>/data/spi_simulation results/issue-<n>/code/<core>.v results/issue-<n>/code/<tb>.v`
    - Run:
      - `VCD_FILE=results/issue-<n>/data/spi_waveform.vcd vvp -n results/issue-<n>/data/spi_simulation`
 
@@ -101,7 +122,7 @@ For any issue that asks you to generate/verify/debug RTL, follow this fixed sequ
 
 ### Required outputs per issue type
 
-#### 1) Specification / Generate core
+#### 1) Specification / Generate core (template 5 → `.github/instructions/SPEC.md`)
 
 - **Artifacts**:
   - Generated RTL (`results/issue-<n>/code/*.v`)
@@ -112,7 +133,7 @@ For any issue that asks you to generate/verify/debug RTL, follow this fixed sequ
   - Translate intent into mode-specific edge semantics, SS_n behavior, and bit-order behavior.
   - Identify ambiguous intent and resolve it explicitly in the report (do not silently guess).
 
-#### 2) Verification / Compliance
+#### 2) Verification / Compliance (template 6 → `.github/instructions/VERIFY.md`)
 
 - **Artifacts**:
   - Protocol compliance report (`results/issue-<n>/logs/protocol_compliance.md`)
@@ -121,11 +142,11 @@ For any issue that asks you to generate/verify/debug RTL, follow this fixed sequ
 - **Agent reasoning**:
   - Express checks as explicit acceptance criteria and map them to evidence extracted from the simulation artifacts.
 
-#### 3) Debug / Observed failure
+#### 3) Debug / Observed failure (template 7 → `.github/instructions/DEBUG.md`)
 
 - **Artifacts**:
   - Triage report (`results/issue-<n>/logs/triage.md`) with suspected root cause and minimal repro steps
-  - When relevant, a “before/after” evidence delta (log excerpt, waveform excerpt, check outcome)
+  - When relevant, a "before/after" evidence delta (log excerpt, waveform excerpt, check outcome)
 - **Agent reasoning**:
   - Localize failures to one of: parsing, template rendering, RTL logic, testbench logic, simulation environment, post-processing.
   - Provide the smallest change that fixes the issue while preserving unrelated behavior.
@@ -135,4 +156,3 @@ For any issue that asks you to generate/verify/debug RTL, follow this fixed sequ
 - Start with a concise statement of **what intent was detected**.
 - Then list **what was verified**, with explicit pass/fail and links to artifacts.
 - If something cannot be verified, state **what evidence is missing** and what must run to obtain it.
-

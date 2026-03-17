@@ -7,16 +7,16 @@
 module spi_dual_tb;
 
     // Parameters
-    parameter MODE = {{ mode }};
-    parameter DATA_WIDTH = {{ data_width }};
-    parameter NUM_SLAVES = {{ num_slaves }};
-    parameter SLAVE_ACTIVE_LOW = {{ slave_active_low | int }};
-    parameter MSB_FIRST = {{ msb_first | int }};
-    parameter FIFO_DEPTH = {{ fifo_depth }};
-    parameter MAX_SLAVES = {{ max_slaves }};
-    parameter CLOCK_DIVIDER = {{ clock_divider }};
-    parameter DEFAULT_DATA_ENABLED = {{ default_data_enabled | int }};
-    parameter DEFAULT_DATA_VALUE = {{ data_width }}'h{{ default_data_value }};
+    parameter MODE = 3;
+    parameter DATA_WIDTH = 8;
+    parameter NUM_SLAVES = 4;
+    parameter SLAVE_ACTIVE_LOW = 1;
+    parameter MSB_FIRST = 1;
+    parameter FIFO_DEPTH = 16;
+    parameter MAX_SLAVES = 8;
+    parameter CLOCK_DIVIDER = 2;
+    parameter DEFAULT_DATA_ENABLED = 0;
+    parameter DEFAULT_DATA_VALUE = 8'hA5;
 
     // Signals
     reg clk;
@@ -101,7 +101,7 @@ module spi_dual_tb;
         $display("--- Testing Master Mode ---");
 
         // Test basic transmission in master mode
-        tx_data = {{ "16'hAA55" if data_width >= 16 else "8'hA5" }};
+        tx_data = 8'hA5;
         $display("TX Data: 0x%h", tx_data);
 
         // Wait for tx_ready to be asserted (may already be high)
@@ -207,7 +207,7 @@ module spi_dual_tb;
 
     // VCD dumping
     initial begin
-        $dumpfile("{{ vcd_filename }}");
+        $dumpfile("results/issue-1/data/spi_waveform.vcd");
         $dumpvars(0, spi_dual_tb);
     end
 

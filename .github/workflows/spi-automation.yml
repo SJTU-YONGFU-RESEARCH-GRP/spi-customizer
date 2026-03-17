@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  agent-assisted-packaging:
+  agent-driven-notice:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,9 +15,10 @@ jobs:
       run: |
         echo "This repository is pure agent-driven."
         echo ""
-        echo "- GitHub Issues encode intent."
-        echo "- Copilot (as an agent) performs generation, verification, and debugging."
-        echo "- We do not auto-execute scripts on issue events."
+        echo "- GitHub Issues encode intent (use templates 5 / 6 / 7 for spec, verify, debug)."
+        echo "- Copilot (as a coding agent) reads the issue and the per-template instruction"
+        echo "  files under .github/instructions/ then performs generation, verification,"
+        echo "  and debugging directly — no scripts are auto-executed by CI."
         echo ""
-        echo "If you want CI assistance, extend this workflow to package/upload artifacts"
-        echo "that the agent already produced under results/issue-<n>/."
+        echo "Artifact packaging: if you want to bundle artifacts already produced under"
+        echo "results/issue-<n>/ extend this workflow with an upload-artifact step."

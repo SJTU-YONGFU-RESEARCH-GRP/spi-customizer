@@ -72,7 +72,7 @@ class RTLSimulator:
         logs_dir.mkdir(exist_ok=True)
 
         simulation_file = str(data_dir / 'spi_simulation')
-        cmd = [iverilog_cmd, '-o', simulation_file]
+        cmd = [iverilog_cmd, '-g2012', '-o', simulation_file]
         cmd.extend(verilog_files)
 
         try:
