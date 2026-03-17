@@ -91,3 +91,4 @@ test_results/
 *.backup
 config.bak
 
+scripts/__pycache__/

@@ -1,0 +1,4 @@
+Time (ns),spi_dual_tb.dut.tx_valid
+0,0
+310000,1
+330000,0

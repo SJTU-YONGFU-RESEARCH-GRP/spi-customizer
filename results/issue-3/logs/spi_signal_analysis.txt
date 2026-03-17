@@ -1,0 +1,353 @@
+SPI Signal Analysis Summary
+========================================
+
+Signal: spi_dual_tb.dut.irq
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.tx_ready
+  Width: 1 bits
+  Changes: 4
+  Current Value: 1
+
+Signal: spi_dual_tb.ss_n
+  Width: 4 bits
+  Changes: 3
+  Current Value: b1111
+
+Signal: spi_dual_tb.dut.sclk
+  Width: 1 bits
+  Changes: 68
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.rx_valid
+  Width: 1 bits
+  Changes: 5
+  Current Value: 0
+
+Signal: spi_dual_tb.rx_data
+  Width: 32 bits
+  Changes: 8
+  Current Value: b101101
+
+Signal: spi_dual_tb.dut.mosi
+  Width: 1 bits
+  Changes: 27
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.miso_out
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.busy
+  Width: 1 bits
+  Changes: 5
+  Current Value: 0
+
+Signal: spi_dual_tb.CLOCK_DIVIDER
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10
+
+Signal: spi_dual_tb.DATA_WIDTH
+  Width: 32 bits
+  Changes: 1
+  Current Value: b100000
+
+Signal: spi_dual_tb.DEFAULT_DATA_ENABLED
+  Width: 32 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_dual_tb.DEFAULT_DATA_VALUE
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10100101101001011010010110100101
+
+Signal: spi_dual_tb.FIFO_DEPTH
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10000
+
+Signal: spi_dual_tb.MAX_SLAVES
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1000
+
+Signal: spi_dual_tb.MODE
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10
+
+Signal: spi_dual_tb.MSB_FIRST
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_dual_tb.NUM_SLAVES
+  Width: 32 bits
+  Changes: 1
+  Current Value: b100
+
+Signal: spi_dual_tb.SLAVE_ACTIVE_LOW
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_dual_tb.dut.clk
+  Width: 1 bits
+  Changes: 402
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.master_mode
+  Width: 1 bits
+  Changes: 2
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.miso
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.mosi_in
+  Width: 1 bits
+  Changes: 6
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.rst_n
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.sclk_in
+  Width: 1 bits
+  Changes: 15
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.ss_in
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_dual_tb.tx_data
+  Width: 32 bits
+  Changes: 2
+  Current Value: b10100101101001011010010110100101
+
+Signal: spi_dual_tb.dut.tx_valid
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.irq_clear
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.tx_data
+  Width: 32 bits
+  Changes: 2
+  Current Value: b10100101101001011010010110100101
+
+Signal: spi_dual_tb.dut.ss_n
+  Width: 4 bits
+  Changes: 3
+  Current Value: b1111
+
+Signal: spi_dual_tb.dut.rx_data
+  Width: 32 bits
+  Changes: 8
+  Current Value: b101101
+
+Signal: spi_dual_tb.dut.CLOCK_DIVIDER
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10
+
+Signal: spi_dual_tb.dut.CPOL
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_dual_tb.dut.DATA_WIDTH
+  Width: 32 bits
+  Changes: 1
+  Current Value: b100000
+
+Signal: spi_dual_tb.dut.DEFAULT_DATA_ENABLED
+  Width: 32 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_dual_tb.dut.DEFAULT_DATA_VALUE
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10100101101001011010010110100101
+
+Signal: spi_dual_tb.dut.FIFO_DEPTH
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10000
+
+Signal: spi_dual_tb.dut.MAX_SLAVES
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1000
+
+Signal: spi_dual_tb.dut.MODE
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10
+
+Signal: spi_dual_tb.dut.MSB_FIRST
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_dual_tb.dut.NUM_SLAVES
+  Width: 32 bits
+  Changes: 1
+  Current Value: b100
+
+Signal: spi_dual_tb.dut.SAMPLE_ON_RISING
+  Width: 32 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_dual_tb.dut.SLAVE_ACTIVE_LOW
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1
+
+Signal: spi_dual_tb.dut.SLAVE_TIMEOUT_CYCLES
+  Width: 8 bits
+  Changes: 1
+  Current Value: b11001000
+
+Signal: spi_dual_tb.dut.default_data
+  Width: 32 bits
+  Changes: 1
+  Current Value: b10100101101001011010010110100101
+
+Signal: spi_dual_tb.dut.master_bit_counter
+  Width: 8 bits
+  Changes: 33
+  Current Value: b100000
+
+Signal: spi_dual_tb.dut.master_busy
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.master_rx_data_buffer
+  Width: 32 bits
+  Changes: 2
+  Current Value: b0
+
+Signal: spi_dual_tb.dut.master_rx_shift_reg
+  Width: 32 bits
+  Changes: 1
+  Current Value: b0
+
+Signal: spi_dual_tb.dut.master_rx_valid_buffer
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.master_sclk_counter
+  Width: 8 bits
+  Changes: 100
+  Current Value: b0
+
+Signal: spi_dual_tb.dut.master_sclk_en
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.master_ss_n_reg
+  Width: 4 bits
+  Changes: 3
+  Current Value: b1111
+
+Signal: spi_dual_tb.dut.master_start_rx
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.master_start_tx
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.master_tx_ready_buffer
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.master_tx_shift_reg
+  Width: 32 bits
+  Changes: 34
+  Current Value: b0
+
+Signal: spi_dual_tb.dut.slave_bit_counter
+  Width: 8 bits
+  Changes: 8
+  Current Value: b111
+
+Signal: spi_dual_tb.dut.slave_busy_buffer
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.slave_rx_data_buffer
+  Width: 32 bits
+  Changes: 7
+  Current Value: b101101
+
+Signal: spi_dual_tb.dut.slave_rx_valid_buffer
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.slave_sclk_last_state
+  Width: 1 bits
+  Changes: 15
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.slave_ss_last_state
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.slave_timeout_counter
+  Width: 8 bits
+  Changes: 42
+  Current Value: b0
+
+Signal: spi_dual_tb.dut.slave_transaction_active
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_dual_tb.dut.slave_tx_ready_buffer
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_dual_tb.dut.slave_tx_shift_reg
+  Width: 32 bits
+  Changes: 2
+  Current Value: b10100101101001011010010110100101
+
+Signal: spi_dual_tb.wait_master.MASTER_TX_TIMEOUT_CYCLES
+  Width: 32 bits
+  Changes: 1
+  Current Value: b1001110001000
+
+Signal: spi_dual_tb.wait_master.timeout
+  Width: 32 bits
+  Changes: 101
+  Current Value: b1100011
+

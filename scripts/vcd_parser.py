@@ -1229,7 +1229,7 @@ class SummaryGenerator:
             dma_support='✅ Enabled' if config.get('dma_support') else '❌ Disabled',
             multi_master='✅ Enabled' if config.get('multi_master') else '❌ Disabled',
             clock_polarity='High' if config.get('mode', 0) in [2,3] else 'Low',
-            clock_phase='Falling edge' if config.get('mode', 0) in [1,3] else 'Rising edge',
+            clock_phase='Falling edge' if config.get('mode', 0) in [1,2] else 'Rising edge',
             timing_analysis=timing_analysis,
             waveform_section=waveform_section,
             sim_log=sim_log,
@@ -1731,15 +1731,17 @@ class ProtocolComplianceChecker:
         mode = getattr(self.config, "mode", None)
         cpol = 1 if mode in [2, 3] else 0
         cpha = 1 if mode in [1, 3] else 0
+        spi_role = getattr(self.config, "spi_role", "master")
 
         sclk = self._find_signal(lambda n: n.endswith(".sclk"))
         mosi = self._find_signal(lambda n: n.endswith(".mosi"))
         ss_n = self._find_signal(lambda n: n.endswith(".ss_n"))
         busy = self._find_signal(lambda n: n.endswith(".busy"))
+        master_mode_sig = self._find_signal(lambda n: n.endswith(".master_mode"))
 
         checks = []
 
-        idle_ok, idle_note = self._check_sclk_idle(sclk, busy, cpol)
+        idle_ok, idle_note = self._check_sclk_idle(sclk, busy, cpol, master_mode_sig)
         checks.append(("SCLK_idle_level_matches_CPOL", idle_ok, idle_note))
 
         ss_ok, ss_note = self._check_ss_framing(ss_n, busy)
@@ -1787,19 +1789,28 @@ class ProtocolComplianceChecker:
                 break
         return current
 
-    def _check_sclk_idle(self, sclk_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]], cpol: int):
+    def _check_sclk_idle(self, sclk_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]], cpol: int, master_mode_sig: Optional[Dict[str, Any]] = None):
         if not sclk_sig or not busy_sig:
             return None, "Missing `sclk` or `busy` in VCD."
         changes = busy_sig.get("changes", [])
         if not changes:
             return None, "`busy` has no transitions; cannot infer idle window."
 
+        checked = 0
         for t, v in changes:
             if v == "0":
+                # In dual mode, skip check when master_mode=0 (SCLK is an input, not driven)
+                if master_mode_sig is not None:
+                    mm_v = self._value_at_or_before(master_mode_sig, t)
+                    if mm_v != "1":
+                        continue
                 sclk_v = self._value_at_or_before(sclk_sig, t)
                 if sclk_v in ["0", "1"] and int(sclk_v) != cpol:
                     return False, f"At busy=0 transition time {t}ns, sclk={sclk_v} but expected idle {cpol}."
-        return True, f"Checked sclk at busy=0 boundaries against CPOL={cpol}."
+                checked += 1
+        if checked == 0:
+            return None, "No master-mode busy=0 transitions found to check SCLK idle."
+        return True, f"Checked sclk at {checked} master-mode busy=0 boundaries against CPOL={cpol}."
 
     def _check_ss_framing(self, ss_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]]):
         if not ss_sig or not busy_sig:

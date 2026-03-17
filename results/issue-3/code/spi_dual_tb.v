@@ -7,16 +7,16 @@
 module spi_dual_tb;
 
     // Parameters
-    parameter MODE = {{ mode }};
-    parameter DATA_WIDTH = {{ data_width }};
-    parameter NUM_SLAVES = {{ num_slaves }};
-    parameter SLAVE_ACTIVE_LOW = {{ slave_active_low | int }};
-    parameter MSB_FIRST = {{ msb_first | int }};
-    parameter FIFO_DEPTH = {{ fifo_depth }};
-    parameter MAX_SLAVES = {{ max_slaves }};
-    parameter CLOCK_DIVIDER = {{ clock_divider }};
-    parameter DEFAULT_DATA_ENABLED = {{ default_data_enabled | int }};
-    parameter DEFAULT_DATA_VALUE = {{ data_width }}'h{{ default_data_value }};
+    parameter MODE = 2;
+    parameter DATA_WIDTH = 32;
+    parameter NUM_SLAVES = 4;
+    parameter SLAVE_ACTIVE_LOW = 1;
+    parameter MSB_FIRST = 1;
+    parameter FIFO_DEPTH = 16;
+    parameter MAX_SLAVES = 8;
+    parameter CLOCK_DIVIDER = 2;
+    parameter DEFAULT_DATA_ENABLED = 0;
+    parameter DEFAULT_DATA_VALUE = 32'hA5A5A5A5;
 
     // Signals
     reg clk;
@@ -101,7 +101,7 @@ module spi_dual_tb;
         $display("--- Testing Master Mode ---");
 
         // Test basic transmission in master mode
-        tx_data = {{ data_width }}'h{{ 'A5' * ((data_width + 7) // 8) }};
+        tx_data = 32'hA5A5A5A5;
         $display("TX Data: 0x%h", tx_data);
 
         // Wait for tx_ready to be asserted (may already be high)
@@ -141,97 +141,54 @@ module spi_dual_tb;
         ss_in = 0;
         $display("Slave selected (SS asserted low)");
 
-        // SPI Mode {{ mode }}: CPOL={{ 1 if mode >= 2 else 0 }}, CPHA={{ 1 if mode in [1,3] else 0 }}
-        // Sampling occurs on {{ 'falling' if mode in [1,2] else 'rising' }} edge
+        // SPI Mode 2: CPOL=1, CPHA=0
+        // Sampling occurs on falling edge
 
         // Send 7 bits of test data (0x5A pattern, MSB first = 0101 1010)
-        {% if mode in [0, 2] %}
+        
         // CPHA=0: data is already valid at SS assertion, clock from idle
         mosi_in = 0; // Bit 6 (MSB of 0x5A = 0101_1010)
         #50;
-        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // First edge (sampling edge)
+        sclk_in = 0; // First edge (sampling edge)
         #50;
-        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
+        sclk_in = 1; // Return to idle
 
         mosi_in = 1; // Bit 5
         #50;
-        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        sclk_in = 0; // Sampling edge
         #50;
-        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
+        sclk_in = 1; // Return to idle
 
         mosi_in = 0; // Bit 4
         #50;
-        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        sclk_in = 0; // Sampling edge
         #50;
-        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
+        sclk_in = 1; // Return to idle
 
         mosi_in = 1; // Bit 3
         #50;
-        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        sclk_in = 0; // Sampling edge
         #50;
-        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
+        sclk_in = 1; // Return to idle
 
         mosi_in = 1; // Bit 2
         #50;
-        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        sclk_in = 0; // Sampling edge
         #50;
-        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
+        sclk_in = 1; // Return to idle
 
         mosi_in = 0; // Bit 1
         #50;
-        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        sclk_in = 0; // Sampling edge
         #50;
-        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
+        sclk_in = 1; // Return to idle
 
         mosi_in = 1; // Bit 0 (LSB)
         #50;
-        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        sclk_in = 0; // Sampling edge
         #50;
-        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
-        {% else %}
-        // CPHA=1: data changes on first clock edge, sampled on second
-        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %}; // First edge (data change)
-        mosi_in = 0; // Bit 6 (MSB of 0x5A)
-        #50;
-        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %}; // Second edge (sampling edge)
-        #50;
-
-        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
-        mosi_in = 1; // Bit 5
-        #50;
-        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
-        #50;
-
-        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
-        mosi_in = 0; // Bit 4
-        #50;
-        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
-        #50;
-
-        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
-        mosi_in = 1; // Bit 3
-        #50;
-        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
-        #50;
-
-        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
-        mosi_in = 1; // Bit 2
-        #50;
-        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
-        #50;
-
-        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
-        mosi_in = 0; // Bit 1
-        #50;
-        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
-        #50;
-
-        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
-        mosi_in = 1; // Bit 0 (LSB)
-        #50;
-        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
-        #50;
-        {% endif %}
+        sclk_in = 1; // Return to idle
+        
 
         // Return clock to idle
         sclk_in = (MODE == 2 || MODE == 3) ? 1 : 0;
@@ -250,7 +207,7 @@ module spi_dual_tb;
 
     // VCD dumping
     initial begin
-        $dumpfile("{{ vcd_filename }}");
+        $dumpfile("results/issue-3/data/spi_waveform.vcd");
         $dumpvars(0, spi_dual_tb);
     end
 
