@@ -4,16 +4,16 @@
 // =============================================
 
 module spi_dual #(
-    parameter MODE = {{MODE}},                    // SPI mode (0, 1, 2, 3)
-    parameter DATA_WIDTH = {{DATA_WIDTH}},        // Data width in bits
-    parameter NUM_SLAVES = {{NUM_SLAVES}},        // Number of slaves when in master mode
-    parameter SLAVE_ACTIVE_LOW = {{SLAVE_ACTIVE_LOW|int}},  // Slave select polarity
-    parameter MSB_FIRST = {{MSB_FIRST|int}},  // Data order
-    parameter FIFO_DEPTH = {{FIFO_DEPTH}},        // FIFO buffer depth
-    parameter MAX_SLAVES = {{MAX_SLAVES}},        // Maximum slaves supported
-    parameter CLOCK_DIVIDER = {{CLOCK_DIVIDER}},  // System clock divider
-    parameter DEFAULT_DATA_ENABLED = {{DEFAULT_DATA_ENABLED|int}},
-    parameter DEFAULT_DATA_VALUE = {{DATA_WIDTH}}'h{{DEFAULT_DATA_VALUE}}
+    parameter MODE = 2,                    // SPI mode (0, 1, 2, 3)
+    parameter DATA_WIDTH = 32,        // Data width in bits
+    parameter NUM_SLAVES = 4,        // Number of slaves when in master mode
+    parameter SLAVE_ACTIVE_LOW = 1,  // Slave select polarity
+    parameter MSB_FIRST = 1,  // Data order
+    parameter FIFO_DEPTH = 16,        // FIFO buffer depth
+    parameter MAX_SLAVES = 8,        // Maximum slaves supported
+    parameter CLOCK_DIVIDER = 2,  // System clock divider
+    parameter DEFAULT_DATA_ENABLED = 0,
+    parameter DEFAULT_DATA_VALUE = 32'hA5A5A5A5
 )(
     // System signals
     input  wire clk,                    // System clock

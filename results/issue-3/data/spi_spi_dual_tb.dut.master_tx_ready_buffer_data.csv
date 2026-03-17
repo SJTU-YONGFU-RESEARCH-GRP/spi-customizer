@@ -1,0 +1,4 @@
+Time (ns),spi_dual_tb.dut.master_tx_ready_buffer
+0,1
+310000,0
+2290000,1
