@@ -127,7 +127,7 @@ class GitHubIssueProcessor:
             parser = SPIConfigParser()
             config = parser.parse_issue(issue_body, self.issue_number)
 
-            print(f"✅ Configuration parsed successfully: Mode {config.mode}, {config.data_width} bits, Email: '{config.email}'")
+            print(f"✅ Configuration parsed successfully: Mode {config.mode}, {config.data_width} bits")
 
             # Update issue with initial status
             status_msg = f"""🔄 Processing your SPI configuration...
@@ -286,9 +286,7 @@ class GitHubIssueProcessor:
                 'multi_master': config.multi_master,
                 'test_duration': config.test_duration,
                 'simulation_success': simulation_success,
-                'waveform_success': waveform_success,
-                'email': config.email,
-                'github_username': config.github_username
+                'waveform_success': waveform_success
             }
 
             issue_dir = f'results/issue-{self.issue_number}'
@@ -429,8 +427,6 @@ class GitHubIssueProcessor:
 ## Support
 
 If you encounter any issues or need modifications:
-- 📧 Email: {config.email}
-- 💬 GitHub: @{config.github_username}
 - 🐛 Report issues: [New Issue](https://github.com/{self.repo_owner}/{self.repo_name}/issues/new)
 
 ---

@@ -145,19 +145,4 @@ body:
         - label: Clock Jitter Testing (tests timing margins)
         - label: Waveform Capture (generates detailed timing diagrams)
 
-  - type: input
-    id: github-username
-    attributes:
-      label: GitHub Username
-      placeholder: "your-username"
-    validations:
-      required: true
-
-  - type: input
-    id: email
-    attributes:
-      label: Email Address (optional)
-      placeholder: "you@example.com"
-    validations:
-      required: false
 

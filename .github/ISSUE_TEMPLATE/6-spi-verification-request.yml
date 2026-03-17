@@ -122,19 +122,4 @@ body:
     validations:
       required: false
 
-  - type: input
-    id: github-username
-    attributes:
-      label: GitHub Username
-      placeholder: "your-username"
-    validations:
-      required: true
-
-  - type: input
-    id: email
-    attributes:
-      label: Email Address (optional)
-      placeholder: "you@example.com"
-    validations:
-      required: false
 

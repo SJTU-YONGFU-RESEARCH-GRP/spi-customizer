@@ -50,7 +50,6 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 - 🔧 **Automatic Code Generation**: Generates Verilog code based on your specifications
 - 🧪 **RTL Simulation**: Tests generated designs with comprehensive testbenches
 - 📊 **Waveform Generation**: Creates timing diagrams and performance plots
-- 📧 **Email Results**: Delivers results directly to your inbox
 - 🧭 **Agent-driven workflow**: GitHub Issues encode intent; a Copilot agent handles generation and verification
 
 ## How It Works
@@ -58,7 +57,7 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 1. **File an Issue**: Use the GitHub issue template to specify your SPI configuration
 2. **Automatic Processing**: The system parses your requirements and generates custom code
 3. **RTL Testing**: Generated Verilog is compiled and simulated with testbenches
-4. **Results Delivery**: Results are emailed to you with downloadable files
+4. **Results Delivery**: Results are posted back to the issue with downloadable artifacts
 5. **Issue Updates**: The GitHub issue is updated with progress and final results
 
 ## Quick Start
@@ -72,7 +71,6 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
    - **Data Width** (bits)
    - **Number of Slaves**
    - **Advanced options** (interrupts, DMA, etc.)
-   - **Contact information**
 
 4. Submit the issue and wait for results!
 
@@ -105,8 +103,7 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 - **Waveform Capture**: Yes
 
 ### Contact Information
-- **Email Address**: your-email@example.com
-- **GitHub Username**: your-username
+- (Removed) This repository does not require email or GitHub username fields for processing.
 ```
 
 ## Architecture
@@ -293,7 +290,6 @@ For the full license text, see the [LICENSE](LICENSE) file in this repository or
 
 ## Support
 
-- 📧 **Email**: support@example.com
 - 🐛 **Issues**: Use GitHub Issues for bug reports
 - 📖 **Documentation**: Check the docs/ directory
 - 💬 **Discussions**: Use GitHub Discussions for questions

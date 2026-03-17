@@ -28,8 +28,6 @@ class SPIConfig:
     clock_jitter_test: bool = False
     clock_frequency: float = 25.0
     waveform_capture: bool = True
-    email: str = ""
-    github_username: str = ""
 
     # New enhanced features
     spi_role: str = "master"  # master, slave, dual
@@ -57,7 +55,6 @@ class SPIConfigParser:
             'test_duration': r'(?:Test Duration|Testing Requirements)[^:]*:?\s*(Brief|Standard|Comprehensive)',
             'clock_jitter': r'Clock Jitter Testing[^:]*:?\s*(Yes|No)',
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
-            'email': r'(?:## Email Address|Email)\s*:?\s*\n?\s*([^\n\r]+)',
 
             # New enhanced features
             'spi_role': r'SPI Role\s*(Master|Slave|Dual)',
@@ -66,8 +63,7 @@ class SPIConfigParser:
             'custom_data': r'Custom Data Value[^:]*:?\s*([0-9A-Fa-f]+)',
             'clock_divider': r'\*\*Clock Divider\*\*:\s*(\d+)',
             'fifo_depth': r'\*\*FIFO Depth\*\*:\s*(\d+)',
-            'max_slaves': r'\*\*Maximum Slaves\*\*:\s*(\d+)',
-            'github_user': r'GitHub Username[^:]*:?\s*([^\n\r]+)'
+            'max_slaves': r'\*\*Maximum Slaves\*\*:\s*(\d+)'
         }
 
     def parse_issue(self, issue_body: str, issue_number: int) -> SPIConfig:
@@ -138,10 +134,6 @@ class SPIConfigParser:
             params['spi_role'] = 'dual'
         else:
             params['spi_role'] = 'master'
-
-        email_value = self._extract_single(issue_body, self.patterns['email']) or ''
-        params['email'] = email_value.strip()
-        params['github_username'] = self._extract_single(issue_body, self.patterns['github_user']) or ''
 
         # Feature flags - check for checked checkboxes
         interrupt_matches = re.findall(r'(\[[^\]]*\]\s*Interrupt Support)', issue_body, re.IGNORECASE | re.MULTILINE)
@@ -277,10 +269,6 @@ class SPIConfigParser:
         if params['max_slaves'] < 1 or params['max_slaves'] > 32:
             raise ValueError(f"Max slaves {params['max_slaves']} out of range (1-32)")
 
-        # Validate email (optional for workflow functionality)
-        if params['email'] and '@' not in params['email']:
-            raise ValueError("Invalid email address format")
-
 
 def main():
     """Main function for testing the parser"""
@@ -312,10 +300,6 @@ def main():
     - **Test Duration**: Standard
     - **Clock Jitter Testing**: Yes
     - **Waveform Capture**: Yes
-
-    ### Contact Information
-    - **Email Address**: your-email@example.com
-    - **GitHub Username**: testuser
     """
 
     try:
@@ -343,9 +327,7 @@ def main():
                 'test_duration': config.test_duration,
                 'clock_jitter_test': config.clock_jitter_test,
                 'clock_frequency': config.clock_frequency,
-                'waveform_capture': config.waveform_capture,
-                'email': config.email,
-                'github_username': config.github_username
+                'waveform_capture': config.waveform_capture
             }, f, indent=2)
 
         print(f"✅ Configuration saved to {config_file}")

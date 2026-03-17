@@ -153,22 +153,6 @@ body:
       placeholder: "8"
     validations:
       required: false
-  - type: input
-    id: email
-    attributes:
-      label: Email Address
-      description: Your email address for receiving results
-      placeholder: "your-email@example.com"
-    validations:
-      required: true
-  - type: input
-    id: github-username
-    attributes:
-      label: GitHub Username
-      description: Your GitHub username for issue updates
-      placeholder: "your-username"
-    validations:
-      required: true
   - type: textarea
     id: additional-notes
     attributes:
