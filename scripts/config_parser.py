@@ -57,7 +57,8 @@ class SPIConfigParser:
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
 
             # New enhanced features
-            'spi_role': r'SPI Role\s*(Master|Slave|Dual)',
+            # Matches both "SPI Role: Master" and "**SPI Role**: Master (default)" and section format
+            'spi_role': r'SPI Role[^a-zA-Z\n]*(?:\n\s*)*(Master|Slave|Dual)',
             'default_data': r'Default Data[^:]*:?\s*(Enabled|Disabled)',
             'data_pattern': r'Data Pattern[^:]*:?\s*(A5A5|FFFF|0000|5555|Custom)',
             'custom_data': r'Custom Data Value[^:]*:?\s*([0-9A-Fa-f]+)',
@@ -111,15 +112,31 @@ class SPIConfigParser:
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid optional parameter values: {e}")
 
-        # Parse slave select behavior - find the line with checked checkbox
-        slave_matches = re.findall(r'(\[[^\]]*\]\s*Active (Low|High))', issue_body, re.IGNORECASE | re.MULTILINE)
-        slave_checked = [full_line for full_line, value in slave_matches if '[x]' in full_line or '[X]' in full_line]
-        params['slave_active_low'] = len(slave_checked) == 0 or 'Low' in slave_checked[0]  # Default to Low if none checked or Low is checked
+        # Parse slave select behavior - handle checkbox format (old) and section/inline dropdown format (new)
+        slave_checkbox = re.findall(r'\[[xX]\]\s*Active\s+(Low|High)', issue_body, re.IGNORECASE)
+        slave_dropdown = re.search(
+            r'Slave\s+Select(?:\s+Behavior)?[^a-zA-Z\n]*(?:\n[ \t]*)*(Active\s+(?:Low|High))',
+            issue_body, re.IGNORECASE
+        )
+        if slave_checkbox:
+            params['slave_active_low'] = slave_checkbox[0].lower() == 'low'
+        elif slave_dropdown:
+            params['slave_active_low'] = 'Low' in slave_dropdown.group(1)
+        else:
+            params['slave_active_low'] = True  # Default to Active Low
 
-        # Parse data order - find the line with checked checkbox
-        data_order_matches = re.findall(r'(\[[^\]]*\]\s*(MSB|LSB) First)', issue_body, re.IGNORECASE | re.MULTILINE)
-        data_order_checked = [full_line for full_line, value in data_order_matches if '[x]' in full_line or '[X]' in full_line]
-        params['msb_first'] = len(data_order_checked) == 0 or 'MSB' in data_order_checked[0]  # Default to MSB if none checked or MSB is checked
+        # Parse data order - handle checkbox format (old) and section/inline dropdown format (new)
+        order_checkbox = re.findall(r'\[[xX]\]\s*(MSB|LSB)\s+First', issue_body, re.IGNORECASE)
+        order_dropdown = re.search(
+            r'Data\s+Order[^a-zA-Z\n]*(?:\n[ \t]*)*(MSB|LSB)\s+First',
+            issue_body, re.IGNORECASE
+        )
+        if order_checkbox:
+            params['msb_first'] = order_checkbox[0].upper() == 'MSB'
+        elif order_dropdown:
+            params['msb_first'] = order_dropdown.group(1).upper() == 'MSB'
+        else:
+            params['msb_first'] = True  # Default to MSB First
 
         # Parse SPI role - for dropdown, extract the selected value
         params['spi_role'] = self._extract_single(issue_body, self.patterns['spi_role']) or 'master'

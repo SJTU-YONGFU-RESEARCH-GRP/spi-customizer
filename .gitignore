@@ -8,14 +8,29 @@ results/**/*.vcd
 
 # Compiled simulation binaries
 results/**/spi_simulation
+results/**/spi_sim
 
 # Generated Verilog and testbench files
 *spi_master*.v
 *spi_master*.sv
 *spi_master_tb*.v
 *spi_master_tb*.sv
+*spi_slave*.v
+*spi_slave*.sv
+*spi_slave_tb*.v
+*spi_slave_tb*.sv
+*spi_dual*.v
+*spi_dual*.sv
+*spi_dual_tb*.v
+*spi_dual_tb*.sv
 generated/**/*.v
 generated/**/*.sv
+
+# Parametric coverage test output (generated during test runs)
+results/parametric_coverage/
+
+# Simulator test output created by test scripts run from inside scripts/
+scripts/results/
 
 # Results directories (but keep the structure for organization)
 # results/
