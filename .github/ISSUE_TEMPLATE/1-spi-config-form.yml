@@ -1,4 +1,4 @@
-name: 🗃️ Legacy: SPI Configuration (parameter-only)
+name: "🗃️ Legacy: SPI Configuration (parameter-only)"
 description: Legacy parameter-only form. Prefer intent-driven templates (Spec / Verification / Debug) for flexibility.
 title: "Legacy SPI Config (parameters only): [Brief description]"
 labels: ["spi-customization", "enhancement"]
