@@ -90,7 +90,6 @@ body:
         - label: Configuration Parser
         - label: Verilog Generator
         - label: RTL Simulator
-        - label: Email System
         - label: GitHub Workflow
         - label: Documentation
 
@@ -100,15 +99,6 @@ body:
       label: Error Logs/Screenshots
       description: Include any error messages, logs, or screenshots
       placeholder: "Paste error logs here or describe what you saw"
-    validations:
-      required: false
-
-  - type: input
-    id: email
-    attributes:
-      label: Email Address
-      description: Your email for follow-up (optional)
-      placeholder: "your-email@example.com"
     validations:
       required: false
 
@@ -129,7 +119,7 @@ body:
         1. 🐛 Our team will review your bug report
         2. 🔍 We'll investigate the issue and try to reproduce it
         3. 🛠️ If confirmed, we'll work on a fix
-        4. 📧 We'll update you via email (if provided) or this issue
+        4. We'll update you in this issue
         5. ✅ Once fixed, this issue will be closed
 
         **Thank you for helping improve SPI Customizer!**

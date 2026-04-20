@@ -1,0 +1,148 @@
+name: 🩺 SPI Debug / Triage
+description: Debug incorrect SPI behavior observed in simulation (or hardware-like traces)
+title: "SPI Debug: [symptom]"
+labels: ["spi-customization", "debug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when you observed incorrect SPI behavior and want the agent to triage root cause and produce a minimal fix + evidence.
+
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptom (what went wrong)
+      description: Describe the observed failure.
+      placeholder: |
+        Example:
+        - SS_n deasserts early (mid-frame)
+        - MOSI changes on the sampling edge for Mode 0
+        - rx_data is rotated by one bit (off-by-one sampling)
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-vs-observed
+    attributes:
+      label: Expected vs observed
+      description: Provide the most concrete comparison you can.
+      placeholder: |
+        Example:
+        - Expected RX: 0x5A, Observed RX: 0x2D
+        - Expected SS_n low for 8 clocks, Observed low for 7 clocks
+    validations:
+      required: true
+
+  - type: input
+    id: reference-issue
+    attributes:
+      label: Reference issue number (recommended)
+      description: If this came from a previous run, reference the issue number so the agent can reproduce.
+      placeholder: "123"
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence (logs / waveform pointers)
+      description: Paste key log excerpts and/or point to artifacts.
+      placeholder: |
+        - Paste relevant lines from `results/issue-<n>/logs/simulation.log`
+        - Paste relevant lines from `results/issue-<n>/logs/SUMMARY.md`
+        - If you have a VCD excerpt, include the signal names and the time range of interest
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Configuration under test
+        Provide parameters so the agent can reproduce if needed.
+
+  - type: input
+    id: spi-mode
+    attributes:
+      label: SPI Mode
+      placeholder: "0"
+    validations:
+      required: true
+
+  - type: input
+    id: data-width
+    attributes:
+      label: Data Width
+      placeholder: "8"
+    validations:
+      required: true
+
+  - type: input
+    id: num-slaves
+    attributes:
+      label: Number of Slaves
+      placeholder: "1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: slave-select
+    attributes:
+      label: Slave Select Behavior
+      options:
+        - Active Low (most common)
+        - Active High
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data-order
+    attributes:
+      label: Data Order
+      options:
+        - MSB First (most common)
+        - LSB First
+    validations:
+      required: true
+
+  - type: dropdown
+    id: spi-role
+    attributes:
+      label: SPI Role
+      options:
+        - Master (default)
+        - Slave
+        - Dual (both master and slave)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: special-features
+    attributes:
+      label: Special Features
+      options:
+        - label: Interrupt Support
+        - label: FIFO Buffers
+        - label: DMA Support
+        - label: Multi-master Support
+
+  - type: dropdown
+    id: test-duration
+    attributes:
+      label: Testing Requirements
+      options:
+        - Brief
+        - Standard
+        - Comprehensive
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: testing-options
+    attributes:
+      label: Testing Options
+      options:
+        - label: Clock Jitter Testing (tests timing margins)
+        - label: Waveform Capture (generates detailed timing diagrams)
+
+

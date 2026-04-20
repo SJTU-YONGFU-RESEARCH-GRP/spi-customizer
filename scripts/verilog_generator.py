@@ -29,6 +29,22 @@ def get_hex_pattern(base_pattern: str, data_width: int) -> str:
         return repeated
 
 
+def compute_scaled_default_data_value(config: 'SPIConfig') -> str:
+    """Compute the default data value hex string scaled to the configured data width."""
+    pattern = config.default_data_pattern.lower()
+    if pattern == 'ffff':
+        return get_hex_pattern('FF', config.data_width)
+    elif pattern == '0000':
+        return get_hex_pattern('00', config.data_width)
+    elif pattern == '5555':
+        return get_hex_pattern('55', config.data_width)
+    elif pattern == 'custom':
+        hex_digits = (config.data_width + 3) // 4
+        return config.default_data_value[-hex_digits:].upper()
+    else:
+        return get_hex_pattern('A5', config.data_width)
+
+
 class VerilogGenerator:
     """Generates Verilog code from SPI configuration"""
 
@@ -60,6 +76,9 @@ class VerilogGenerator:
 
         template = Template(template_content)
 
+        # Compute default data value scaled to data width
+        scaled_default_data_value = compute_scaled_default_data_value(config)
+
         # Generate code with all parameters
         verilog_code = template.render(
             # Basic SPI parameters
@@ -79,7 +98,7 @@ class VerilogGenerator:
             SPI_ROLE=config.spi_role,
             DEFAULT_DATA_ENABLED=config.default_data_enabled,
             DEFAULT_DATA_PATTERN=config.default_data_pattern,
-            DEFAULT_DATA_VALUE=config.default_data_value,
+            DEFAULT_DATA_VALUE=scaled_default_data_value,
             A5_PATTERN=get_hex_pattern('A5', config.data_width),
             FF_PATTERN=get_hex_pattern('FF', config.data_width),
             ZERO_PATTERN=get_hex_pattern('00', config.data_width),
@@ -158,6 +177,9 @@ class VerilogGenerator:
 
         template = Template(template_content)
 
+        # Compute default data value scaled to data width for testbench
+        tb_default_data_value = compute_scaled_default_data_value(config)
+
         # Generate testbench code
         testbench_code = template.render(
             mode=config.mode,
@@ -170,7 +192,7 @@ class VerilogGenerator:
             clock_divider=config.clock_divider,
             default_data_enabled=config.default_data_enabled,
             default_data_pattern=config.default_data_pattern,
-            default_data_value=config.default_data_value,
+            default_data_value=tb_default_data_value,
             vcd_filename=vcd_filename
         )
 

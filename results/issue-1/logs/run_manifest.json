@@ -1,0 +1,32 @@
+{
+  "issue_number": 1,
+  "issue_body_sha256": "287c4ea1b9730659603ead6049009fec8511b7fb08b49225b968902e9360dc82",
+  "config": {
+    "mode": 3,
+    "data_width": 8,
+    "num_slaves": 4,
+    "slave_active_low": true,
+    "msb_first": true,
+    "interrupts": true,
+    "fifo_buffers": true,
+    "dma_support": true,
+    "multi_master": true,
+    "test_duration": "Comprehensive",
+    "clock_jitter_test": true,
+    "waveform_capture": true,
+    "spi_role": "dual",
+    "clock_divider": 2,
+    "fifo_depth": 16,
+    "max_slaves": 8
+  },
+  "generated_files": {
+    "core_file": "code/spi_dual_mode3_8bit.v",
+    "tb_file": "code/spi_dual_tb.v",
+    "expected_vcd": "data/spi_waveform.vcd"
+  },
+  "tools": {
+    "iverilog": "Icarus Verilog version 12.0 (stable) ()",
+    "vvp": "Icarus Verilog runtime version 12.0 (stable) ()",
+    "python": "Python 3.12.3"
+  }
+}

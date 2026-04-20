@@ -28,8 +28,6 @@ class SPIConfig:
     clock_jitter_test: bool = False
     clock_frequency: float = 25.0
     waveform_capture: bool = True
-    email: str = ""
-    github_username: str = ""
 
     # New enhanced features
     spi_role: str = "master"  # master, slave, dual
@@ -57,17 +55,16 @@ class SPIConfigParser:
             'test_duration': r'(?:Test Duration|Testing Requirements)[^:]*:?\s*(Brief|Standard|Comprehensive)',
             'clock_jitter': r'Clock Jitter Testing[^:]*:?\s*(Yes|No)',
             'waveform': r'Waveform Capture[^:]*:?\s*(Yes|No)',
-            'email': r'(?:## Email Address|Email)\s*:?\s*\n?\s*([^\n\r]+)',
 
             # New enhanced features
-            'spi_role': r'SPI Role\s*(Master|Slave|Dual)',
+            # Matches both "SPI Role: Master" and "**SPI Role**: Master (default)" and section format
+            'spi_role': r'SPI Role[^a-zA-Z\n]*(?:\n\s*)*(Master|Slave|Dual)',
             'default_data': r'Default Data[^:]*:?\s*(Enabled|Disabled)',
             'data_pattern': r'Data Pattern[^:]*:?\s*(A5A5|FFFF|0000|5555|Custom)',
             'custom_data': r'Custom Data Value[^:]*:?\s*([0-9A-Fa-f]+)',
             'clock_divider': r'\*\*Clock Divider\*\*:\s*(\d+)',
             'fifo_depth': r'\*\*FIFO Depth\*\*:\s*(\d+)',
-            'max_slaves': r'\*\*Maximum Slaves\*\*:\s*(\d+)',
-            'github_user': r'GitHub Username[^:]*:?\s*([^\n\r]+)'
+            'max_slaves': r'\*\*Maximum Slaves\*\*:\s*(\d+)'
         }
 
     def parse_issue(self, issue_body: str, issue_number: int) -> SPIConfig:
@@ -115,15 +112,31 @@ class SPIConfigParser:
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid optional parameter values: {e}")
 
-        # Parse slave select behavior - find the line with checked checkbox
-        slave_matches = re.findall(r'(\[[^\]]*\]\s*Active (Low|High))', issue_body, re.IGNORECASE | re.MULTILINE)
-        slave_checked = [full_line for full_line, value in slave_matches if '[x]' in full_line or '[X]' in full_line]
-        params['slave_active_low'] = len(slave_checked) == 0 or 'Low' in slave_checked[0]  # Default to Low if none checked or Low is checked
+        # Parse slave select behavior - handle checkbox format (old) and section/inline dropdown format (new)
+        slave_checkbox = re.findall(r'\[[xX]\]\s*Active\s+(Low|High)', issue_body, re.IGNORECASE)
+        slave_dropdown = re.search(
+            r'Slave\s+Select(?:\s+Behavior)?[^a-zA-Z\n]*(?:\n[ \t]*)*(Active\s+(?:Low|High))',
+            issue_body, re.IGNORECASE
+        )
+        if slave_checkbox:
+            params['slave_active_low'] = slave_checkbox[0].lower() == 'low'
+        elif slave_dropdown:
+            params['slave_active_low'] = 'Low' in slave_dropdown.group(1)
+        else:
+            params['slave_active_low'] = True  # Default to Active Low
 
-        # Parse data order - find the line with checked checkbox
-        data_order_matches = re.findall(r'(\[[^\]]*\]\s*(MSB|LSB) First)', issue_body, re.IGNORECASE | re.MULTILINE)
-        data_order_checked = [full_line for full_line, value in data_order_matches if '[x]' in full_line or '[X]' in full_line]
-        params['msb_first'] = len(data_order_checked) == 0 or 'MSB' in data_order_checked[0]  # Default to MSB if none checked or MSB is checked
+        # Parse data order - handle checkbox format (old) and section/inline dropdown format (new)
+        order_checkbox = re.findall(r'\[[xX]\]\s*(MSB|LSB)\s+First', issue_body, re.IGNORECASE)
+        order_dropdown = re.search(
+            r'Data\s+Order[^a-zA-Z\n]*(?:\n[ \t]*)*(MSB|LSB)\s+First',
+            issue_body, re.IGNORECASE
+        )
+        if order_checkbox:
+            params['msb_first'] = order_checkbox[0].upper() == 'MSB'
+        elif order_dropdown:
+            params['msb_first'] = order_dropdown.group(1).upper() == 'MSB'
+        else:
+            params['msb_first'] = True  # Default to MSB First
 
         # Parse SPI role - for dropdown, extract the selected value
         params['spi_role'] = self._extract_single(issue_body, self.patterns['spi_role']) or 'master'
@@ -138,10 +151,6 @@ class SPIConfigParser:
             params['spi_role'] = 'dual'
         else:
             params['spi_role'] = 'master'
-
-        email_value = self._extract_single(issue_body, self.patterns['email']) or ''
-        params['email'] = email_value.strip()
-        params['github_username'] = self._extract_single(issue_body, self.patterns['github_user']) or ''
 
         # Feature flags - check for checked checkboxes
         interrupt_matches = re.findall(r'(\[[^\]]*\]\s*Interrupt Support)', issue_body, re.IGNORECASE | re.MULTILINE)
@@ -277,10 +286,6 @@ class SPIConfigParser:
         if params['max_slaves'] < 1 or params['max_slaves'] > 32:
             raise ValueError(f"Max slaves {params['max_slaves']} out of range (1-32)")
 
-        # Validate email (optional for workflow functionality)
-        if params['email'] and '@' not in params['email']:
-            raise ValueError("Invalid email address format")
-
 
 def main():
     """Main function for testing the parser"""
@@ -312,10 +317,6 @@ def main():
     - **Test Duration**: Standard
     - **Clock Jitter Testing**: Yes
     - **Waveform Capture**: Yes
-
-    ### Contact Information
-    - **Email Address**: your-email@example.com
-    - **GitHub Username**: testuser
     """
 
     try:
@@ -343,9 +344,7 @@ def main():
                 'test_duration': config.test_duration,
                 'clock_jitter_test': config.clock_jitter_test,
                 'clock_frequency': config.clock_frequency,
-                'waveform_capture': config.waveform_capture,
-                'email': config.email,
-                'github_username': config.github_username
+                'waveform_capture': config.waveform_capture
             }, f, indent=2)
 
         print(f"✅ Configuration saved to {config_file}")

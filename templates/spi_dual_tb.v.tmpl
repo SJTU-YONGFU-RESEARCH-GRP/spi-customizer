@@ -86,7 +86,7 @@ module spi_dual_tb;
         tx_data = 0;
         tx_valid = 0;
         miso = 0;
-        sclk_in = 1; // Start high for Mode 3 (CPOL=1)
+        sclk_in = (MODE == 2 || MODE == 3) ? 1 : 0; // CPOL idle state
         mosi_in = 0;
         ss_in = 1;
 
@@ -101,29 +101,30 @@ module spi_dual_tb;
         $display("--- Testing Master Mode ---");
 
         // Test basic transmission in master mode
-        tx_data = {{ "16'hAA55" if data_width >= 16 else "8'hA5" }};
+        tx_data = {{ data_width }}'h{{ 'A5' * ((data_width + 7) // 8) }};
         $display("TX Data: 0x%h", tx_data);
 
-        // Wait for tx_ready, then start transmission
-        @(posedge tx_ready);
+        // Wait for tx_ready to be asserted (may already be high)
+        wait(tx_ready);
         #10; // Small delay
         tx_valid = 1; // Assert tx_valid to start transmission
         #20; // Hold tx_valid for a few cycles
         tx_valid = 0; // Deassert tx_valid
 
-        // Wait for transmission to complete with timeout
-        fork
-            begin
-                @(negedge busy);
-                $display("✓ Master transmission complete");
+        // Wait for transmission to complete (with timeout)
+        begin : wait_master
+            localparam MASTER_TX_TIMEOUT_CYCLES = 5000;
+            integer timeout;
+            timeout = 0;
+            while (!tx_ready && timeout < MASTER_TX_TIMEOUT_CYCLES) begin
+                #20;
+                timeout = timeout + 1;
             end
-            begin
-                #10000; // 10us timeout
-                $display("⚠️  Master transmission timeout - forcing completion");
-                $finish;
-            end
-        join_any
-        disable fork;
+            if (timeout >= MASTER_TX_TIMEOUT_CYCLES)
+                $display("WARNING: Master transmission timeout");
+            else
+                $display("Master transmission complete");
+        end
 
         // Switch to slave mode after master test
         #500;
@@ -140,62 +141,105 @@ module spi_dual_tb;
         ss_in = 0;
         $display("Slave selected (SS asserted low)");
 
-        // SPI Mode 3: CPOL=1, CPHA=1
-        // Clock high when idle, data sampled on falling edge, changed on rising edge
+        // SPI Mode {{ mode }}: CPOL={{ 1 if mode >= 2 else 0 }}, CPHA={{ 1 if mode in [1,3] else 0 }}
+        // Sampling occurs on {{ 'falling' if mode in [1,2] else 'rising' }} edge
 
-        // Send test data (7'h2A = 0101010 for 7-bit)
-        // For Mode 3: Start with clock high, change data on rising edges, sample on falling edges
-
-        // Clock should already be high (idle state for Mode 3)
-        // Send bit 6 (MSB first) - change data BEFORE rising edge
-        mosi_in = 0; // Bit 6 (MSB)
-        #50; // Setup time before rising edge
-        sclk_in = 0; // Falling edge - sample data
-        #50; // Hold time
+        // Send 7 bits of test data (0x5A pattern, MSB first = 0101 1010)
+        {% if mode in [0, 2] %}
+        // CPHA=0: data is already valid at SS assertion, clock from idle
+        mosi_in = 0; // Bit 6 (MSB of 0x5A = 0101_1010)
+        #50;
+        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // First edge (sampling edge)
+        #50;
+        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
 
         mosi_in = 1; // Bit 5
-        sclk_in = 1; // Rising edge - change data
-        #50; // Setup time before falling edge
-        sclk_in = 0; // Falling edge - sample data
-        #50; // Hold time
+        #50;
+        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        #50;
+        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
 
         mosi_in = 0; // Bit 4
-        sclk_in = 1; // Rising edge - change data
-        #50; // Setup time before falling edge
-        sclk_in = 0; // Falling edge - sample data
-        #50; // Hold time
+        #50;
+        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        #50;
+        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
 
         mosi_in = 1; // Bit 3
-        sclk_in = 1; // Rising edge - change data
-        #50; // Setup time before falling edge
-        sclk_in = 0; // Falling edge - sample data
-        #50; // Hold time
+        #50;
+        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        #50;
+        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
 
-        mosi_in = 0; // Bit 2
-        sclk_in = 1; // Rising edge - change data
-        #50; // Setup time before falling edge
-        sclk_in = 0; // Falling edge - sample data
-        #50; // Hold time
+        mosi_in = 1; // Bit 2
+        #50;
+        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        #50;
+        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
 
-        mosi_in = 1; // Bit 1
-        sclk_in = 1; // Rising edge - change data
-        #50; // Setup time before falling edge
-        sclk_in = 0; // Falling edge - sample data
-        #50; // Hold time
+        mosi_in = 0; // Bit 1
+        #50;
+        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        #50;
+        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
 
-        mosi_in = 0; // Bit 0 (LSB)
-        sclk_in = 1; // Rising edge - change data
-        #50; // Setup time before falling edge
-        sclk_in = 0; // Falling edge - sample data
-        #50; // Hold time
+        mosi_in = 1; // Bit 0 (LSB)
+        #50;
+        sclk_in = {% if mode == 2 %}0{% else %}1{% endif %}; // Sampling edge
+        #50;
+        sclk_in = {% if mode == 2 %}1{% else %}0{% endif %}; // Return to idle
+        {% else %}
+        // CPHA=1: data changes on first clock edge, sampled on second
+        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %}; // First edge (data change)
+        mosi_in = 0; // Bit 6 (MSB of 0x5A)
+        #50;
+        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %}; // Second edge (sampling edge)
+        #50;
 
-        // Return clock to idle (high for Mode 3)
-        sclk_in = 1;
+        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
+        mosi_in = 1; // Bit 5
+        #50;
+        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
+        #50;
+
+        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
+        mosi_in = 0; // Bit 4
+        #50;
+        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
+        #50;
+
+        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
+        mosi_in = 1; // Bit 3
+        #50;
+        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
+        #50;
+
+        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
+        mosi_in = 1; // Bit 2
+        #50;
+        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
+        #50;
+
+        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
+        mosi_in = 0; // Bit 1
+        #50;
+        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
+        #50;
+
+        sclk_in = {% if mode == 3 %}0{% else %}1{% endif %};
+        mosi_in = 1; // Bit 0 (LSB)
+        #50;
+        sclk_in = {% if mode == 3 %}1{% else %}0{% endif %};
+        #50;
+        {% endif %}
+
+        // Return clock to idle
+        sclk_in = (MODE == 2 || MODE == 3) ? 1 : 0;
 
         // End transaction: deassert SS
         #100;
         ss_in = 1;
-        $display("✓ Slave mode SPI transaction complete - sent 0x5A");
+        $display("Slave mode SPI transaction complete - sent 0x5A (7 bits)");
 
         #200; // Allow slave to process
 

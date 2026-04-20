@@ -7,8 +7,10 @@ Main entry point for processing SPI configuration issues in CI environment
 import os
 import sys
 import json
+import hashlib
+import subprocess
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 # Add current directory to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -25,8 +27,11 @@ class GitHubIssueProcessor:
         self.token = token
         self.issue_number = issue_number
         self.api_base = "https://api.github.com/repos"
-        self.repo_owner = "SJTU-YONGFU-RESEARCH-GRP"
-        self.repo_name = "spi-customizer"
+        # Prefer environment variables set by GitHub Actions (GITHUB_REPOSITORY = "owner/repo")
+        gh_repo = os.environ.get('GITHUB_REPOSITORY', 'cylindercheah/spi-customizer')
+        parts = gh_repo.split('/', 1)
+        self.repo_owner = parts[0] if len(parts) == 2 else 'cylindercheah'
+        self.repo_name = parts[1] if len(parts) == 2 else 'spi-customizer'
 
     def get_issue_content(self) -> Optional[str]:
         """Fetch issue content from local overrides or GitHub API"""
@@ -122,7 +127,7 @@ class GitHubIssueProcessor:
             parser = SPIConfigParser()
             config = parser.parse_issue(issue_body, self.issue_number)
 
-            print(f"✅ Configuration parsed successfully: Mode {config.mode}, {config.data_width} bits, Email: '{config.email}'")
+            print(f"✅ Configuration parsed successfully: Mode {config.mode}, {config.data_width} bits")
 
             # Update issue with initial status
             status_msg = f"""🔄 Processing your SPI configuration...
@@ -148,14 +153,19 @@ class GitHubIssueProcessor:
 
         # Step 3: Generate Verilog code
         try:
-            # Create issue directory and subdirectories
             issue_dir = f'results/issue-{self.issue_number}'
             code_dir = f'{issue_dir}/code'
+            data_dir = f'{issue_dir}/data'
+            logs_dir = f'{issue_dir}/logs'
+            graphs_dir = f'{issue_dir}/graphs'
             os.makedirs(code_dir, exist_ok=True)
+            os.makedirs(data_dir, exist_ok=True)
+            os.makedirs(logs_dir, exist_ok=True)
+            os.makedirs(graphs_dir, exist_ok=True)
 
             generator = VerilogGenerator()
             # Generate VCD filename for testbench
-            vcd_filename = f"{issue_dir}/data/spi_waveform.vcd"
+            vcd_filename = f"{data_dir}/spi_waveform.vcd"
             core_file = generator.save_verilog_file(config, output_dir=code_dir)
             tb_file = generator.save_testbench(config, output_dir=code_dir, vcd_filename=vcd_filename)
 
@@ -172,6 +182,20 @@ class GitHubIssueProcessor:
             self.update_issue_status('failed', error_msg)
             return False
 
+        # Step 3.5: Write run manifest (traceability)
+        try:
+            manifest_path = os.path.join(logs_dir, 'run_manifest.json')
+            self._write_run_manifest(
+                manifest_path=manifest_path,
+                issue_body=issue_body,
+                config=config,
+                core_file=core_file,
+                tb_file=tb_file
+            )
+            print(f"✅ Run manifest written: {manifest_path}")
+        except Exception as e:
+            print(f"⚠️  Failed to write run manifest: {e}")
+
         # Step 4: Run simulation (if tools available)
         try:
             simulator = RTLSimulator()
@@ -180,15 +204,6 @@ class GitHubIssueProcessor:
                 verilog_files = [core_file, tb_file]
                 top_module = "spi_master_tb"
                 simulation_success = simulator.run_full_simulation(config, verilog_files, top_module)
-
-                # Debug: List files after simulation
-                issue_dir = f'results/issue-{self.issue_number}'
-                if os.path.exists(issue_dir):
-                    print(f"📁 Files in {issue_dir} after simulation:")
-                    for f in os.listdir(issue_dir):
-                        filepath = os.path.join(issue_dir, f)
-                        size = os.path.getsize(filepath) if os.path.isfile(filepath) else "dir"
-                        print(f"  - {f} ({size} bytes)")
             else:
                 simulation_success = False
                 print("⚠️  RTL tools not available, skipping simulation")
@@ -201,13 +216,12 @@ class GitHubIssueProcessor:
         waveform_success = False
         if simulation_success:
             try:
-                issue_dir = f'results/issue-{self.issue_number}'
-                vcd_file = os.path.join(issue_dir, 'data', 'spi_waveform.vcd')
+                vcd_file = os.path.join(data_dir, 'spi_waveform.vcd')
                 if os.path.exists(vcd_file):
                     print("📊 Processing VCD file for waveform analysis...")
                     # Import vcd_parser functions
                     sys.path.append(os.path.dirname(__file__))
-                    from vcd_parser import VcdParser, CsvGenerator, PlotGenerator, SignalPlotGenerator, SummaryGenerator
+                    from vcd_parser import VcdParser, CsvGenerator, PlotGenerator, SignalPlotGenerator, SummaryGenerator, ProtocolComplianceChecker
 
                     # Parse VCD file
                     parser = VcdParser(vcd_file)
@@ -239,6 +253,12 @@ class GitHubIssueProcessor:
                         summary_file = summary_gen.generate_summary()
                         print(f"✅ Generated analysis summary: {summary_file}")
 
+                        # Generate protocol compliance report (evidence-based)
+                        compliance_path = os.path.join(logs_dir, 'protocol_compliance.md')
+                        checker = ProtocolComplianceChecker(config=config, vcd_data=vcd_data)
+                        checker.write_markdown(compliance_path)
+                        print(f"✅ Generated protocol compliance report: {compliance_path}")
+
                         waveform_success = True
                         print("🎉 Waveform analysis completed!")
                 else:
@@ -266,23 +286,11 @@ class GitHubIssueProcessor:
                 'multi_master': config.multi_master,
                 'test_duration': config.test_duration,
                 'simulation_success': simulation_success,
-                'waveform_success': waveform_success,
-                'email': config.email,
-                'github_username': config.github_username
+                'waveform_success': waveform_success
             }
 
             issue_dir = f'results/issue-{self.issue_number}'
             os.makedirs(issue_dir, exist_ok=True)
-
-            # Create subdirectories for organization
-            code_dir = os.path.join(issue_dir, 'code')
-            graphs_dir = os.path.join(issue_dir, 'graphs')
-            logs_dir = os.path.join(issue_dir, 'logs')
-            data_dir = os.path.join(issue_dir, 'data')
-            os.makedirs(code_dir, exist_ok=True)
-            os.makedirs(graphs_dir, exist_ok=True)
-            os.makedirs(logs_dir, exist_ok=True)
-            os.makedirs(data_dir, exist_ok=True)
 
             # Ensure plots directory exists (even if no plots generated)
             plots_dir = 'plots'
@@ -316,6 +324,56 @@ class GitHubIssueProcessor:
 
         print("✅ Issue processing completed successfully!")
         return True
+
+    def _write_run_manifest(self, manifest_path: str, issue_body: str, config: SPIConfig, core_file: str, tb_file: str) -> None:
+        body_hash = hashlib.sha256(issue_body.encode('utf-8')).hexdigest()
+
+        def _tool_version(cmd: List[str]) -> Optional[str]:
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                if res.returncode == 0:
+                    out = (res.stdout or res.stderr or "").strip()
+                    return out.splitlines()[0] if out else None
+                return None
+            except Exception:
+                return None
+
+        issue_dir = os.path.dirname(os.path.dirname(manifest_path))
+        manifest = {
+            "issue_number": self.issue_number,
+            "issue_body_sha256": body_hash,
+            "config": {
+                "mode": config.mode,
+                "data_width": config.data_width,
+                "num_slaves": config.num_slaves,
+                "slave_active_low": config.slave_active_low,
+                "msb_first": config.msb_first,
+                "interrupts": config.interrupts,
+                "fifo_buffers": config.fifo_buffers,
+                "dma_support": config.dma_support,
+                "multi_master": config.multi_master,
+                "test_duration": config.test_duration,
+                "clock_jitter_test": config.clock_jitter_test,
+                "waveform_capture": config.waveform_capture,
+                "spi_role": config.spi_role,
+                "clock_divider": config.clock_divider,
+                "fifo_depth": config.fifo_depth,
+                "max_slaves": config.max_slaves,
+            },
+            "generated_files": {
+                "core_file": os.path.relpath(core_file, issue_dir),
+                "tb_file": os.path.relpath(tb_file, issue_dir),
+                "expected_vcd": "data/spi_waveform.vcd",
+            },
+            "tools": {
+                "iverilog": _tool_version(["iverilog", "-V"]),
+                "vvp": _tool_version(["vvp", "-V"]),
+                "python": _tool_version([sys.executable, "--version"]),
+            },
+        }
+
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2)
 
     def _generate_results_summary(self, config: SPIConfig, core_file: str, tb_file: str, sim_success: bool, waveform_success: bool) -> str:
         """Generate summary of results for GitHub issue"""
@@ -369,8 +427,6 @@ class GitHubIssueProcessor:
 ## Support
 
 If you encounter any issues or need modifications:
-- 📧 Email: {config.email}
-- 💬 GitHub: @{config.github_username}
 - 🐛 Report issues: [New Issue](https://github.com/{self.repo_owner}/{self.repo_name}/issues/new)
 
 ---
@@ -391,6 +447,10 @@ def main():
     except ValueError:
         print("❌ Issue number must be an integer")
         sys.exit(1)
+
+    if issue_number == 0:
+        print("ℹ️  Issue number is 0 (workflow_dispatch without ISSUE_NUMBER). Nothing to process.")
+        sys.exit(0)
 
     # Get GitHub token from environment (optional in local mode)
     token = os.environ.get('GITHUB_TOKEN')

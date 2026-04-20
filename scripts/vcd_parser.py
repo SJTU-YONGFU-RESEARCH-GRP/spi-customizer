@@ -1070,6 +1070,9 @@ class SummaryGenerator:
 
     def __init__(self, issue_dir: str):
         self.issue_dir = Path(issue_dir)
+        self.code_dir = self.issue_dir / 'code'
+        self.data_dir = self.issue_dir / 'data'
+        self.graphs_dir = self.issue_dir / 'graphs'
         self.logs_dir = self.issue_dir / 'logs'
         self.logs_dir.mkdir(exist_ok=True)
         self.output_file = self.logs_dir / 'SUMMARY.md'
@@ -1093,6 +1096,8 @@ class SummaryGenerator:
 
         # Get waveform visualization section
         waveform_section = self._generate_waveform_section()
+
+        gen_files = self._detect_generated_files()
 
         # Generate summary content
         summary_content = """# SPI RTL Simulation Summary - Issue {issue_number}
@@ -1175,7 +1180,7 @@ class SummaryGenerator:
 - **Active Signals**: `{active_signals}`
 - **Data Transfer Events**: `{data_transfers}`
 - **Clock Cycles**: `{clock_cycles}`
-- **Protocol Compliance**: `✅ Verified`
+- **Protocol Compliance**: `{protocol_compliance}`
 
 ## 📈 Recommendations
 
@@ -1224,32 +1229,33 @@ class SummaryGenerator:
             dma_support='✅ Enabled' if config.get('dma_support') else '❌ Disabled',
             multi_master='✅ Enabled' if config.get('multi_master') else '❌ Disabled',
             clock_polarity='High' if config.get('mode', 0) in [2,3] else 'Low',
-            clock_phase='Falling edge' if config.get('mode', 0) in [1,3] else 'Rising edge',
+            clock_phase='Falling edge' if config.get('mode', 0) in [1,2] else 'Rising edge',
             timing_analysis=timing_analysis,
             waveform_section=waveform_section,
             sim_log=sim_log,
             signal_stats=signal_stats,
-            core_file_info=self._get_file_info('example1.v'),
-            tb_file_info=self._get_file_info('example1_tb.v'),
-            sim_file_info=self._get_file_info('spi_simulation'),
-            log_file_info=self._get_file_info('compilation.log'),
-            vcd_file_info=self._get_file_info('spi_waveform.vcd'),
-            gtkw_file_info=self._get_file_info('spi_waveform.gtkw'),
-            timing_csv_info=self._get_file_info('spi_timing_data.csv'),
-            consolidated_csv_info=self._get_file_info('spi_consolidated_signals.csv'),
+            core_file_info=self._get_file_info(gen_files.get('core_relpath')),
+            tb_file_info=self._get_file_info(gen_files.get('tb_relpath')),
+            sim_file_info=self._get_file_info('data/spi_simulation'),
+            log_file_info=self._get_file_info('logs/compilation.log'),
+            vcd_file_info=self._get_file_info('data/spi_waveform.vcd'),
+            gtkw_file_info=self._get_file_info('data/spi_waveform.gtkw'),
+            timing_csv_info=self._get_file_info('data/spi_timing_data.csv'),
+            consolidated_csv_info=self._get_file_info('data/spi_consolidated_signals.csv'),
             visualization_summary=self._get_visualization_summary(),
             csv_summary=self._get_csv_summary(),
-            total_signals=len([f for f in self.issue_dir.glob('*.csv') if 'individual' not in f.name]),
-            vcd_size=self._get_file_size('spi_waveform.vcd'),
+            total_signals=len(list(self.data_dir.glob('*.csv'))),
+            vcd_size=self._get_file_size('data/spi_waveform.vcd'),
             total_transitions=self._get_total_transitions(signal_stats),
-            active_signals=len([s for s in signal_stats.split('\n') if s.strip() and '|' in s]),
+            active_signals=len([s for s in signal_stats.split('\n') if s.strip().startswith('| `')]),
             data_transfers=self._count_data_transfers(),
             clock_cycles=self._get_clock_cycles(),
+            protocol_compliance=self._get_protocol_compliance_status(),
             cpol=1 if config.get('mode', 0) in [2,3] else 0,
             cpha=config.get('mode', 0) % 2,
             data_rate=100000 // (config.get('data_width', 16) * config.get('num_slaves', 1)),
             frame_size=config.get('data_width', 16),
-            vcd_storage=self._get_file_size('spi_waveform.vcd'),
+            vcd_storage=self._get_file_size('data/spi_waveform.vcd'),
             csv_data=self._get_total_csv_size(),
             total_analysis=self._get_total_analysis_size(),
             timestamp=self._get_timestamp()
@@ -1272,7 +1278,7 @@ class SummaryGenerator:
 
     def _read_simulation_log(self) -> str:
         """Read and format simulation log"""
-        log_file = self.issue_dir / 'logs' / 'simulation.log'
+        log_file = self.logs_dir / 'simulation.log'
         if log_file.exists():
             with open(log_file, 'r') as f:
                 content = f.read()
@@ -1300,7 +1306,7 @@ class SummaryGenerator:
 
     def _read_signal_summary(self) -> str:
         """Read and format signal summary"""
-        summary_file = self.issue_dir / 'data' / 'spi_signal_summary.csv'
+        summary_file = self.data_dir / 'spi_signal_summary.csv'
         if not summary_file.exists():
             return "No signal summary available"
 
@@ -1342,7 +1348,7 @@ class SummaryGenerator:
 
     def _analyze_timing_data(self) -> str:
         """Analyze timing data for key insights"""
-        timing_file = self.issue_dir / 'data' / 'spi_timing_data.csv'
+        timing_file = self.data_dir / 'spi_timing_data.csv'
         if not timing_file.exists():
             return "No timing data available"
 
@@ -1478,7 +1484,7 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _get_transaction_duration(self) -> str:
         """Estimate transaction duration"""
-        timing_file = self.issue_dir / 'data' / 'spi_timing_data.csv'
+        timing_file = self.data_dir / 'spi_timing_data.csv'
         if timing_file.exists():
             with open(timing_file, 'r') as f:
                 lines = f.readlines()
@@ -1523,17 +1529,20 @@ For detailed signal examination, individual plots are provided for each signal:
         else:
             return "Basic polling mode"
 
-    def _get_file_info(self, filename: str) -> str:
-        """Get file information"""
-        file_path = self.issue_dir / filename
+    def _get_file_info(self, relpath: Optional[str]) -> str:
+        """Get file information from a repo-relative path under the issue directory"""
+        if not relpath:
+            return "`(not produced)`"
+        file_path = (self.issue_dir / relpath)
+        display = relpath.replace('\\', '/')
         if file_path.exists():
             size = file_path.stat().st_size
-            return f"`{filename}` ({size:,} bytes)"
-        return f"`{filename}` (file not found)"
+            return f"`{display}` ({size:,} bytes)"
+        return f"`{display}` (file not found)"
 
-    def _get_file_size(self, filename: str) -> str:
+    def _get_file_size(self, relpath: str) -> str:
         """Get formatted file size"""
-        file_path = self.issue_dir / filename
+        file_path = self.issue_dir / relpath
         if file_path.exists():
             size = file_path.stat().st_size
             if size > 1024 * 1024:
@@ -1546,7 +1555,7 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _get_visualization_summary(self) -> str:
         """Generate visualization files summary"""
-        png_files = list(self.issue_dir.glob('*.png'))
+        png_files = list(self.graphs_dir.glob('*.png'))
         if not png_files:
             return "- No visualization files generated"
 
@@ -1564,7 +1573,7 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _get_csv_summary(self) -> str:
         """Generate CSV files summary"""
-        csv_files = list(self.issue_dir.glob('*.csv'))
+        csv_files = list(self.data_dir.glob('*.csv'))
         if not csv_files:
             return "- No CSV files generated"
 
@@ -1613,16 +1622,16 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _count_data_transfers(self) -> int:
         """Count data transfer events from logs"""
-        log_file = self.issue_dir / 'simulation.log'
+        log_file = self.logs_dir / 'simulation.log'
         if log_file.exists():
-            with open(log_file, 'r') as f:
+            with open(log_file, 'r', encoding='utf-8') as f:
                 content = f.read()
-                return content.count('Transmission complete')
+            return content.count('Transmission complete')
         return 0
 
     def _get_clock_cycles(self) -> str:
         """Estimate clock cycles from timing data"""
-        timing_file = self.issue_dir / 'data' / 'spi_timing_data.csv'
+        timing_file = self.data_dir / 'spi_timing_data.csv'
         if timing_file.exists():
             with open(timing_file, 'r') as f:
                 lines = f.readlines()
@@ -1637,7 +1646,7 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _get_total_csv_size(self) -> str:
         """Get total size of all CSV files"""
-        csv_files = list(self.issue_dir.glob('*.csv'))
+        csv_files = list(self.data_dir.glob('*.csv'))
         total_size = sum(f.stat().st_size for f in csv_files if f.exists())
         if total_size > 1024 * 1024:
             return f"{total_size / (1024*1024):.1f} MB"
@@ -1648,7 +1657,7 @@ For detailed signal examination, individual plots are provided for each signal:
 
     def _get_total_analysis_size(self) -> str:
         """Get total size of analysis files"""
-        analysis_files = list(self.issue_dir.glob('*.png')) + list(self.issue_dir.glob('*.csv')) + list(self.issue_dir.glob('*.vcd'))
+        analysis_files = list(self.graphs_dir.glob('*.png')) + list(self.data_dir.glob('*.csv')) + list(self.data_dir.glob('*.vcd'))
         total_size = sum(f.stat().st_size for f in analysis_files if f.exists())
         if total_size > 1024 * 1024:
             return f"{total_size / (1024*1024):.1f} MB"
@@ -1661,6 +1670,197 @@ For detailed signal examination, individual plots are provided for each signal:
         """Get current timestamp"""
         from datetime import datetime
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    def _get_protocol_compliance_status(self) -> str:
+        config = self._read_config()
+        sim_ok = bool(config.get("simulation_success"))
+        report = self.logs_dir / "protocol_compliance.md"
+        if sim_ok and report.exists():
+            return "`✅ Evidence-based checks generated`"
+        if sim_ok:
+            return "`⚠️ Simulation ran (no compliance report)`"
+        return "`⚠️ Not verified (no simulation evidence)`"
+
+    def _detect_generated_files(self) -> Dict[str, Optional[str]]:
+        """
+        Detect generated RTL/TB filenames for reporting.
+        Prefers `logs/run_manifest.json` if present; otherwise falls back to scanning `code/`.
+        """
+        manifest_file = self.logs_dir / "run_manifest.json"
+        if manifest_file.exists():
+            try:
+                with open(manifest_file, "r", encoding="utf-8") as f:
+                    manifest = json.load(f)
+                gen = manifest.get("generated_files", {})
+                core_rel = gen.get("core_file")
+                tb_rel = gen.get("tb_file")
+                return {
+                    "core_relpath": core_rel,
+                    "tb_relpath": tb_rel,
+                }
+            except Exception:
+                pass
+
+        core_candidates = sorted([p for p in self.code_dir.glob("*.v") if not p.name.endswith("_tb.v")])
+        tb_candidates = sorted([p for p in self.code_dir.glob("*_tb.v")])
+
+        core_rel = str(core_candidates[0].relative_to(self.issue_dir)) if core_candidates else None
+        tb_rel = str(tb_candidates[0].relative_to(self.issue_dir)) if tb_candidates else None
+
+        return {"core_relpath": core_rel, "tb_relpath": tb_rel}
+
+
+class ProtocolComplianceChecker:
+    """
+    Evidence-based protocol checks driven by `SPIConfig` and VCD signal transitions.
+    This does not attempt to fully decode transactions; it provides minimal, auditable checks
+    that are useful for triage and non-expert users.
+    """
+
+    def __init__(self, config, vcd_data: Dict[str, Any]):
+        self.config = config
+        self.vcd_data = vcd_data
+        self.signals = vcd_data.get("signals", {})
+
+    def write_markdown(self, output_path: str) -> None:
+        md = self._render_markdown()
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(md)
+
+    def _render_markdown(self) -> str:
+        mode = getattr(self.config, "mode", None)
+        cpol = 1 if mode in [2, 3] else 0
+        cpha = 1 if mode in [1, 3] else 0
+        spi_role = getattr(self.config, "spi_role", "master")
+
+        sclk = self._find_signal(lambda n: n.endswith(".sclk"))
+        mosi = self._find_signal(lambda n: n.endswith(".mosi"))
+        ss_n = self._find_signal(lambda n: n.endswith(".ss_n"))
+        busy = self._find_signal(lambda n: n.endswith(".busy"))
+        master_mode_sig = self._find_signal(lambda n: n.endswith(".master_mode"))
+
+        checks = []
+
+        idle_ok, idle_note = self._check_sclk_idle(sclk, busy, cpol, master_mode_sig)
+        checks.append(("SCLK_idle_level_matches_CPOL", idle_ok, idle_note))
+
+        ss_ok, ss_note = self._check_ss_framing(ss_n, busy)
+        checks.append(("SS_n_matches_busy_window", ss_ok, ss_note))
+
+        edge_ok, edge_note = self._check_mosi_not_changing_on_sampling_edges(sclk, mosi, cpol, cpha)
+        checks.append(("MOSI_does_not_change_on_sampling_edge", edge_ok, edge_note))
+
+        lines = []
+        lines.append("# SPI Protocol Compliance (evidence-based)")
+        lines.append("")
+        lines.append("## Configuration")
+        lines.append(f"- Mode: {mode} (CPOL={cpol}, CPHA={cpha})")
+        lines.append(f"- Data width: {getattr(self.config, 'data_width', 'unknown')}")
+        lines.append(f"- Data order: {'MSB First' if getattr(self.config, 'msb_first', True) else 'LSB First'}")
+        lines.append(f"- Slave select polarity: {'Active Low' if getattr(self.config, 'slave_active_low', True) else 'Active High'}")
+        lines.append("")
+        lines.append("## Checks")
+        lines.append("")
+        lines.append("| Check | Result | Notes |")
+        lines.append("|---|---:|---|")
+        for name, ok, note in checks:
+            result = "PASS" if ok is True else "FAIL" if ok is False else "NOT_RUN"
+            lines.append(f"| `{name}` | **{result}** | {note} |")
+        lines.append("")
+        lines.append("## Evidence pointers")
+        lines.append(f"- VCD: `{self.vcd_data.get('vcd_file', '(unknown)')}`")
+        lines.append(f"- Timescale: `{self.vcd_data.get('timescale', '(unknown)')}`")
+        lines.append("")
+        return "\n".join(lines)
+
+    def _find_signal(self, predicate) -> Optional[Dict[str, Any]]:
+        for sig in self.signals.values():
+            name = sig.get("name", "")
+            if predicate(name):
+                return sig
+        return None
+
+    def _value_at_or_before(self, sig: Dict[str, Any], t: int) -> str:
+        current = sig.get("current_value", "x")
+        for ct, v in sig.get("changes", []):
+            if ct <= t:
+                current = v
+            else:
+                break
+        return current
+
+    def _check_sclk_idle(self, sclk_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]], cpol: int, master_mode_sig: Optional[Dict[str, Any]] = None):
+        if not sclk_sig or not busy_sig:
+            return None, "Missing `sclk` or `busy` in VCD."
+        changes = busy_sig.get("changes", [])
+        if not changes:
+            return None, "`busy` has no transitions; cannot infer idle window."
+
+        checked = 0
+        for t, v in changes:
+            if v == "0":
+                # In dual mode, skip check when master_mode=0 (SCLK is an input, not driven)
+                if master_mode_sig is not None:
+                    mm_v = self._value_at_or_before(master_mode_sig, t)
+                    if mm_v != "1":
+                        continue
+                sclk_v = self._value_at_or_before(sclk_sig, t)
+                if sclk_v in ["0", "1"] and int(sclk_v) != cpol:
+                    return False, f"At busy=0 transition time {t}ns, sclk={sclk_v} but expected idle {cpol}."
+                checked += 1
+        if checked == 0:
+            return None, "No master-mode busy=0 transitions found to check SCLK idle."
+        return True, f"Checked sclk at {checked} master-mode busy=0 boundaries against CPOL={cpol}."
+
+    def _check_ss_framing(self, ss_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]]):
+        if not ss_sig or not busy_sig:
+            return None, "Missing `ss_n` or `busy` in VCD."
+        active_low = bool(getattr(self.config, "slave_active_low", True))
+        active_val = "0" if active_low else "1"
+
+        # For multi-bit ss_n, treat any value starting with 'b' as unknown for this check.
+        for t, v in busy_sig.get("changes", []):
+            if v == "1":
+                ss_v = self._value_at_or_before(ss_sig, t)
+                if ss_v.startswith("b"):
+                    return None, "Multi-bit ss_n observed; framing check not implemented for bus-valued ss_n."
+                if ss_v in ["0", "1"] and ss_v != active_val:
+                    return False, f"At busy=1 time {t}ns, ss_n={ss_v} but expected active {active_val}."
+        return True, "Checked ss_n at busy=1 boundaries."
+
+    def _check_mosi_not_changing_on_sampling_edges(self, sclk_sig, mosi_sig, cpol: int, cpha: int):
+        if not sclk_sig or not mosi_sig:
+            return None, "Missing `sclk` or `mosi` in VCD."
+        sclk_changes = [(t, v) for t, v in sclk_sig.get("changes", []) if v in ["0", "1"]]
+        mosi_change_times = set(t for t, _ in mosi_sig.get("changes", []))
+        if not sclk_changes:
+            return None, "`sclk` has no transitions."
+
+        # Sampling edge depends on CPOL/CPHA:
+        # - Leading edge is rising if CPOL=0, falling if CPOL=1
+        # - CPHA=0 samples on leading edge; CPHA=1 samples on trailing edge
+        leading = "rising" if cpol == 0 else "falling"
+        sampling_edge = leading if cpha == 0 else ("falling" if leading == "rising" else "rising")
+
+        prev_v = None
+        sampling_times = []
+        for t, v in sclk_changes:
+            if prev_v is None:
+                prev_v = v
+                continue
+            if sampling_edge == "rising" and prev_v == "0" and v == "1":
+                sampling_times.append(t)
+            if sampling_edge == "falling" and prev_v == "1" and v == "0":
+                sampling_times.append(t)
+            prev_v = v
+
+        if not sampling_times:
+            return None, f"No {sampling_edge} edges found on sclk."
+
+        bad = [t for t in sampling_times if t in mosi_change_times]
+        if bad:
+            return False, f"MOSI changes at {len(bad)} sampling edge time(s), e.g. {bad[:5]}."
+        return True, f"Checked {len(sampling_times)} sampling edges ({sampling_edge})."
 
 
 if __name__ == "__main__":

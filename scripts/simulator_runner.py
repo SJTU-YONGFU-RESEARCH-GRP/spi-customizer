@@ -28,38 +28,18 @@ class RTLSimulator:
 
     def check_dependencies(self) -> bool:
         """Check if required tools are installed"""
-        # Check for iverilog with multiple possible paths
-        iverilog_paths = [
-            'iverilog',  # Standard path
-            os.path.expanduser('~/yongfu/local/bin/iverilog'),  # User's specific path
-            '/usr/local/bin/iverilog',  # Common install location
-            '/usr/bin/iverilog'  # System path
-        ]
-
-        iverilog_found = False
-        for path in iverilog_paths:
-            if os.path.exists(path) or shutil.which('iverilog'):
-                iverilog_found = True
-                break
-
-        required_tools = ['vvp']  # Only vvp is required, we generate VCD ourselves
         missing_tools = []
-
-        for tool in required_tools:
-            if not shutil.which(tool):
-                missing_tools.append(tool)
-
-        if not iverilog_found:
+        if not shutil.which('iverilog'):
             missing_tools.append('iverilog')
+        if not shutil.which('vvp'):
+            missing_tools.append('vvp')
 
         if missing_tools:
             print(f"❌ Missing required tools: {', '.join(missing_tools)}")
-            print("Please ensure iverilog and vvp are available.")
-            print("💡 We don't require GTKWave for CSV data generation.")
+            print("RTL simulation requires real Icarus Verilog (iverilog + vvp).")
             return False
 
         print("✅ All required tools found (iverilog, vvp)")
-        print("💡 GTKWave not required - using VCD-to-CSV conversion")
         return True
 
     def compile_design(self, verilog_files: list, top_module: str, config=None) -> bool:
@@ -77,135 +57,59 @@ class RTLSimulator:
 
         print(f"🔨 Compiling {len(verilog_files)} Verilog files...")
 
-        # Find iverilog with multiple possible paths
-        iverilog_paths = [
-            'iverilog',
-            os.path.expanduser('~/yongfu/local/bin/iverilog'),
-            '/usr/local/bin/iverilog',
-            '/usr/bin/iverilog'
-        ]
+        iverilog_cmd = shutil.which('iverilog')
+        if not iverilog_cmd:
+            print("❌ iverilog not found - cannot compile")
+            return False
 
-        iverilog_cmd = None
-        for path in iverilog_paths:
-            if os.path.exists(path):
-                iverilog_cmd = path
-                break
-            elif shutil.which('iverilog'):
-                iverilog_cmd = 'iverilog'
-                break
+        print(f"   Using Icarus Verilog compiler: {iverilog_cmd}")
 
-        if iverilog_cmd:
-            print(f"   Using real Icarus Verilog compiler: {iverilog_cmd}")
+        issue_dir = self.results_dir / f"issue-{config.issue_number}" if hasattr(config, 'issue_number') else self.results_dir
+        issue_dir.mkdir(exist_ok=True)
+        data_dir = issue_dir / 'data'
+        logs_dir = issue_dir / 'logs'
+        data_dir.mkdir(exist_ok=True)
+        logs_dir.mkdir(exist_ok=True)
 
-            # Generate issue-specific directory
-            issue_dir = self.results_dir / f"issue-{config.issue_number}" if hasattr(config, 'issue_number') else self.results_dir
-            issue_dir.mkdir(exist_ok=True)
-            data_dir = issue_dir / 'data'
-            logs_dir = issue_dir / 'logs'
-            data_dir.mkdir(exist_ok=True)
-            logs_dir.mkdir(exist_ok=True)
-
-            # Compile to issue-specific data directory
-            simulation_file = str(data_dir / 'spi_simulation')
-            cmd = [iverilog_cmd, '-o', simulation_file]
-            cmd.extend(verilog_files)
-
-            try:
-                print(f"   Running: {' '.join(cmd)}")
-                print(f"   Working directory: {os.getcwd()}")
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=os.getcwd()  # Use project root as working directory
-                )
-
-                if result.returncode == 0:
-                    print("✅ Real compilation successful")
-                    print(f"   Generated: {simulation_file}")
-
-                    # Generate compilation log in logs directory
-                    log_file = str(logs_dir / 'compilation.log')
-                    with open(log_file, 'w') as f:
-                        f.write("Icarus Verilog compilation log\n")
-                        f.write("=" * 50 + "\n")
-                        f.write(f"Command: {' '.join(cmd)}\n")
-                        f.write(f"Working directory: {os.getcwd()}\n")
-                        f.write(f"Return code: {result.returncode}\n")
-                        if result.stdout:
-                            f.write(f"STDOUT:\n{result.stdout}\n")
-                        if result.stderr:
-                            f.write(f"STDERR:\n{result.stderr}\n")
-                        f.write("Compilation: SUCCESS\n")
-
-                    print(f"✅ Compilation log: {log_file}")
-                    return True
-                else:
-                    print(f"❌ Real compilation failed with exit code {result.returncode}")
-                    print("STDERR:")
-                    print(result.stderr)
-                    return self._simulate_compilation(verilog_files, top_module, config)
-
-            except Exception as e:
-                print(f"❌ Real compilation error: {e}")
-                return self._simulate_compilation(verilog_files, top_module, config)
-        else:
-            print("   Icarus Verilog not found - simulating compilation...")
-            return self._simulate_compilation(verilog_files, top_module, config)
-
-    def _simulate_compilation(self, verilog_files: list, top_module: str, config=None) -> bool:
-        """
-        Simulate compilation process and create mock simulation file
-
-        Args:
-            verilog_files: List of Verilog file paths
-            top_module: Name of the top-level module
-            config: SPI configuration (optional)
-
-        Returns:
-            True if simulation successful
-        """
-        print("   📝 Simulating compilation process...")
+        simulation_file = str(data_dir / 'spi_simulation')
+        cmd = [iverilog_cmd, '-g2012', '-o', simulation_file]
+        cmd.extend(verilog_files)
 
         try:
-            # Generate issue-specific directory
-            if config and hasattr(config, 'issue_number'):
-                issue_dir = self.results_dir / f"issue-{config.issue_number}"
-                issue_dir.mkdir(exist_ok=True)
-                data_dir = issue_dir / 'data'
-                logs_dir = issue_dir / 'logs'
-                data_dir.mkdir(exist_ok=True)
-                logs_dir.mkdir(exist_ok=True)
-                simulation_file = str(data_dir / 'spi_simulation')
-                log_file = str(logs_dir / 'compilation.log')
-            else:
-                simulation_file = str(self.results_dir / 'spi_simulation')
-                log_file = str(self.results_dir / 'compilation.log')
+            print(f"   Running: {' '.join(cmd)}")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=os.getcwd()
+            )
 
-            # Create mock simulation file
-            with open(simulation_file, 'w') as f:
-                f.write("# Mock Icarus Verilog simulation file\n")
-                f.write(f"# Generated from: {', '.join(verilog_files)}\n")
-                f.write(f"# Top module: {top_module}\n")
-                f.write("# This is a simulated compilation for environments without iverilog\n")
-
-            # Generate compilation log
+            log_file = str(logs_dir / 'compilation.log')
             with open(log_file, 'w') as f:
                 f.write("Icarus Verilog compilation log\n")
                 f.write("=" * 50 + "\n")
-                f.write("Simulated compilation (iverilog not available)\n")
-                f.write(f"Verilog files: {len(verilog_files)}\n")
-                f.write(f"Files: {', '.join(verilog_files)}\n")
-                f.write(f"Top module: {top_module}\n")
-                f.write("Compilation: SUCCESS (simulated)\n")
-                f.write("Exit code: 0\n")
+                f.write(f"Command: {' '.join(cmd)}\n")
+                f.write(f"Working directory: {os.getcwd()}\n")
+                f.write(f"Return code: {result.returncode}\n")
+                if result.stdout:
+                    f.write(f"STDOUT:\n{result.stdout}\n")
+                if result.stderr:
+                    f.write(f"STDERR:\n{result.stderr}\n")
+                f.write("Compilation: SUCCESS\n" if result.returncode == 0 else "Compilation: FAILED\n")
 
-            print(f"✅ Simulated compilation successful: {simulation_file}")
+            if result.returncode == 0:
+                print(f"✅ Compilation successful: {simulation_file}")
+                print(f"✅ Compilation log: {log_file}")
+                return True
+
+            print(f"❌ Compilation failed with exit code {result.returncode}")
+            print("STDERR:")
+            print(result.stderr)
             print(f"📝 Compilation log: {log_file}")
-            return True
+            return False
 
         except Exception as e:
-            print(f"❌ Failed to simulate compilation: {e}")
+            print(f"❌ Compilation error: {e}")
             return False
 
     def run_simulation(self, test_duration: str = "standard", config=None) -> bool:
@@ -246,377 +150,88 @@ class RTLSimulator:
             simulation_file = str(self.results_dir / 'spi_simulation')
             issue_dir = self.results_dir
 
-        if os.path.exists(simulation_file):
-            # Find vvp with multiple possible paths
-            vvp_paths = [
-                'vvp',
-                os.path.expanduser('~/yongfu/local/bin/vvp'),
-                '/usr/local/bin/vvp',
-                '/usr/bin/vvp'
-            ]
-
-            vvp_cmd = None
-            for path in vvp_paths:
-                if os.path.exists(path) or shutil.which('vvp'):
-                    vvp_cmd = 'vvp'
-                    break
-
-            if vvp_cmd:
-                # Find vvp with multiple possible paths
-                vvp_paths = [
-                    'vvp',
-                    os.path.expanduser('~/yongfu/local/bin/vvp'),
-                    '/usr/local/bin/vvp',
-                    '/usr/bin/vvp'
-                ]
-
-                vvp_exec = None
-                for path in vvp_paths:
-                    if os.path.exists(path):
-                        vvp_exec = path
-                        break
-
-                if vvp_exec:
-                    # Ensure issue directory exists
-                    if issue_dir:
-                        data_dir = issue_dir / 'data'
-                        logs_dir = issue_dir / 'logs'
-                        data_dir.mkdir(exist_ok=True)
-                        logs_dir.mkdir(exist_ok=True)
-
-                    # Run real RTL simulation with VCD dumping
-                    vcd_file = str(data_dir / 'spi_waveform.vcd')
-                    simulation_file = str(data_dir / 'spi_simulation')
-                    cmd = [vvp_exec, '-n', simulation_file]
-
-                    try:
-                        print(f"🔧 Running real RTL simulation: {' '.join(cmd)}")
-                        print(f"   Simulation time: {sim_time}")
-                        print(f"   VCD output: {vcd_file}")
-                        print(f"   Using vvp: {vvp_exec}")
-
-                        # Generate simulation log header in logs directory
-                        log_file = str(logs_dir / 'simulation.log')
-                        with open(log_file, 'w') as f:
-                            f.write("Icarus Verilog simulation log\n")
-                            f.write("=" * 50 + "\n")
-                            f.write(f"Command: {' '.join(cmd)}\n")
-                            f.write(f"Simulation time: {sim_time}\n")
-                            f.write(f"VCD file: {vcd_file}\n")
-                            f.write(f"Start time: {os.getcwd()}\n\n")
-
-                        result = subprocess.run(
-                            cmd,
-                            capture_output=True,
-                            text=True,
-                            timeout=900,  # 900 second timeout for comprehensive tests
-                            env={**os.environ, 'VCD_FILE': vcd_file}
-                        )
-
-                        # Append results to log
-                        with open(log_file, 'a') as f:
-                            f.write(f"Return code: {result.returncode}\n")
-                            if result.stdout:
-                                f.write(f"STDOUT:\n{result.stdout}\n")
-                            if result.stderr:
-                                f.write(f"STDERR:\n{result.stderr}\n")
-
-                        if result.returncode == 0:
-                            print("✅ RTL Simulation completed successfully")
-                            print("📊 Simulation output:")
-                            print(result.stdout)
-
-                            # Check if VCD file was generated
-                            if os.path.exists(vcd_file):
-                                print(f"📊 Real VCD file generated: {vcd_file}")
-                                print(f"   Size: {os.path.getsize(vcd_file)} bytes")
-                                print(f"✅ Simulation log: {log_file}")
-
-                                # Generate GTKWave save file
-                                gtkw_file = str(data_dir / 'spi_waveform.gtkw')
-                                with open(gtkw_file, 'w') as f:
-                                    f.write("[*\n")
-                                    f.write("[*]\n")
-                                    f.write("[sst]\n")
-                                    f.write(f"{data_dir / 'spi_waveform.vcd'}\n")
-                                    f.write("[timeline] 1\n")
-                                    f.write("[analog] 0\n")
-                                    f.write("[waves] 0\n")
-                                print(f"✅ GTKWave save file: {gtkw_file}")
-
-                            return True
-                        else:
-                            print("⚠️  VCD file not found - generating simulated data")
-                            return self._generate_simulated_vcd(vcd_file, test_duration, config)
-                        print(f"❌ RTL Simulation failed with exit code {result.returncode}")
-                        print("STDERR:")
-                        print(result.stderr)
-                        print(f"📝 Simulation log: {log_file}")
-                        print("🔄 Falling back to simulated VCD generation...")
-                        return self._generate_simulated_vcd(vcd_file, test_duration, config)
-
-                    except subprocess.TimeoutExpired:
-                        print("⏰ RTL Simulation timed out (900 seconds)")
-                        with open(log_file, 'a') as f:
-                            f.write("TIMEOUT: Simulation exceeded 900 seconds\n")
-                        print("❌ Real simulation failed - no fallback to fake data")
-                        return False
-                    except FileNotFoundError:
-                        print("❌ vvp execution failed")
-                        print("❌ Real simulation failed - no fallback to fake data")
-                        return False
-                else:
-                    print("❌ vvp not found - cannot run simulation")
-                    print("❌ Real simulation failed - no fallback to fake data")
-                    return False
-        else:
-            # No compiled simulation available - fail the test
-            print("❌ No compiled simulation found - real simulation required")
-            print("❌ Real simulation failed - no fallback to fake data")
-
-            # Ensure issue directory exists
-            if not issue_dir:
-                issue_dir = self.results_dir
-                data_dir = issue_dir / 'data'
-                logs_dir = issue_dir / 'logs'
-                data_dir.mkdir(exist_ok=True)
-                logs_dir.mkdir(exist_ok=True)
-
-            log_file = str(logs_dir / 'simulation.log')
-
-            # Log the failure
-            with open(log_file, 'w') as f:
-                f.write("RTL Simulation failed\n")
-                f.write("No compiled simulation available\n")
-                f.write("Real simulation required but not available\n")
-                f.write("Exit code: 1\n")
-
+        if not os.path.exists(simulation_file):
+            print("❌ No compiled simulation found - cannot run vvp")
             return False
 
+        vvp_exec = shutil.which('vvp')
+        if not vvp_exec:
+            print("❌ vvp not found - cannot run simulation")
             return False
 
-    def _generate_simulated_vcd(self, vcd_file: str, test_duration: str, config=None) -> bool:
-        """
-        Generate realistic VCD data based on expected SPI behavior
-
-        Args:
-            vcd_file: Path to output VCD file
-            test_duration: Test duration level
-
-        Returns:
-            True if VCD generation successful
-        """
-        print("📊 Generating realistic VCD simulation data...")
-
-        # Determine simulation parameters based on test duration
-        durations = {
-            'brief': (10000, 200),      # 10us, 200 time points
-            'standard': (100000, 500),  # 100us, 500 time points
-            'comprehensive': (1000000, 1000)  # 1ms, 1000 time points
-        }
-        total_time, num_points = durations.get(test_duration, (100000, 500))
-
-        # Generate realistic SPI timing data
-        vcd_content = self._create_realistic_vcd_content(total_time, num_points, config)
-
-        try:
-            # Extract issue directory from VCD file path
-            vcd_path = Path(vcd_file)
-            issue_dir = vcd_path.parent.parent  # Get the issue directory (parent of data/)
+        if issue_dir:
             data_dir = issue_dir / 'data'
             logs_dir = issue_dir / 'logs'
             data_dir.mkdir(exist_ok=True)
             logs_dir.mkdir(exist_ok=True)
 
-            with open(vcd_file, 'w') as f:
-                f.write(vcd_content)
+        vcd_file = str(data_dir / 'spi_waveform.vcd')
+        simulation_file = str(data_dir / 'spi_simulation')
+        cmd = [vvp_exec, '-n', simulation_file]
 
-            print(f"✅ Simulated VCD file generated: {vcd_file}")
-            print(f"   Size: {os.path.getsize(vcd_file)} bytes")
-            print(f"   Simulation time: {total_time}ns")
-            print(f"   Data points: {num_points}")
+        log_file = str(logs_dir / 'simulation.log')
+        try:
+            print(f"🔧 Running RTL simulation: {' '.join(cmd)}")
+            print(f"   Simulation time: {sim_time}")
+            print(f"   VCD output: {vcd_file}")
 
-            # Generate log file in the logs directory
-            log_file = str(logs_dir / 'simulation.log')
             with open(log_file, 'w') as f:
                 f.write("Icarus Verilog simulation log\n")
-                f.write("=" * 40 + "\n")
-                f.write("VCD info: 5 txns, 500 signal events\n")
-                f.write("Simulation completed successfully\n")
-                f.write(f"Simulation time: {total_time} ns\n")
-                f.write("Exit code: 0\n")
+                f.write("=" * 50 + "\n")
+                f.write(f"Command: {' '.join(cmd)}\n")
+                f.write(f"Simulation time: {sim_time}\n")
+                f.write(f"VCD file: {vcd_file}\n")
+                f.write(f"Working directory: {os.getcwd()}\n\n")
 
-            print(f"✅ Simulation log generated: {log_file}")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=900,
+                env={**os.environ, 'VCD_FILE': vcd_file}
+            )
+
+            with open(log_file, 'a') as f:
+                f.write(f"Return code: {result.returncode}\n")
+                if result.stdout:
+                    f.write(f"STDOUT:\n{result.stdout}\n")
+                if result.stderr:
+                    f.write(f"STDERR:\n{result.stderr}\n")
+
+            if result.returncode != 0:
+                print(f"❌ Simulation failed with exit code {result.returncode}")
+                print(f"📝 Simulation log: {log_file}")
+                return False
+
+            if not os.path.exists(vcd_file):
+                print("❌ Simulation completed but VCD file was not generated")
+                print(f"📝 Simulation log: {log_file}")
+                return False
+
+            gtkw_file = str(data_dir / 'spi_waveform.gtkw')
+            with open(gtkw_file, 'w') as f:
+                f.write("[*\n")
+                f.write("[*]\n")
+                f.write("[sst]\n")
+                f.write(f"{data_dir / 'spi_waveform.vcd'}\n")
+                f.write("[timeline] 1\n")
+                f.write("[analog] 0\n")
+                f.write("[waves] 0\n")
+
+            print(f"✅ VCD generated: {vcd_file} ({os.path.getsize(vcd_file)} bytes)")
+            print(f"✅ Simulation log: {log_file}")
             return True
 
-        except Exception as e:
-            print(f"❌ Failed to generate VCD file: {e}")
+        except subprocess.TimeoutExpired:
+            with open(log_file, 'a') as f:
+                f.write("TIMEOUT: Simulation exceeded 900 seconds\n")
+            print("⏰ RTL Simulation timed out (900 seconds)")
+            print(f"📝 Simulation log: {log_file}")
             return False
-
-    def _create_realistic_vcd_content(self, total_time: int, num_points: int, config=None) -> str:
-        """Create realistic VCD content based on expected SPI behavior and configuration"""
-        lines = []
-
-        # VCD header
-        lines.append("$date")
-        lines.append("    Today")
-        lines.append("$end")
-        lines.append("$version")
-        lines.append("    Icarus Verilog")
-        lines.append("$end")
-        lines.append("$timescale 1ns $end")
-        lines.append("")
-        lines.append("$scope module spi_master_tb $end")
-
-        # Signal definitions
-        lines.append("$var wire 1 ! sclk $end")      # SCLK
-        lines.append("$var wire 1 \" mosi $end")     # MOSI
-        lines.append("$var wire 1 # miso $end")      # MISO
-        lines.append("$var wire 1 $ ss_n $end")      # Slave Select
-        lines.append("$var wire 1 % busy $end")      # Busy
-        lines.append("$var wire 1 & irq $end")       # Interrupt
-        lines.append("$var wire 8 ' data $end")      # Data bus
-
-        lines.append("$upscope $end")
-        lines.append("$enddefinitions $end")
-        lines.append("")
-
-        # Initial dump - set initial values based on config
-        lines.append("$dumpvars")
-        
-        # Initial SCLK based on CPOL
-        if config and hasattr(config, 'mode'):
-            cpol = 1 if config.mode in [2, 3] else 0
-            lines.append(f"{cpol}!")
-        else:
-            lines.append("x!")
-            
-        lines.append("x\"")  # MOSI
-        lines.append("x#")  # MISO
-        lines.append("1$")  # SS_N (inactive)
-        lines.append("x%")  # BUSY
-        lines.append("x&")  # IRQ
-        lines.append("x'")  # DATA
-        lines.append("$end")
-        lines.append("")
-
-        # Generate realistic timing data based on config
-        time_step = total_time // num_points
-        
-        # Get config parameters
-        mode = config.mode if config and hasattr(config, 'mode') else 0
-        data_width = config.data_width if config and hasattr(config, 'data_width') else 16
-        num_slaves = config.num_slaves if config and hasattr(config, 'num_slaves') else 1
-        
-        # Calculate CPOL/CPHA
-        cpol = 1 if mode in [2, 3] else 0
-        cpha = 1 if mode in [1, 3] else 0
-        
-        # Clock period based on data width (more bits = longer transaction)
-        clock_period = max(20, data_width * 2)  # Base 20ns, scale with data width
-        
-        # Transaction timing
-        transaction_start = 50
-        transaction_duration = data_width * clock_period * 2  # Rough estimate
-        transaction_end = transaction_start + transaction_duration
-
-        for i in range(num_points):
-            current_time = i * time_step
-
-            # Generate signals based on config
-            in_transaction = transaction_start < i < transaction_end
-            
-            # SCLK pattern based on CPOL and transaction state
-            if in_transaction:
-                # During transaction, toggle SCLK
-                sclk = '1' if ((i - transaction_start) // (clock_period // 2)) % 2 == (1 if cpol else 0) else '0'
-            else:
-                # Outside transaction, SCLK at idle level
-                sclk = str(cpol)
-            
-            # MOSI data pattern (different for different data widths)
-            if in_transaction:
-                bit_position = (i - transaction_start) // clock_period
-                if bit_position < data_width:
-                    if data_width == 8:
-                        mosi = '1' if (0xA5 >> (7 - bit_position)) & 1 else '0'
-                    elif data_width == 16:
-                        mosi = '1' if (0xAA55 >> (15 - bit_position)) & 1 else '0'
-                    elif data_width == 32:
-                        mosi = '1' if (0xAA55FF00 >> (31 - bit_position)) & 1 else '0'
-                    else:
-                        mosi = '1' if (bit_position % 2) == 0 else '0'
-                else:
-                    mosi = '0'
-            else:
-                mosi = '0'
-
-            # MISO response pattern (different from MOSI)
-            if in_transaction:
-                bit_position = (i - transaction_start) // clock_period
-                if bit_position < data_width:
-                    if data_width == 8:
-                        miso = '1' if (0x5A >> (7 - bit_position)) & 1 else '0'
-                    elif data_width == 16:
-                        miso = '1' if (0x5A5A >> (15 - bit_position)) & 1 else '0'
-                    elif data_width == 32:
-                        miso = '1' if (0x5A5AFFFF >> (31 - bit_position)) & 1 else '0'
-                    else:
-                        miso = '1' if (bit_position % 3) == 0 else '0'
-                else:
-                    miso = '0'
-            else:
-                miso = '0'
-            
-            # Slave select (active low, different patterns for different slave counts)
-            ss_n = '0' if in_transaction else '1'
-            
-            # Busy signal
-            busy = '1' if in_transaction else '0'
-            
-            # IRQ signal (pulse at end of transaction)
-            irq = '1' if i == transaction_end else '0'
-            
-            # Data bus (changes based on transaction progress)
-            data_value = (i * 17) % 256  # Pseudo-random pattern
-            data = f"b{data_value:08b}"
-
-            # Only write changes (not every time point)
-            if i == 0 or sclk != (str(cpol) if (transaction_start < (i-1) < transaction_end) else str(cpol)):
-                lines.append(f"#{current_time}")
-                lines.append(f"{sclk}!")
-
-            if i == 0 or mosi != ('0' if not (transaction_start < (i-1) < transaction_end) else '0'):
-                if i > 0:
-                    lines.append(f"#{current_time}")
-                lines.append(f"{mosi}\"")
-
-            if i == 0 or miso != ('0' if not (transaction_start < (i-1) < transaction_end) else '0'):
-                if i > 0:
-                    lines.append(f"#{current_time}")
-                lines.append(f"{miso}#")
-
-            if i == 0 or ss_n != ('1' if not (transaction_start < (i-1) < transaction_end) else '0'):
-                if i > 0:
-                    lines.append(f"#{current_time}")
-                lines.append(f"{ss_n}$")
-
-            if i == 0 or busy != ('0' if not (transaction_start < (i-1) < transaction_end) else '1'):
-                if i > 0:
-                    lines.append(f"#{current_time}")
-                lines.append(f"{busy}%")
-
-            if i == 0 or irq != ('0' if (i-1) != transaction_end else '1'):
-                if i > 0:
-                    lines.append(f"#{current_time}")
-                lines.append(f"{irq}&")
-
-            if i == 0 or data != f"b{((i-1) * 17) % 256:08b}":
-                if i > 0:
-                    lines.append(f"#{current_time}")
-                lines.append(f"{data}'")
-
-        return '\n'.join(lines)
+        except Exception as e:
+            print(f"❌ Simulation error: {e}")
+            print(f"📝 Simulation log: {log_file}")
+            return False
 
     def generate_waveform(self, vcd_file: str = None) -> bool:
         """
@@ -672,7 +287,7 @@ class RTLSimulator:
 
         print("🚀 Starting complete RTL simulation flow...")
 
-        # Step 1: Compile design (simulated if tools not available)
+        # Step 1: Compile design
         if not self.compile_design(verilog_files, top_module, config):
             print("❌ Compilation failed - cannot proceed with simulation")
             return False
@@ -687,21 +302,13 @@ class RTLSimulator:
             issue_dir = self.results_dir / f"issue-{config.issue_number}"
             data_dir = issue_dir / 'data'
             vcd_file = str(data_dir / 'spi_waveform.vcd')
-            if os.path.exists(vcd_file):
-                self.generate_waveform(vcd_file)
-                print("🎉 RTL simulation completed successfully!")
-                return True
-            else:
-                print("⚠️  No VCD file generated, generating simulated waveform data...")
-                # Generate simulated VCD data as fallback
-                test_duration = getattr(config, 'test_duration', 'standard')
-                if self._generate_simulated_vcd(vcd_file, test_duration, config):
-                    self.generate_waveform(vcd_file)
-                    print("✅ Simulated waveform data generated successfully!")
-                    return True
-                else:
-                    print("❌ Failed to generate simulated waveform data")
-                    return False
+            if not os.path.exists(vcd_file):
+                print("❌ No VCD file generated - cannot proceed with evidence-based analysis")
+                return False
+
+            self.generate_waveform(vcd_file)
+            print("🎉 RTL simulation completed successfully!")
+            return True
         else:
             print("⚠️  No issue number available, simulation completed")
         return True

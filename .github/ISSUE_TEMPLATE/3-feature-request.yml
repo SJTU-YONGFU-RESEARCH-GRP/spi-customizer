@@ -84,15 +84,6 @@ body:
     validations:
       required: false
 
-  - type: input
-    id: email
-    attributes:
-      label: Email Address
-      description: Your email for follow-up on this feature request (optional)
-      placeholder: "your-email@example.com"
-    validations:
-      required: false
-
   - type: markdown
     attributes:
       value: |
@@ -101,7 +92,7 @@ body:
         1. 💡 Our team will review your feature request
         2. 📊 We'll assess feasibility and impact
         3. 🎯 If approved, we'll add it to our development roadmap
-        4. 📧 We'll update you via email (if provided) or this issue
+        4. We'll update you in this issue
         5. 🚀 Once implemented, this issue will be closed
 
         **Thank you for helping improve SPI Customizer!**

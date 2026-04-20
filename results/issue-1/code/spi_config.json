@@ -1,0 +1,17 @@
+{
+  "issue_number": 1,
+  "mode": 3,
+  "data_width": 8,
+  "num_slaves": 4,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": true,
+  "fifo_buffers": true,
+  "dma_support": true,
+  "multi_master": true,
+  "test_duration": "Comprehensive",
+  "simulation_success": true,
+  "waveform_success": true,
+  "email": "circlecheah@gmail.com",
+  "github_username": "_"
+}

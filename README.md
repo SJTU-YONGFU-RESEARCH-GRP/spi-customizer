@@ -3,7 +3,7 @@
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![Verilog](https://img.shields.io/badge/Verilog-IEEE%201364-orange.svg)](https://en.wikipedia.org/wiki/Verilog)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-green.svg)](https://github.com/features/actions)
+[![Workflow](https://img.shields.io/badge/Workflow-Agent--driven-blue)](https://github.com/features/copilot)
 [![Issues](https://img.shields.io/github/issues/SJTU-YONGFU-RESEARCH-GRP/spi-customizer)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/SJTU-YONGFU-RESEARCH-GRP/spi-customizer?style=flat-square&logo=github&color=ffdd00&label=⭐%20Stars&v=1)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/stargazers)
 
@@ -50,15 +50,14 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 - 🔧 **Automatic Code Generation**: Generates Verilog code based on your specifications
 - 🧪 **RTL Simulation**: Tests generated designs with comprehensive testbenches
 - 📊 **Waveform Generation**: Creates timing diagrams and performance plots
-- 📧 **Email Results**: Delivers results directly to your inbox
-- ⚡ **CI/CD Ready**: Fully automated pipeline using GitHub Actions
+- 🧭 **Agent-driven workflow**: GitHub Issues encode intent; a Copilot agent handles generation and verification
 
 ## How It Works
 
 1. **File an Issue**: Use the GitHub issue template to specify your SPI configuration
 2. **Automatic Processing**: The system parses your requirements and generates custom code
 3. **RTL Testing**: Generated Verilog is compiled and simulated with testbenches
-4. **Results Delivery**: Results are emailed to you with downloadable files
+4. **Results Delivery**: Results are posted back to the issue with downloadable artifacts
 5. **Issue Updates**: The GitHub issue is updated with progress and final results
 
 ## Quick Start
@@ -72,7 +71,6 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
    - **Data Width** (bits)
    - **Number of Slaves**
    - **Advanced options** (interrupts, DMA, etc.)
-   - **Contact information**
 
 4. Submit the issue and wait for results!
 
@@ -105,8 +103,7 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 - **Waveform Capture**: Yes
 
 ### Contact Information
-- **Email Address**: your-email@example.com
-- **GitHub Username**: your-username
+- (Removed) This repository does not require email or GitHub username fields for processing.
 ```
 
 ## Architecture
@@ -116,7 +113,7 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 - **Issue Parser** (`scripts/config_parser.py`): Extracts SPI parameters from GitHub issues
 - **Verilog Generator** (`scripts/verilog_generator.py`): Creates custom SPI cores
 - **RTL Simulator** (`scripts/simulator_runner.py`): Runs simulations and generates waveforms
-- **CI Pipeline** (`.github/workflows/`): Automates the entire process
+- **Agent instructions** (`.github/copilot-instructions.md`): Defines the agent workflow and required artifacts
 
 ### Generated Files
 
@@ -162,16 +159,13 @@ docker build -t spi-customizer .
 docker run -it spi-customizer
 ```
 
-### CI/CD (GitHub Actions)
+### Workflow (Agent-driven)
 
-The system includes pre-configured GitHub Actions workflows that automatically:
+This repository is designed to be **pure agent-driven**:
 
-1. Parse new SPI configuration issues
-2. Generate custom Verilog code
-3. Run RTL simulations
-4. Create waveforms and plots
-5. Email results to users
-6. Update and close issues
+1. Users file issues that encode design/verification/debug intent
+2. A Copilot agent explores the repo, modifies templates/code as needed, and produces artifacts + evidence
+3. The agent reports reasoning and results back into the issue
 
 ## Testing
 
@@ -296,7 +290,6 @@ For the full license text, see the [LICENSE](LICENSE) file in this repository or
 
 ## Support
 
-- 📧 **Email**: support@example.com
 - 🐛 **Issues**: Use GitHub Issues for bug reports
 - 📖 **Documentation**: Check the docs/ directory
 - 💬 **Discussions**: Use GitHub Discussions for questions
