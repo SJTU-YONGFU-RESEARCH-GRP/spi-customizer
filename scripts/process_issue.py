@@ -197,6 +197,41 @@ class GitHubIssueProcessor:
             print(f"⚠️  Failed to write run manifest: {e}")
 
         # Step 4: Run simulation (if tools available)
+        # Persist configuration early so downstream report generation can read it.
+        try:
+            initial_config_dict = {
+                'issue_number': self.issue_number,
+                'mode': config.mode,
+                'data_width': config.data_width,
+                'num_slaves': config.num_slaves,
+                'slave_active_low': config.slave_active_low,
+                'msb_first': config.msb_first,
+                'interrupts': config.interrupts,
+                'fifo_buffers': config.fifo_buffers,
+                'dma_support': config.dma_support,
+                'multi_master': config.multi_master,
+                'spi_role': config.spi_role,
+                'test_duration': config.test_duration,
+                'clock_jitter_test': config.clock_jitter_test,
+                'waveform_capture': config.waveform_capture,
+                'default_data_enabled': config.default_data_enabled,
+                'default_data_pattern': config.default_data_pattern,
+                'default_data_value': config.default_data_value,
+                'clock_divider': config.clock_divider,
+                'fifo_depth': config.fifo_depth,
+                'max_slaves': config.max_slaves,
+                'simulation_success': False,
+                'waveform_success': False,
+                'email': getattr(config, 'email', ''),
+                'github_username': getattr(config, 'github_username', ''),
+                'custom_features': getattr(config, 'custom_features', {}) or {}
+            }
+            config_file = os.path.join(code_dir, 'spi_config.json')
+            with open(config_file, 'w') as f:
+                json.dump(initial_config_dict, f, indent=2)
+        except Exception as e:
+            print(f"⚠️  Failed to persist initial config: {e}")
+
         try:
             simulator = RTLSimulator()
             if simulator.check_dependencies():
@@ -284,9 +319,21 @@ class GitHubIssueProcessor:
                 'fifo_buffers': config.fifo_buffers,
                 'dma_support': config.dma_support,
                 'multi_master': config.multi_master,
+                'spi_role': config.spi_role,
                 'test_duration': config.test_duration,
+                'clock_jitter_test': config.clock_jitter_test,
+                'waveform_capture': config.waveform_capture,
+                'default_data_enabled': config.default_data_enabled,
+                'default_data_pattern': config.default_data_pattern,
+                'default_data_value': config.default_data_value,
+                'clock_divider': config.clock_divider,
+                'fifo_depth': config.fifo_depth,
+                'max_slaves': config.max_slaves,
                 'simulation_success': simulation_success,
-                'waveform_success': waveform_success
+                'waveform_success': waveform_success,
+                'email': getattr(config, 'email', ''),
+                'github_username': getattr(config, 'github_username', ''),
+                'custom_features': getattr(config, 'custom_features', {}) or {}
             }
 
             issue_dir = f'results/issue-{self.issue_number}'
@@ -339,6 +386,17 @@ class GitHubIssueProcessor:
                 return None
 
         issue_dir = os.path.dirname(os.path.dirname(manifest_path))
+        acceptance_raw = ""
+        intent_raw = ""
+        custom_features = getattr(config, "custom_features", {}) or {}
+        if isinstance(custom_features, dict):
+            acceptance_raw = custom_features.get("acceptance_criteria", "") or custom_features.get("what_to_verify", "") or ""
+            intent_raw = custom_features.get("intent", "") or ""
+        acceptance_criteria = [line.strip("- ").strip() for line in acceptance_raw.splitlines() if line.strip().startswith("-")]
+        mode = config.mode
+        cpol = 1 if mode in [2, 3] else 0
+        cpha = 1 if mode in [1, 3] else 0
+
         manifest = {
             "issue_number": self.issue_number,
             "issue_body_sha256": body_hash,
@@ -370,6 +428,18 @@ class GitHubIssueProcessor:
                 "vvp": _tool_version(["vvp", "-V"]),
                 "python": _tool_version([sys.executable, "--version"]),
             },
+            "verification_spec": {
+                "spi_role": config.spi_role,
+                "mode": mode,
+                "cpol": cpol,
+                "cpha": cpha,
+                "data_width": config.data_width,
+                "num_slaves": config.num_slaves,
+                "slave_active_low": config.slave_active_low,
+                "bit_order": "msb_first" if config.msb_first else "lsb_first",
+                "intent": intent_raw,
+                "acceptance_criteria": acceptance_criteria,
+            }
         }
 
         with open(manifest_path, "w", encoding="utf-8") as f:

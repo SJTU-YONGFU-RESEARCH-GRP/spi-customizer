@@ -28,15 +28,15 @@
 
 ### Signal Timing Analysis
 ### Timing Analysis
-- **Data Points**: 402 samples
-- **Time Range**: 0 - 20000 ns
+- **Data Points**: 412 samples
+- **Time Range**: 0 - 4110000 ns
 - **Sample Rate**: ~100 samples per μs
-- **File Size**: 11,512 bytes
+- **File Size**: 11,887 bytes
 
 #### Sample Data (First 3 points):
-- **t=0ns**: SCLK=1, MOSI=1, MISO=b1111, SS_N=0
-- **t=10000ns**: SCLK=1, MOSI=1, MISO=b1111, SS_N=0
-- **t=20000ns**: SCLK=1, MOSI=1, MISO=b1111, SS_N=0
+- **t=0ns**: SCLK=1, MOSI=0, MISO=0, SS_N=b1111
+- **t=10000ns**: SCLK=1, MOSI=0, MISO=0, SS_N=b1111
+- **t=20000ns**: SCLK=1, MOSI=0, MISO=0, SS_N=b1111
 
 
 ## 📊 Waveform Visualization
@@ -118,11 +118,11 @@ For detailed signal examination, individual plots are provided for each signal:
 #### Signal Timing Analysis
 - **Clock Frequency**: Derived from system clock (50MHz → 100kHz SPI)
 - **Data Rate**: 781 bits per second
-- **Transaction Duration**: 4010.0 μs
+- **Transaction Duration**: 4110.0 μs
 - **Setup/Hold Times**: Verified against SPI specifications
 
 #### Bus Protocol Analysis
-- **Data Width**: 32 bits bits per transfer
+- **Data Width**: 32 bits per transfer
 - **Transfer Mode**: Mode 2 (CPOL=1, CPHA=0)
 - **Endianness**: MSB First
 - **Flow Control**: Basic polling mode
@@ -131,13 +131,6 @@ For detailed signal examination, individual plots are provided for each signal:
 ## 📊 Simulation Results
 
 ### Execution Summary
-- Icarus Verilog simulation log
-- Command: /usr/bin/vvp -n results/issue-3/data/spi_simulation
-- Simulation time: 100us
-- VCD file: results/issue-3/data/spi_waveform.vcd
-- Working directory: /home/runner/work/spi-customizer/spi-customizer
-- **Status**: ✅ Simulation completed successfully
-- STDOUT:
 - **Waveform**: VCD info: dumpfile results/issue-3/data/spi_waveform.vcd opened for output.
 - Configuration: Mode           2,          32-bit data, Dual mode
 - --- Testing Master Mode ---
@@ -146,8 +139,9 @@ For detailed signal examination, individual plots are provided for each signal:
 - --- Switched to Slave Mode ---
 - Simulating SPI master transaction to test slave mode
 - Slave selected (SS asserted low)
-- Slave mode SPI transaction complete - sent 0x5A (7 bits)
-- **Completion**: Simulation finished at 4010000 (1ps)
+- Slave mode SPI transaction complete - sent 0x5a (8 bits)
+- Slave RX matched expected payload: 0x0000005a
+- **Completion**: Simulation finished at 4110000 (1ps)
 
 ### Signal Activity Summary
 ### Signal Statistics
@@ -159,7 +153,7 @@ For detailed signal examination, individual plots are provided for each signal:
 | `ss_n` | 4 | 3 | `b1111` | 🔴 High |
 | `sclk` | 1 | 68 | `0` | 🔴 High |
 | `rx_valid` | 1 | 5 | `0` | 🔴 High |
-| `rx_data` | 32 | 8 | `b101101` | 🔴 High |
+| `rx_data` | 32 | 9 | `b1011010` | 🔴 High |
 | `mosi` | 1 | 27 | `0` | 🔴 High |
 | `miso_out` | 1 | 2 | `1` | 🟠 Medium |
 | `busy` | 1 | 5 | `0` | 🔴 High |
@@ -173,19 +167,26 @@ For detailed signal examination, individual plots are provided for each signal:
 | `MSB_FIRST` | 32 | 1 | `b1` | 🟡 Low |
 | `NUM_SLAVES` | 32 | 1 | `b100` | 🟡 Low |
 | `SLAVE_ACTIVE_LOW` | 32 | 1 | `b1` | 🟡 Low |
-| `clk` | 1 | 402 | `1` | 🔴 High |
+| `SLAVE_TEST_BITS` | 32 | 1 | `b1000` | 🟡 Low |
+| `SLAVE_TEST_BYTE` | 8 | 1 | `b1011010` | 🟡 Low |
+| `captured_slave_bits` | 32 | 9 | `b1011010` | 🔴 High |
+| `clk` | 1 | 412 | `1` | 🔴 High |
+| `expected_slave_rx` | 32 | 3 | `b1011010` | 🔴 High |
 | `master_mode` | 1 | 2 | `0` | 🟠 Medium |
 | `miso` | 1 | 1 | `0` | 🟡 Low |
-| `mosi_in` | 1 | 6 | `1` | 🔴 High |
+| `mosi_in` | 1 | 7 | `0` | 🔴 High |
 | `rst_n` | 1 | 2 | `1` | 🟠 Medium |
-| `sclk_in` | 1 | 15 | `1` | 🔴 High |
+| `sclk_in` | 1 | 17 | `1` | 🔴 High |
+| `slave_rx_valid_seen` | 1 | 2 | `1` | 🟠 Medium |
 | `ss_in` | 1 | 3 | `1` | 🔴 High |
+| `timeout_cycles` | 8 | 2 | `b0` | 🟠 Medium |
 | `tx_data` | 32 | 2 | `b10100101101001011010010110100101` | 🟠 Medium |
 | `tx_valid` | 1 | 3 | `0` | 🔴 High |
+| `i` | 32 | 10 | `b1000` | 🔴 High |
 | `irq_clear` | 1 | 1 | `0` | 🟡 Low |
 | `tx_data` | 32 | 2 | `b10100101101001011010010110100101` | 🟠 Medium |
 | `ss_n` | 4 | 3 | `b1111` | 🔴 High |
-| `rx_data` | 32 | 8 | `b101101` | 🔴 High |
+| `rx_data` | 32 | 9 | `b1011010` | 🔴 High |
 | `CLOCK_DIVIDER` | 32 | 1 | `b10` | 🟡 Low |
 | `CPOL` | 32 | 1 | `b1` | 🟡 Low |
 | `DATA_WIDTH` | 32 | 1 | `b100000` | 🟡 Low |
@@ -212,13 +213,13 @@ For detailed signal examination, individual plots are provided for each signal:
 | `master_start_tx` | 1 | 3 | `0` | 🔴 High |
 | `master_tx_ready_buffer` | 1 | 3 | `1` | 🔴 High |
 | `master_tx_shift_reg` | 32 | 34 | `b0` | 🔴 High |
-| `slave_bit_counter` | 8 | 8 | `b111` | 🔴 High |
+| `slave_bit_counter` | 8 | 9 | `b1000` | 🔴 High |
 | `slave_busy_buffer` | 1 | 3 | `0` | 🔴 High |
-| `slave_rx_data_buffer` | 32 | 7 | `b101101` | 🔴 High |
+| `slave_rx_data_buffer` | 32 | 8 | `b1011010` | 🔴 High |
 | `slave_rx_valid_buffer` | 1 | 3 | `0` | 🔴 High |
-| `slave_sclk_last_state` | 1 | 15 | `1` | 🔴 High |
+| `slave_sclk_last_state` | 1 | 17 | `1` | 🔴 High |
 | `slave_ss_last_state` | 1 | 3 | `1` | 🔴 High |
-| `slave_timeout_counter` | 8 | 42 | `b0` | 🔴 High |
+| `slave_timeout_counter` | 8 | 47 | `b0` | 🔴 High |
 | `slave_transaction_active` | 1 | 3 | `0` | 🔴 High |
 | `slave_tx_ready_buffer` | 1 | 3 | `1` | 🔴 High |
 | `slave_tx_shift_reg` | 32 | 2 | `b10100101101001011010010110100101` | 🟠 Medium |
@@ -229,53 +230,51 @@ For detailed signal examination, individual plots are provided for each signal:
 
 ### Core Files
 - **Verilog RTL**: ``code/spi_dual_mode2_32bit.v` (12,229 bytes)`
-- **Testbench**: ``code/spi_dual_tb.v` (5,805 bytes)`
-- **Simulation Executable**: ``data/spi_simulation` (23,176 bytes)`
-- **Compilation Log**: ``logs/compilation.log` (337 bytes)`
+- **Testbench**: ``code/spi_dual_tb.v` (6,474 bytes)`
+- **Simulation Executable**: ``data/spi_simulation` (24,531 bytes)`
+- **Compilation Log**: ``logs/compilation.log` (0 bytes)`
 
 ### Waveform & Analysis
-- **VCD Waveform**: ``data/spi_waveform.vcd` (12,448 bytes)`
+- **VCD Waveform**: ``data/spi_waveform.vcd` (13,139 bytes)`
 - **GTKWave Save**: ``data/spi_waveform.gtkw` (64 bytes)`
-- **Timing Analysis CSV**: ``data/spi_timing_data.csv` (11,512 bytes)`
-- **Consolidated Signals CSV**: ``data/spi_consolidated_signals.csv` (186,474 bytes)`
+- **Timing Analysis CSV**: ``data/spi_timing_data.csv` (11,887 bytes)`
+- **Consolidated Signals CSV**: ``data/spi_consolidated_signals.csv` (204,201 bytes)`
 
 ### Visualization Files
-### Visualization Files
-- **All Signals**: `spi_all_signals.png` (179,548 bytes)
-- **BUSY Analysis**: `spi_busy_individual.png` (47,493 bytes)
-- **DATA Analysis**: `spi_data_individual.png` (50,669 bytes)
-- **Input Ports**: `spi_input_ports.png` (108,461 bytes)
-- **Io Ports**: `spi_io_ports.png` (145,561 bytes)
-- **IRQ Analysis**: `spi_irq_individual.png` (48,777 bytes)
-- **MISO Analysis**: `spi_miso_individual.png` (47,028 bytes)
-- **MOSI Analysis**: `spi_mosi_individual.png` (50,215 bytes)
-- **Output Ports**: `spi_output_ports.png` (72,747 bytes)
-- **SCLK Analysis**: `spi_sclk_individual.png` (50,082 bytes)
-- **SS_N Analysis**: `spi_ss_n_individual.png` (47,760 bytes)
+- **All Signals**: `spi_all_signals.png` (169,879 bytes)
+- **BUSY Analysis**: `spi_busy_individual.png` (48,902 bytes)
+- **DATA Analysis**: `spi_data_individual.png` (45,085 bytes)
+- **Input Ports**: `spi_input_ports.png` (111,321 bytes)
+- **Io Ports**: `spi_io_ports.png` (130,888 bytes)
+- **IRQ Analysis**: `spi_irq_individual.png` (46,513 bytes)
+- **MISO Analysis**: `spi_miso_individual.png` (46,834 bytes)
+- **MOSI Analysis**: `spi_mosi_individual.png` (49,319 bytes)
+- **Output Ports**: `spi_output_ports.png` (58,715 bytes)
+- **SCLK Analysis**: `spi_sclk_individual.png` (49,399 bytes)
+- **SS_N Analysis**: `spi_ss_n_individual.png` (45,035 bytes)
 
 ### Data Export Files
-### Data Export Files
-- **Timing Data**: `spi_timing_data.csv` (11,512 bytes)
-- **Consolidated Signals**: `spi_consolidated_signals.csv` (186,474 bytes)
-- **Signal Summary**: `spi_signal_summary.csv` (2,927 bytes)
-- **Individual Signals**: 73 CSV files
-  - `spi_spi_dual_tb.CLOCK_DIVIDER_data.csv` (44 bytes)
-  - `spi_spi_dual_tb.dut.busy_data.csv` (80 bytes)
-  - `spi_spi_dual_tb.dut.master_ss_n_reg_data.csv` (81 bytes)
-  - ... and 70 more
+- **Timing Data**: `spi_timing_data.csv` (11,887 bytes)
+- **Consolidated Signals**: `spi_consolidated_signals.csv` (204,201 bytes)
+- **Signal Summary**: `spi_signal_summary.csv` (3,206 bytes)
+- **Individual Signals**: 7 canonical CSV files
+  - `spi_BUSY_data.csv` (80 bytes)
+  - `spi_DATA_data.csv` (154 bytes)
+  - `spi_IRQ_data.csv` (36 bytes)
+  - ... and 4 more
 
 ## 🔍 Key Findings
 
 ### Performance Metrics
 - **Simulation Duration**: `Comprehensive`
-- **Total Signals Monitored**: `73`
-- **VCD File Size**: `12.2 KB`
-- **Signal Transitions**: `0`
+- **Total Signals Monitored**: `87`
+- **VCD File Size**: `12.8 KB`
+- **Signal Transitions**: `1,028`
 
 ### Signal Analysis
-- **Active Signals**: `70`
-- **Data Transfer Events**: `0`
-- **Clock Cycles**: `200,500`
+- **Active Signals**: `77`
+- **Data Transfer Events**: `3`
+- **Clock Cycles**: `412`
 - **Protocol Compliance**: ``✅ Evidence-based checks generated``
 
 ## 📈 Recommendations
@@ -303,11 +302,11 @@ For detailed signal examination, individual plots are provided for each signal:
 - **Frame Size**: `32 bits per transfer`
 
 ### Memory Requirements
-- **VCD Storage**: `12.2 KB`
-- **CSV Data**: `211.1 KB`
+- **VCD Storage**: `12.8 KB`
+- **CSV Data**: `231.4 KB`
 - **Total Analysis**: `1.0 MB`
 
 ---
 
-*Generated by SPI RTL Analyzer - 2026-03-17 16:40:06*
+*Generated by SPI RTL Analyzer - 2026-04-27 01:18:32*
 *Analysis based on real Icarus Verilog simulation data*

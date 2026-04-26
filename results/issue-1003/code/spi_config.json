@@ -1,0 +1,29 @@
+{
+  "issue_number": 1003,
+  "mode": 2,
+  "data_width": 32,
+  "num_slaves": 4,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": false,
+  "fifo_buffers": false,
+  "dma_support": false,
+  "multi_master": false,
+  "spi_role": "dual",
+  "test_duration": "Comprehensive",
+  "simulation_success": true,
+  "waveform_success": true,
+  "email": "",
+  "github_username": "",
+  "custom_features": {
+    "intent": "Need dual-role SPI core for loopback diagnostics where master and slave mode are both exercised in one simulation.",
+    "transaction_examples": "- TX: 0xA5A5A5A5 in master mode\n- Slave receives 0x5A on MOSI test sequence",
+    "acceptance_criteria": "- SS_n asserted during active transfer\n- MOSI stable on sampling edge for mode 2\n- Slave RX equals expected payload for the test sequence",
+    "what_to_verify": "",
+    "symptom": "",
+    "expected_vs_observed": "",
+    "reference_issue": "",
+    "evidence": "",
+    "additional_notes": ""
+  }
+}

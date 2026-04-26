@@ -44,7 +44,7 @@ module spi_master #(
     reg [2:0]  state;
     reg [2:0]  next_state;
     reg [15:0] clk_counter;    // SCLK generation counter
-    reg [4:0]  bit_counter;    // Bit transmission counter
+    reg [15:0] bit_counter;    // Bit transmission counter (supports wider DATA_WIDTH values)
     reg [DATA_WIDTH-1:0] tx_shift_reg;
     reg [DATA_WIDTH-1:0] rx_shift_reg;
     reg        sclk_gen;       // SCLK generator
@@ -83,10 +83,11 @@ module spi_master #(
             rx_shift_reg <= 0;
             sclk <= CPOL;  // Set initial SCLK state based on CPOL
             mosi <= 0;
-            ss_n <= {NUM_SLAVES{1'b1}};
+            ss_n <= {NUM_SLAVES{~SS_ACTIVE}};
             busy <= 0;
             irq <= 0;
             last_sclk <= CPOL;
+            sclk_gen <= CPOL;
         end else begin
             state <= next_state;
             last_sclk <= sclk_gen;
@@ -105,6 +106,14 @@ module spi_master #(
                     bit_counter <= 0;
                     tx_shift_reg <= DEFAULT_DATA_ENABLED ? default_data : tx_data;
                     rx_shift_reg <= 0;
+                    // For CPHA=0, present first data bit before the first sampling edge.
+                    if (!CPHA) begin
+                        if (MSB_FIRST) begin
+                            mosi <= DEFAULT_DATA_ENABLED ? default_data[DATA_WIDTH-1] : tx_data[DATA_WIDTH-1];
+                        end else begin
+                            mosi <= DEFAULT_DATA_ENABLED ? default_data[0] : tx_data[0];
+                        end
+                    end
                 end
 
                 COMPLETE: begin
@@ -130,48 +139,53 @@ module spi_master #(
             if (state == TRANSMIT || state == RECEIVE) begin
                 // SPI Mode-specific data handling
                 if (CPHA == 0) begin
-                    // Mode 0/2: Sample on leading edge, change on trailing edge
-                    if (sclk_gen != last_sclk && sclk_gen == ~CPOL) begin
-                        if (bit_counter < DATA_WIDTH) begin
-                            // Shift in received data
-                            if (MSB_FIRST) begin
-                                if (DATA_WIDTH > 1) begin
-                                    rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
+                    // Mode 0/2: sample on leading edge, change data on trailing edge.
+                    if (sclk_gen != last_sclk) begin
+                        if (sclk_gen == ~CPOL) begin
+                            // Leading edge - sample data
+                            if (bit_counter < DATA_WIDTH) begin
+                                if (MSB_FIRST) begin
+                                    if (DATA_WIDTH > 1) begin
+                                        rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
+                                    end else begin
+                                        rx_shift_reg <= miso;
+                                    end
                                 end else begin
-                                    rx_shift_reg <= miso;  // For 1-bit, just set to received bit
-                                end
-                            end else begin
-                                if (DATA_WIDTH > 1) begin
-                                    rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
-                                end else begin
-                                    rx_shift_reg <= miso;  // For 1-bit, just set to received bit
-                                end
-                            end
-
-                            // Shift out transmitted data
-                            if (MSB_FIRST) begin
-                                mosi <= tx_shift_reg[DATA_WIDTH-1];
-                                if (DATA_WIDTH > 1) begin
-                                    tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
-                                end else begin
-                                    tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
-                                end
-                            end else begin
-                                mosi <= tx_shift_reg[0];
-                                if (DATA_WIDTH > 1) begin
-                                    tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
-                                end else begin
-                                    tx_shift_reg <= 1'b0;  // For 1-bit, just set to 0 after transmission
+                                    if (DATA_WIDTH > 1) begin
+                                        rx_shift_reg <= {miso, rx_shift_reg[DATA_WIDTH-1:1]};
+                                    end else begin
+                                        rx_shift_reg <= miso;
+                                    end
                                 end
                             end
-
-                            bit_counter <= bit_counter + 1;
+                        end else if (sclk_gen == CPOL) begin
+                            // Trailing edge - shift and present next transmit bit
+                            if (bit_counter < DATA_WIDTH) begin
+                                if (MSB_FIRST) begin
+                                    if (DATA_WIDTH > 1) begin
+                                        tx_shift_reg <= {tx_shift_reg[DATA_WIDTH-2:0], 1'b0};
+                                        mosi <= tx_shift_reg[DATA_WIDTH-2];
+                                    end else begin
+                                        tx_shift_reg <= 1'b0;
+                                        mosi <= 1'b0;
+                                    end
+                                end else begin
+                                    if (DATA_WIDTH > 1) begin
+                                        tx_shift_reg <= {1'b0, tx_shift_reg[DATA_WIDTH-1:1]};
+                                        mosi <= tx_shift_reg[1];
+                                    end else begin
+                                        tx_shift_reg <= 1'b0;
+                                        mosi <= 1'b0;
+                                    end
+                                end
+                                bit_counter <= bit_counter + 1;
+                            end
                         end
                     end
                 end else begin
-                    // Mode 1/3: Sample on trailing edge, change on leading edge
+                    // Mode 1/3: sample on trailing edge, change data on leading edge.
                     if (sclk_gen != last_sclk) begin
-                        if (sclk_gen == 1'b1) begin // Rising edge - change data
+                        if (sclk_gen == ~CPOL) begin // Leading edge - change data
                             if (bit_counter < DATA_WIDTH) begin
                                 // Shift out transmitted data
                                 if (MSB_FIRST) begin
@@ -191,9 +205,9 @@ module spi_master #(
                                 end
                                 bit_counter <= bit_counter + 1;
                             end
-                        end else begin // Falling edge - sample data
+                        end else if (sclk_gen == CPOL) begin // Trailing edge - sample data
                             if (bit_counter < DATA_WIDTH && bit_counter > 0) begin
-                                // Shift in received data (sample on falling edge)
+                                // Shift in received data
                                 if (MSB_FIRST) begin
                                     if (DATA_WIDTH > 1) begin
                                         rx_shift_reg <= {rx_shift_reg[DATA_WIDTH-2:0], miso};
@@ -215,12 +229,13 @@ module spi_master #(
         end
     end
 
-    // SCLK output assignment - XOR with CPOL for proper SPI mode behavior
+    // SCLK output assignment
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             sclk <= CPOL;
         end else begin
-            sclk <= sclk_gen ^ CPOL;  // XOR for proper idle/active levels
+            // Force protocol idle level whenever transfer is not active.
+            sclk <= (state == TRANSMIT || state == RECEIVE) ? sclk_gen : CPOL;
         end
     end
 
@@ -242,13 +257,13 @@ module spi_master #(
             end
 
             TRANSMIT: begin
-                if (bit_counter >= DATA_WIDTH) begin
+                if (bit_counter >= DATA_WIDTH && sclk_gen == CPOL) begin
                     next_state = COMPLETE;
                 end
             end
 
             RECEIVE: begin
-                if (bit_counter >= DATA_WIDTH) begin
+                if (bit_counter >= DATA_WIDTH && sclk_gen == CPOL) begin
                     next_state = COMPLETE;
                 end
             end
@@ -267,7 +282,7 @@ module spi_master #(
             IDLE: begin
                 busy = 0;
                 irq = 0;
-                ss_n = {NUM_SLAVES{1'b1}};
+                ss_n = {NUM_SLAVES{~SS_ACTIVE}};
             end
 
             SETUP: begin
@@ -287,7 +302,7 @@ module spi_master #(
 
             COMPLETE: begin
                 busy = 0;
-                ss_n = {NUM_SLAVES{1'b1}};  // Deactivate slave select
+                ss_n = {NUM_SLAVES{~SS_ACTIVE}};  // Deactivate slave select
                 irq = 1;  // Generate interrupt
                 rx_data = rx_shift_reg;  // Output received data
             end
@@ -295,7 +310,7 @@ module spi_master #(
             default: begin
                 busy = 0;
                 irq = 0;
-                ss_n = {NUM_SLAVES{1'b1}};
+                ss_n = {NUM_SLAVES{~SS_ACTIVE}};
             end
         endcase
     end

@@ -17,6 +17,8 @@ module spi_dual_tb;
     parameter CLOCK_DIVIDER = 2;
     parameter DEFAULT_DATA_ENABLED = 0;
     parameter DEFAULT_DATA_VALUE = 32'hA5A5A5A5;
+    localparam integer SLAVE_TEST_BITS = (DATA_WIDTH < 8) ? DATA_WIDTH : 8;
+    localparam [7:0] SLAVE_TEST_BYTE = 8'h5A;
 
     // Signals
     reg clk;
@@ -37,6 +39,11 @@ module spi_dual_tb;
     reg tx_valid;
     wire busy;
     wire irq;
+    integer i;
+    reg [DATA_WIDTH-1:0] expected_slave_rx;
+    reg [DATA_WIDTH-1:0] captured_slave_bits;
+    reg [7:0] timeout_cycles;
+    reg slave_rx_valid_seen;
 
     // DUT instantiation
     spi_dual #(
@@ -89,6 +96,7 @@ module spi_dual_tb;
         sclk_in = (MODE == 2 || MODE == 3) ? 1 : 0; // CPOL idle state
         mosi_in = 0;
         ss_in = 1;
+        slave_rx_valid_seen = 0;
 
         #100;
         rst_n = 1;
@@ -143,52 +151,20 @@ module spi_dual_tb;
 
         // SPI Mode 2: CPOL=1, CPHA=0
         // Sampling occurs on falling edge
+        // Send SLAVE_TEST_BITS bits from SLAVE_TEST_BYTE (MSB first over tested window)
+        expected_slave_rx = {DATA_WIDTH{1'b0}};
+        captured_slave_bits = {DATA_WIDTH{1'b0}};
 
-        // Send 7 bits of test data (0x5A pattern, MSB first = 0101 1010)
-        
-        // CPHA=0: data is already valid at SS assertion, clock from idle
-        mosi_in = 0; // Bit 6 (MSB of 0x5A = 0101_1010)
-        #50;
-        sclk_in = 0; // First edge (sampling edge)
-        #50;
-        sclk_in = 1; // Return to idle
+        for (i = 0; i < SLAVE_TEST_BITS; i = i + 1) begin
+            mosi_in = SLAVE_TEST_BYTE[SLAVE_TEST_BITS - 1 - i];
+            captured_slave_bits = {captured_slave_bits[DATA_WIDTH-2:0], mosi_in};
+            #50;
+            sclk_in = 0; // Leading edge
+            #50;
+            sclk_in = 1; // Trailing edge
+        end
 
-        mosi_in = 1; // Bit 5
-        #50;
-        sclk_in = 0; // Sampling edge
-        #50;
-        sclk_in = 1; // Return to idle
-
-        mosi_in = 0; // Bit 4
-        #50;
-        sclk_in = 0; // Sampling edge
-        #50;
-        sclk_in = 1; // Return to idle
-
-        mosi_in = 1; // Bit 3
-        #50;
-        sclk_in = 0; // Sampling edge
-        #50;
-        sclk_in = 1; // Return to idle
-
-        mosi_in = 1; // Bit 2
-        #50;
-        sclk_in = 0; // Sampling edge
-        #50;
-        sclk_in = 1; // Return to idle
-
-        mosi_in = 0; // Bit 1
-        #50;
-        sclk_in = 0; // Sampling edge
-        #50;
-        sclk_in = 1; // Return to idle
-
-        mosi_in = 1; // Bit 0 (LSB)
-        #50;
-        sclk_in = 0; // Sampling edge
-        #50;
-        sclk_in = 1; // Return to idle
-        
+        expected_slave_rx = captured_slave_bits;
 
         // Return clock to idle
         sclk_in = (MODE == 2 || MODE == 3) ? 1 : 0;
@@ -196,13 +172,37 @@ module spi_dual_tb;
         // End transaction: deassert SS
         #100;
         ss_in = 1;
-        $display("Slave mode SPI transaction complete - sent 0x5A (7 bits)");
+        $display("Slave mode SPI transaction complete - sent 0x%0h (%0d bits)", SLAVE_TEST_BYTE, SLAVE_TEST_BITS);
 
         #200; // Allow slave to process
+
+        // Wait for slave rx_valid pulse with timeout, then check payload
+        timeout_cycles = 0;
+        while (!slave_rx_valid_seen && timeout_cycles < 100) begin
+            #20;
+            timeout_cycles = timeout_cycles + 1;
+        end
+        if (!slave_rx_valid_seen) begin
+            $fatal(1, "Slave rx_valid did not assert within timeout");
+        end
+
+        if (rx_data !== expected_slave_rx) begin
+            $fatal(1, "Slave RX mismatch. expected=0x%h got=0x%h", expected_slave_rx, rx_data);
+        end else begin
+            $display("Slave RX matched expected payload: 0x%h", rx_data);
+        end
 
         $display("=== All Dual Mode Tests Completed Successfully ===");
         #100; // Small delay before finish
         $finish;
+    end
+
+    // Latch rx_valid pulse so the check is robust to single-cycle assertions
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            slave_rx_valid_seen <= 1'b0;
+        else if (rx_valid)
+            slave_rx_valid_seen <= 1'b1;
     end
 
     // VCD dumping

@@ -1,0 +1,16 @@
+{
+  "issue_number": 999,
+  "mode": 0,
+  "data_width": 16,
+  "num_slaves": 2,
+  "slave_active_low": true,
+  "msb_first": true,
+  "interrupts": true,
+  "fifo_buffers": false,
+  "dma_support": false,
+  "multi_master": false,
+  "test_duration": "Standard",
+  "clock_jitter_test": false,
+  "clock_frequency": 25.0,
+  "waveform_capture": false
+}

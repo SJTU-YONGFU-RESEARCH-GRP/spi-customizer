@@ -51,6 +51,7 @@ module spi_dual #(
     localparam SLAVE_TIMEOUT_CYCLES = 8'd200; // Timeout after ~200 system clock cycles
     localparam CPOL = (MODE == 2 || MODE == 3) ? 1 : 0; // Clock polarity: 1=idles high
     localparam SAMPLE_ON_RISING = (MODE == 0 || MODE == 3) ? 1 : 0; // 1=sample rising, 0=sample falling
+    localparam SS_ACTIVE = SLAVE_ACTIVE_LOW ? 1'b0 : 1'b1;
     reg [DATA_WIDTH-1:0] default_data;
 
     // Master mode internal signals
@@ -90,7 +91,7 @@ module spi_dual #(
             master_sclk_counter <= 8'd0;
             master_tx_shift_reg <= {DATA_WIDTH{1'b0}};
             master_rx_shift_reg <= {DATA_WIDTH{1'b0}};
-            master_ss_n_reg <= {NUM_SLAVES{1'b1}}; // Deasserted (active low)
+            master_ss_n_reg <= {NUM_SLAVES{~SS_ACTIVE}}; // Deasserted based on selected polarity
         end else if (master_mode) begin
             // Master mode logic
             if (tx_valid && master_tx_ready_buffer && !master_busy) begin
@@ -102,9 +103,9 @@ module spi_dual #(
                 master_bit_counter <= 8'd0;
                 master_sclk_counter <= 8'd0;
                 master_start_tx <= 1'b1;
-                // Assert slave 0 (active low): all bits high except bit 0
-                master_ss_n_reg <= {NUM_SLAVES{1'b1}};
-                master_ss_n_reg[0] <= 1'b0;
+                // Assert slave 0 using configured slave-select polarity
+                master_ss_n_reg <= {NUM_SLAVES{~SS_ACTIVE}};
+                master_ss_n_reg[0] <= SS_ACTIVE;
             end else begin
                 master_start_tx <= 1'b0;
             end
@@ -142,7 +143,7 @@ module spi_dual #(
                         master_tx_ready_buffer <= 1'b1; // Ready for next transmission
                         master_rx_valid_buffer <= 1'b1; // Data received
                         master_rx_data_buffer <= master_rx_shift_reg;
-                        master_ss_n_reg <= {NUM_SLAVES{1'b1}}; // Deassert slave select
+                        master_ss_n_reg <= {NUM_SLAVES{~SS_ACTIVE}}; // Deassert slave select
                     end
                 end
             end
@@ -241,8 +242,8 @@ module spi_dual #(
     assign mosi = master_mode ? master_tx_shift_reg[MSB_FIRST ? DATA_WIDTH-1 : 0] : 1'b0;
     assign miso_out = master_mode ? 1'b0 : (slave_tx_ready_buffer ? default_data[MSB_FIRST ? DATA_WIDTH-1 : 0] : 1'b0);
 
-    // Slave select outputs: active-low, slave 0 asserted during master transmission
-    assign ss_n = master_mode ? master_ss_n_reg : {NUM_SLAVES{1'b1}};
+    // Slave select outputs follow configured polarity.
+    assign ss_n = master_mode ? master_ss_n_reg : {NUM_SLAVES{~SS_ACTIVE}};
 
     // Data signal selection
     assign rx_data = master_mode ? master_rx_data_buffer : slave_rx_data_buffer;

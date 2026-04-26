@@ -7,6 +7,7 @@ Extracts SPI parameters from GitHub issue text and validates them.
 import re
 import json
 import sys
+import os
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 
@@ -38,6 +39,8 @@ class SPIConfig:
     fifo_depth: int = 16  # FIFO buffer depth
     max_slaves: int = 8  # Maximum slaves supported
     custom_features: Dict[str, Any] = None  # For future extensions
+    email: str = ""
+    github_username: str = ""
 
 
 class SPIConfigParser:
@@ -66,6 +69,32 @@ class SPIConfigParser:
             'fifo_depth': r'\*\*FIFO Depth\*\*:\s*(\d+)',
             'max_slaves': r'\*\*Maximum Slaves\*\*:\s*(\d+)'
         }
+        self.form_labels = {
+            'mode': ['SPI Mode'],
+            'data_width': ['Data Width'],
+            'num_slaves': ['Number of Slaves'],
+            'slave_select': ['Slave Select Behavior', 'Slave Select'],
+            'data_order': ['Data Order'],
+            'spi_role': ['SPI Role'],
+            'test_duration': ['Testing Requirements', 'Test Duration'],
+            'default_data': ['Default Data'],
+            'data_pattern': ['Data Pattern', 'Default Data Pattern'],
+            'custom_data': ['Custom Data Value', 'Custom Data Value (Hex)'],
+            'clock_divider': ['Clock Divider'],
+            'fifo_depth': ['FIFO Depth'],
+            'max_slaves': ['Maximum Slaves'],
+            'intent': ['Design intent'],
+            'transaction_examples': ['Transaction examples (expected)'],
+            'acceptance': ['Acceptance criteria (what must be proven)'],
+            'what_to_verify': ['What must be verified'],
+            'symptom': ['Symptom (what went wrong)'],
+            'expected_vs_observed': ['Expected vs observed'],
+            'reference_issue': ['Reference issue number (optional)', 'Reference issue number (recommended)'],
+            'evidence': ['Evidence (logs / waveform pointers)'],
+            'additional_notes': ['Additional Notes'],
+            'email': ['Email Address'],
+            'github_username': ['GitHub Username'],
+        }
 
     def parse_issue(self, issue_body: str, issue_number: int) -> SPIConfig:
         """
@@ -87,8 +116,8 @@ class SPIConfigParser:
         params = {}
 
         # Required parameters
-        mode_value = self._extract_single(issue_body, self.patterns['mode'])
-        data_width_value = self._extract_single(issue_body, self.patterns['data_width'])
+        mode_value = self._extract_form_or_regex(issue_body, 'mode', self.patterns['mode'])
+        data_width_value = self._extract_form_or_regex(issue_body, 'data_width', self.patterns['data_width'])
 
         # Validate required parameters
         if mode_value is None:
@@ -103,7 +132,7 @@ class SPIConfigParser:
             raise ValueError(f"Invalid required parameters: {e}")
 
         # Optional parameters with defaults
-        num_slaves_value = self._extract_single(issue_body, self.patterns['num_slaves'])
+        num_slaves_value = self._extract_form_or_regex(issue_body, 'num_slaves', self.patterns['num_slaves'])
         clock_freq_value = self._extract_single(issue_body, self.patterns['clock_freq'])
 
         try:
@@ -114,10 +143,8 @@ class SPIConfigParser:
 
         # Parse slave select behavior - handle checkbox format (old) and section/inline dropdown format (new)
         slave_checkbox = re.findall(r'\[[xX]\]\s*Active\s+(Low|High)', issue_body, re.IGNORECASE)
-        slave_dropdown = re.search(
-            r'Slave\s+Select(?:\s+Behavior)?[^a-zA-Z\n]*(?:\n[ \t]*)*(Active\s+(?:Low|High))',
-            issue_body, re.IGNORECASE
-        )
+        slave_form_value = self._extract_issue_form_value(issue_body, self.form_labels['slave_select'])
+        slave_dropdown = re.search(r'(Active\s+(?:Low|High))', slave_form_value or '', re.IGNORECASE)
         if slave_checkbox:
             params['slave_active_low'] = slave_checkbox[0].lower() == 'low'
         elif slave_dropdown:
@@ -127,10 +154,8 @@ class SPIConfigParser:
 
         # Parse data order - handle checkbox format (old) and section/inline dropdown format (new)
         order_checkbox = re.findall(r'\[[xX]\]\s*(MSB|LSB)\s+First', issue_body, re.IGNORECASE)
-        order_dropdown = re.search(
-            r'Data\s+Order[^a-zA-Z\n]*(?:\n[ \t]*)*(MSB|LSB)\s+First',
-            issue_body, re.IGNORECASE
-        )
+        order_form_value = self._extract_issue_form_value(issue_body, self.form_labels['data_order'])
+        order_dropdown = re.search(r'(MSB|LSB)\s+First', order_form_value or '', re.IGNORECASE)
         if order_checkbox:
             params['msb_first'] = order_checkbox[0].upper() == 'MSB'
         elif order_dropdown:
@@ -139,16 +164,16 @@ class SPIConfigParser:
             params['msb_first'] = True  # Default to MSB First
 
         # Parse SPI role - for dropdown, extract the selected value
-        params['spi_role'] = self._extract_single(issue_body, self.patterns['spi_role']) or 'master'
+        params['spi_role'] = self._extract_form_or_regex(issue_body, 'spi_role', self.patterns['spi_role']) or 'master'
 
         # Normalize SPI role to canonical form
         role_lower = params['spi_role'].lower()
-        if 'master' in role_lower:
-            params['spi_role'] = 'master'
-        elif 'slave' in role_lower:
-            params['spi_role'] = 'slave'
-        elif 'dual' in role_lower:
+        if 'dual' in role_lower:
             params['spi_role'] = 'dual'
+        elif 'slave' in role_lower and 'master' not in role_lower:
+            params['spi_role'] = 'slave'
+        elif 'master' in role_lower:
+            params['spi_role'] = 'master'
         else:
             params['spi_role'] = 'master'
 
@@ -166,7 +191,7 @@ class SPIConfigParser:
         params['multi_master'] = len([m for m in multi_master_matches if '[x]' in m or '[X]' in m]) > 0
 
         # Test configuration
-        params['test_duration'] = self._extract_single(issue_body, self.patterns['test_duration']) or 'standard'
+        params['test_duration'] = self._extract_form_or_regex(issue_body, 'test_duration', self.patterns['test_duration']) or 'standard'
 
         # Parse testing options - find checked checkboxes
         clock_jitter_matches = re.findall(r'(\[[^\]]*\]\s*Clock Jitter Testing)', issue_body, re.IGNORECASE | re.MULTILINE)
@@ -176,17 +201,17 @@ class SPIConfigParser:
         params['waveform_capture'] = len([m for m in waveform_matches if '[x]' in m or '[X]' in m]) > 0
 
         # Enhanced features
-        params['default_data_enabled'] = 'Enabled' in (self._extract_single(issue_body, self.patterns['default_data']) or 'Disabled')
-        params['default_data_pattern'] = self._extract_single(issue_body, self.patterns['data_pattern']) or 'a5a5'
-        params['default_data_value'] = self._extract_single(issue_body, self.patterns['custom_data']) or 'A5A5'
+        default_data_val = self._extract_form_or_regex(issue_body, 'default_data', self.patterns['default_data']) or 'Disabled'
+        params['default_data_enabled'] = 'enabled' in default_data_val.lower()
+        params['default_data_pattern'] = self._extract_form_or_regex(issue_body, 'data_pattern', self.patterns['data_pattern']) or 'a5a5'
+        params['default_data_value'] = self._extract_form_or_regex(issue_body, 'custom_data', self.patterns['custom_data']) or 'A5A5'
 
         # Advanced configuration
-        clock_div_value = self._extract_single(issue_body, self.patterns['clock_divider'])
-        fifo_depth_value = self._extract_single(issue_body, self.patterns['fifo_depth'])
-        max_slaves_value = self._extract_single(issue_body, self.patterns['max_slaves'])
+        clock_div_value = self._extract_form_or_regex(issue_body, 'clock_divider', self.patterns['clock_divider'])
+        fifo_depth_value = self._extract_form_or_regex(issue_body, 'fifo_depth', self.patterns['fifo_depth'])
+        max_slaves_value = self._extract_form_or_regex(issue_body, 'max_slaves', self.patterns['max_slaves'])
 
         # Clock divider with validation
-        clock_div_value = self._extract_single(issue_body, self.patterns['clock_divider'])
         clock_divider = 2  # Default value
         if clock_div_value:
             try:
@@ -200,7 +225,6 @@ class SPIConfigParser:
         params['clock_divider'] = clock_divider
 
         # FIFO depth with validation
-        fifo_depth_value = self._extract_single(issue_body, self.patterns['fifo_depth'])
         fifo_depth = 16  # Default value
         if fifo_depth_value:
             try:
@@ -214,7 +238,6 @@ class SPIConfigParser:
         params['fifo_depth'] = fifo_depth
 
         # Maximum slaves with validation
-        max_slaves_value = self._extract_single(issue_body, self.patterns['max_slaves'])
         max_slaves = 8  # Default value
         if max_slaves_value:
             try:
@@ -227,6 +250,20 @@ class SPIConfigParser:
                 print(f"⚠️ Invalid maximum slaves value: '{max_slaves_value}', using default 8")
         params['max_slaves'] = max_slaves
 
+        params['email'] = self._extract_issue_form_value(issue_body, self.form_labels['email']) or ""
+        params['github_username'] = self._extract_issue_form_value(issue_body, self.form_labels['github_username']) or ""
+        params['custom_features'] = {
+            'intent': self._extract_issue_form_value(issue_body, self.form_labels['intent']) or "",
+            'transaction_examples': self._extract_issue_form_value(issue_body, self.form_labels['transaction_examples']) or "",
+            'acceptance_criteria': self._extract_issue_form_value(issue_body, self.form_labels['acceptance']) or "",
+            'what_to_verify': self._extract_issue_form_value(issue_body, self.form_labels['what_to_verify']) or "",
+            'symptom': self._extract_issue_form_value(issue_body, self.form_labels['symptom']) or "",
+            'expected_vs_observed': self._extract_issue_form_value(issue_body, self.form_labels['expected_vs_observed']) or "",
+            'reference_issue': self._extract_issue_form_value(issue_body, self.form_labels['reference_issue']) or "",
+            'evidence': self._extract_issue_form_value(issue_body, self.form_labels['evidence']) or "",
+            'additional_notes': self._extract_issue_form_value(issue_body, self.form_labels['additional_notes']) or "",
+        }
+
         # Validate configuration
         self._validate_config(params)
 
@@ -238,6 +275,32 @@ class SPIConfigParser:
         """Extract first match from text using regex pattern"""
         match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
         return match.group(1).strip() if match else None
+
+    def _extract_issue_form_value(self, text: str, labels: List[str]) -> Optional[str]:
+        """
+        Extract value from GitHub issue form markdown blocks:
+        ### <Label>
+        <value lines>
+        """
+        for label in labels:
+            pattern = rf'^###\s*{re.escape(label)}\s*$([\s\S]*?)(?=^###\s|\Z)'
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if not match:
+                continue
+            value = match.group(1).strip()
+            if not value:
+                continue
+            # Normalize common GH empty placeholders.
+            if value in ['_No response_', 'No response', '_']:
+                return ""
+            return value
+        return None
+
+    def _extract_form_or_regex(self, text: str, form_key: str, regex_pattern: str) -> Optional[str]:
+        form_value = self._extract_issue_form_value(text, self.form_labels.get(form_key, []))
+        if form_value:
+            return form_value.strip()
+        return self._extract_single(text, regex_pattern)
 
     def _validate_config(self, params: Dict[str, Any]) -> None:
         """Validate the parsed configuration parameters"""
@@ -292,6 +355,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: python config_parser.py <issue_number>")
         sys.exit(1)
+    issue_number = int(sys.argv[1])
 
     # Sample issue text for testing
     sample_issue = """
@@ -321,7 +385,7 @@ def main():
 
     try:
         parser = SPIConfigParser()
-        config = parser.parse_issue(sample_issue, int(sys.argv[1]))
+        config = parser.parse_issue(sample_issue, issue_number)
 
         # Create issue-specific results directory
         issue_dir = f'results/issue-{issue_number}'

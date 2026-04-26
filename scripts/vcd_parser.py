@@ -161,29 +161,25 @@ class VcdParser:
 class CsvGenerator:
     """Generates CSV files from VCD data for plotting"""
 
-    # Signal name mapping from VCD identifiers to meaningful names
-    SIGNAL_NAME_MAP = {
-        'spi_core_tb.dut.sclk': 'SCLK',
-        'spi_master_tb.sclk': 'SCLK',
-        '"': 'SCLK',  # VCD identifier for SCLK
-        'spi_core_tb.dut.mosi': 'MOSI',
-        'spi_master_tb.mosi': 'MOSI',
-        '$': 'MOSI',  # VCD identifier for MOSI
-        'spi_core_tb.dut.miso': 'MISO',
-        'spi_master_tb.miso': 'MISO',
-        '#': 'MISO',  # VCD identifier for MISO (actually rx_data, but used as MISO)
-        'spi_core_tb.dut.ss_n': 'SS_N',
-        'spi_master_tb.ss_n': 'SS_N',
-        '!': 'SS_N',  # VCD identifier for SS_N
-        'spi_core_tb.dut.busy': 'BUSY',
-        'spi_master_tb.busy': 'BUSY',
-        '&': 'BUSY',  # VCD identifier for BUSY
-        'spi_core_tb.dut.irq': 'IRQ',
-        'spi_master_tb.irq': 'IRQ',
-        '%': 'IRQ',   # VCD identifier for IRQ
-        'spi_core_tb.dut.data': 'DATA',
-        'spi_master_tb.data': 'DATA',
-        "'": 'DATA',  # VCD identifier for DATA
+    # Canonical signals we want for timing exports
+    SIGNAL_ORDER = ['SCLK', 'MOSI', 'MISO', 'SS_N', 'BUSY', 'IRQ', 'DATA']
+    CANONICAL_SUFFIXES = {
+        'SCLK': ('sclk', 'sclk_in'),
+        'MOSI': ('mosi', 'mosi_in'),
+        'MISO': ('miso', 'miso_out'),
+        'SS_N': ('ss_n', 'ss_in'),
+        'BUSY': ('busy',),
+        'IRQ': ('irq',),
+        'DATA': ('rx_data', 'data'),
+    }
+    SIGNAL_NAME_PRIORITY = {
+        'SCLK': ('sclk', 'sclk_in'),
+        'MOSI': ('mosi', 'mosi_in'),
+        'MISO': ('miso', 'miso_out'),
+        'SS_N': ('ss_n', 'ss_in'),
+        'BUSY': ('busy',),
+        'IRQ': ('irq',),
+        'DATA': ('rx_data', 'data'),
     }
 
     def __init__(self, vcd_data: Dict[str, Any], output_dir: str):
@@ -195,6 +191,51 @@ class CsvGenerator:
         self.data_dir.mkdir(exist_ok=True)
         self.graphs_dir.mkdir(exist_ok=True)
         self.logs_dir.mkdir(exist_ok=True)
+        self.canonical_signals = self._build_canonical_signal_map()
+
+    def _canonical_name(self, signal_full_name: str) -> Optional[str]:
+        """Map a full VCD signal path to one canonical SPI signal."""
+        short_name = signal_full_name.split('.')[-1].lower()
+        for canonical, suffixes in self.CANONICAL_SUFFIXES.items():
+            if short_name in suffixes:
+                return canonical
+        return None
+
+    def _build_canonical_signal_map(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Build a stable canonical-name -> signal-data map.
+        Prefers DUT-facing names to avoid mixing similarly named TB wires/regs.
+        """
+        selected: Dict[str, Dict[str, Any]] = {}
+        signals = self.vcd_data.get('signals', {})
+        for signal_data in signals.values():
+            full_name = signal_data.get('name', '')
+            canonical = self._canonical_name(full_name)
+            if not canonical:
+                continue
+
+            existing = selected.get(canonical)
+            if existing is None:
+                selected[canonical] = signal_data
+                continue
+
+            existing_name = existing.get('name', '')
+            # Prefer DUT signals when available.
+            if '.dut.' in full_name and '.dut.' not in existing_name:
+                selected[canonical] = signal_data
+                continue
+
+            # Prefer primary short-name forms (e.g., ss_n over ss_in).
+            new_short = full_name.split('.')[-1].lower()
+            old_short = existing_name.split('.')[-1].lower()
+            priorities = self.SIGNAL_NAME_PRIORITY.get(canonical, ())
+            if priorities:
+                old_idx = priorities.index(old_short) if old_short in priorities else len(priorities)
+                new_idx = priorities.index(new_short) if new_short in priorities else len(priorities)
+                if new_idx < old_idx:
+                    selected[canonical] = signal_data
+
+        return selected
 
     def generate_csv_files(self) -> List[str]:
         """Generate CSV files for plotting"""
@@ -224,31 +265,15 @@ class CsvGenerator:
     def _generate_timing_csv(self) -> Optional[str]:
         """Generate CSV with timing information for all signals"""
         csv_file = self.data_dir / 'spi_timing_data.csv'
-
-        # Get signals data early
-        signals = self.vcd_data.get('signals', {})
+        canonical = self.canonical_signals
 
         with open(csv_file, 'w', newline='') as f:
             writer = csv.writer(f)
 
-            # Write header - include all available signals
+            # Write header with only present canonical signals
             header = ['Time (ns)']
-            signal_order = ['SCLK', 'MOSI', 'MISO', 'SS_N', 'BUSY', 'IRQ', 'DATA']  # Preferred order
-            for signal_name in signal_order:
-                # Check if this signal exists in the VCD data
-                signal_found = False
-                for signal_data in signals.values():
-                    if self.SIGNAL_NAME_MAP.get(signal_data['name'], '') == signal_name:
-                        header.append(signal_name)
-                        signal_found = True
-                        break
-                # If not found, check by VCD identifier
-                if not signal_found:
-                    for identifier, signal_data in signals.items():
-                        if self.SIGNAL_NAME_MAP.get(identifier, '') == signal_name:
-                            header.append(signal_name)
-                            signal_found = True
-                            break
+            present_order = [name for name in self.SIGNAL_ORDER if name in canonical]
+            header.extend(present_order)
 
             writer.writerow(header)
             print(f"✅ Generated timing CSV header: {header}")
@@ -257,7 +282,7 @@ class CsvGenerator:
             all_times = set()
 
             # Collect all change times
-            for signal_data in signals.values():
+            for signal_data in self.vcd_data.get('signals', {}).values():
                 for time, value in signal_data.get('changes', []):
                     all_times.add(time)
 
@@ -268,27 +293,13 @@ class CsvGenerator:
             for time_ns in sorted_times:
                 row = [time_ns]
 
-                # Get signal values at this time for each signal in header order
-                for signal_name in signal_order:
-                    signal_found = False
-                    for identifier, signal_data in signals.items():
-                        if self.SIGNAL_NAME_MAP.get(identifier, '') == signal_name:
-                            value = self._get_value_at_time(signal_data, time_ns)
-                            row.append(value)
-                            signal_found = True
-                            break
-
-                    if not signal_found:
-                        # Try by signal name in data
-                        for signal_data in signals.values():
-                            if self.SIGNAL_NAME_MAP.get(signal_data['name'], '') == signal_name:
-                                value = self._get_value_at_time(signal_data, time_ns)
-                                row.append(value)
-                                signal_found = True
-                                break
-
-                    if not signal_found:
-                        row.append('x')  # Unknown
+                # Get signal values at this time using canonical map
+                for signal_name in present_order:
+                    signal_data = canonical.get(signal_name)
+                    if signal_data is None:
+                        row.append('x')
+                    else:
+                        row.append(self._get_value_at_time(signal_data, time_ns))
 
                 writer.writerow(row)
 
@@ -322,13 +333,17 @@ class CsvGenerator:
         """Generate individual CSV files for each signal with meaningful names"""
         csv_files = []
         signals = self.vcd_data.get('signals', {})
+        used_names = set()
 
         for signal_name, signal_data in signals.items():
             # Get meaningful signal name
-            meaningful_name = self.SIGNAL_NAME_MAP.get(signal_data['name'], signal_data['name'])
+            meaningful_name = self._canonical_name(signal_data['name']) or signal_data['name']
 
             # Create filename with meaningful name (replace special chars)
             safe_name = meaningful_name.replace(' ', '_').replace('/', '_')
+            if safe_name in used_names:
+                safe_name = signal_data['name'].replace(' ', '_').replace('/', '_')
+            used_names.add(safe_name)
             csv_file = self.data_dir / f'spi_{safe_name}_data.csv'
 
             with open(csv_file, 'w', newline='') as f:
@@ -372,7 +387,7 @@ class CsvGenerator:
                 header = ['Time (ns)']
                 signals = self.vcd_data.get('signals', {})
                 for signal_name, signal_data in signals.items():
-                    meaningful_name = self.SIGNAL_NAME_MAP.get(signal_data['name'], signal_data['name'])
+                    meaningful_name = self._canonical_name(signal_data['name']) or signal_data['name']
                     header.append(meaningful_name)
 
                 writer.writerow(header)
@@ -482,8 +497,15 @@ class PlotGenerator:
 
                 # Create a simple text-based waveform
                 for i, row in enumerate(rows[1:6]):  # Show first 5 data points
-                    if len(row) >= 8:  # Ensure row has enough columns
-                        time, mode, sclk, mosi, miso, ss_n, busy, irq = row
+                    if len(row) >= 2:
+                        row_map = dict(zip(rows[0], row))
+                        time = row_map.get('Time (ns)', 'N/A')
+                        sclk = row_map.get('SCLK', 'x')
+                        mosi = row_map.get('MOSI', 'x')
+                        miso = row_map.get('MISO', 'x')
+                        ss_n = row_map.get('SS_N', 'x')
+                        busy = row_map.get('BUSY', 'x')
+                        irq = row_map.get('IRQ', 'x')
                         f.write(f"Time {time:4s}ns: SCLK={sclk} MOSI={mosi} MISO={miso} SS={ss_n} BUSY={busy} IRQ={irq}\n")
                     else:
                         f.write(f"Time {row[0] if row else 'N/A':4s}ns: Incomplete data row\n")
@@ -846,10 +868,11 @@ class SignalPlotGenerator:
         with open(timing_csv, 'r') as f:
             reader = csv.reader(f)
             header = next(reader)  # Skip header
+            header_index = {name: idx for idx, name in enumerate(header)}
 
             sample_counter = 0
             for row in reader:
-                if len(row) < 8:  # Need at least time + 7 signals
+                if not row:
                     continue
 
                 sample_counter += 1
@@ -859,19 +882,37 @@ class SignalPlotGenerator:
                 time_ns = int(row[0])
                 time_data.append(time_ns / 1000.0)  # Convert to microseconds (keep as float)
 
-                # Map CSV columns to signal names
-                signal_mapping = {
-                    1: 'SCLK', 2: 'MOSI', 3: 'MISO', 4: 'SS_N',
-                    5: 'BUSY', 6: 'IRQ', 7: 'DATA'
-                }
-
-                for csv_idx, signal_name in signal_mapping.items():
-                    if signal_name in signal_names and csv_idx < len(row):
+                for signal_name in signal_names:
+                    csv_idx = header_index.get(signal_name)
+                    if csv_idx is not None and csv_idx < len(row):
                         value = row[csv_idx]
-                        signal_data[signal_name].append(1 if value == '1' else 0 if value == '0' else 0.5)
+                        if signal_name == 'SS_N':
+                            signal_data[signal_name].append(self._ss_to_numeric(value))
+                        else:
+                            signal_data[signal_name].append(1 if value == '1' else 0 if value == '0' else 0.5)
 
         print(f"✅ Processed {len(time_data):,} samples after sampling")
         return time_data, signal_data
+
+    def _ss_to_numeric(self, value: str) -> float:
+        """
+        Convert SS value to a plottable numeric level.
+        Assumes active-low semantics for visualization:
+        - inactive/all-high -> 1
+        - any selected low bit -> 0
+        - unknown/undecidable -> 0.5
+        """
+        if value == '1':
+            return 1
+        if value == '0':
+            return 0
+        if value.startswith('b'):
+            bits = value[1:]
+            if bits and all(b == '1' for b in bits):
+                return 1
+            if bits and any(b == '0' for b in bits):
+                return 0
+        return 0.5
 
     def _plot_spi_signal(self, ax: plt.Axes, signal_name: str, time_data: List[float], values: List[float]) -> None:
         """Plot a single SPI signal with protocol-aware visualization"""
@@ -1162,10 +1203,8 @@ class SummaryGenerator:
 - **Timing Analysis CSV**: `{timing_csv_info}`
 - **Consolidated Signals CSV**: `{consolidated_csv_info}`
 
-### Visualization Files
 {visualization_summary}
 
-### Data Export Files
 {csv_summary}
 
 ## 🔍 Key Findings
@@ -1246,8 +1285,8 @@ class SummaryGenerator:
             csv_summary=self._get_csv_summary(),
             total_signals=len(list(self.data_dir.glob('*.csv'))),
             vcd_size=self._get_file_size('data/spi_waveform.vcd'),
-            total_transitions=self._get_total_transitions(signal_stats),
-            active_signals=len([s for s in signal_stats.split('\n') if s.strip().startswith('| `')]),
+            total_transitions=self._get_total_transitions(),
+            active_signals=self._count_active_signals(),
             data_transfers=self._count_data_transfers(),
             clock_cycles=self._get_clock_cycles(),
             protocol_compliance=self._get_protocol_compliance_status(),
@@ -1357,15 +1396,23 @@ class SummaryGenerator:
             file_size = timing_file.stat().st_size
             line_count = sum(1 for _ in open(timing_file, 'r')) - 1  # Exclude header
 
-            # Read first few lines for sample data
+            # Read first few lines for sample data and full time range
             with open(timing_file, 'r') as f:
                 reader = csv.reader(f)
                 header = next(reader)
-                sample_data = [next(reader) for _ in range(min(3, line_count))]
+                rows = list(reader)
+
+            sample_data = rows[:3]
+            last_time = rows[-1][0] if rows else 'Unknown'
+            idx = {name: i for i, name in enumerate(header)}
+            sclk_idx = idx.get('SCLK', 1)
+            mosi_idx = idx.get('MOSI', 2)
+            miso_idx = idx.get('MISO', 3)
+            ss_idx = idx.get('SS_N', 4)
 
             analysis = f"""### Timing Analysis
 - **Data Points**: {line_count:,} samples
-- **Time Range**: 0 - {sample_data[-1][0] if sample_data else 'Unknown'} ns
+- **Time Range**: 0 - {last_time} ns
 - **Sample Rate**: ~100 samples per μs
 - **File Size**: {file_size:,} bytes
 
@@ -1373,7 +1420,7 @@ class SummaryGenerator:
 """
 
             for i, row in enumerate(sample_data):
-                analysis += f"- **t={row[0]}ns**: SCLK={row[1]}, MOSI={row[2]}, MISO={row[3]}, SS_N={row[4]}"
+                analysis += f"- **t={row[0]}ns**: SCLK={row[sclk_idx]}, MOSI={row[mosi_idx]}, MISO={row[miso_idx]}, SS_N={row[ss_idx]}"
                 analysis += "\n"
 
             return analysis
@@ -1458,7 +1505,7 @@ For detailed signal examination, individual plots are provided for each signal:
 - **Setup/Hold Times**: Verified against SPI specifications
 
 #### Bus Protocol Analysis
-- **Data Width**: {bus_width} bits per transfer
+- **Data Width**: {bus_width} per transfer
 - **Transfer Mode**: {transfer_mode}
 - **Endianness**: {endianness}
 - **Flow Control**: {flow_control}
@@ -1578,7 +1625,7 @@ For detailed signal examination, individual plots are provided for each signal:
             return "- No CSV files generated"
 
         # Group by type
-        individual_csvs = [f for f in csv_files if 'individual' not in f.name and 'spi_' in f.name]
+        canonical_individual = {'spi_sclk_data.csv', 'spi_mosi_data.csv', 'spi_miso_data.csv', 'spi_ss_n_data.csv', 'spi_busy_data.csv', 'spi_irq_data.csv', 'spi_data_data.csv'}
         consolidated_csv = [f for f in csv_files if 'consolidated' in f.name]
         timing_csv = [f for f in csv_files if 'timing' in f.name]
         summary_csv = [f for f in csv_files if 'summary' in f.name]
@@ -1597,40 +1644,79 @@ For detailed signal examination, individual plots are provided for each signal:
             size = summary_csv[0].stat().st_size
             summary_lines.append(f"- **Signal Summary**: `{summary_csv[0].name}` ({size:,} bytes)")
 
-        if individual_csvs:
-            summary_lines.append(f"- **Individual Signals**: {len(individual_csvs)} CSV files")
-            for csv_file in sorted(individual_csvs[:3]):  # Show first 3
-                signal_name = csv_file.name.replace('spi_', '').replace('.csv', '').upper()
+        if canonical_individual:
+            present_individual = [f for f in csv_files if f.name.lower() in canonical_individual]
+            summary_lines.append(f"- **Individual Signals**: {len(present_individual)} canonical CSV files")
+            for csv_file in sorted(present_individual[:3]):  # Show first 3
                 size = csv_file.stat().st_size
                 summary_lines.append(f"  - `{csv_file.name}` ({size} bytes)")
-            if len(individual_csvs) > 3:
-                summary_lines.append(f"  - ... and {len(individual_csvs) - 3} more")
+            if len(present_individual) > 3:
+                summary_lines.append(f"  - ... and {len(present_individual) - 3} more")
 
         return "\n".join(summary_lines)
 
-    def _get_total_transitions(self, signal_stats: str) -> str:
-        """Calculate total signal transitions"""
+    def _read_signal_summary_rows(self) -> List[List[str]]:
+        summary_file = self.data_dir / 'spi_signal_summary.csv'
+        if not summary_file.exists():
+            return []
+        try:
+            with open(summary_file, 'r') as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+            return rows[1:] if len(rows) > 1 else []
+        except Exception:
+            return []
+
+    def _get_total_transitions(self) -> str:
+        """Calculate total signal transitions from signal summary CSV."""
         total_transitions = 0
-        for line in signal_stats.split('\n'):
-            if '|' in line and 'Changes' in line:
+        for row in self._read_signal_summary_rows():
+            if len(row) >= 3:
                 try:
-                    changes = int(line.split('|')[3].strip())
-                    total_transitions += changes
-                except (ValueError, IndexError):
-                    pass
+                    total_transitions += int(row[2])
+                except ValueError:
+                    continue
         return f"{total_transitions:,}"
+
+    def _count_active_signals(self) -> int:
+        """Count signals that changed at least once."""
+        active = 0
+        for row in self._read_signal_summary_rows():
+            if len(row) >= 3:
+                try:
+                    if int(row[2]) > 0:
+                        active += 1
+                except ValueError:
+                    continue
+        return active
 
     def _count_data_transfers(self) -> int:
         """Count data transfer events from logs"""
         log_file = self.logs_dir / 'simulation.log'
         if log_file.exists():
             with open(log_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return content.count('Transmission complete')
+                content = f.read().lower()
+            patterns = [
+                'transmission complete',
+                'reception complete',
+                'slave mode spi transaction complete',
+                'rx matched expected payload'
+            ]
+            return sum(content.count(p) for p in patterns)
         return 0
 
     def _get_clock_cycles(self) -> str:
         """Estimate clock cycles from timing data"""
+        # Prefer actual clk transition counts from summary CSV when available.
+        for row in self._read_signal_summary_rows():
+            if len(row) >= 3:
+                sig = row[0].split('.')[-1].lower()
+                if sig == 'clk':
+                    try:
+                        return f"{int(row[2]):,}"
+                    except ValueError:
+                        break
+
         timing_file = self.data_dir / 'spi_timing_data.csv'
         if timing_file.exists():
             with open(timing_file, 'r') as f:
@@ -1741,14 +1827,22 @@ class ProtocolComplianceChecker:
 
         checks = []
 
-        idle_ok, idle_note = self._check_sclk_idle(sclk, busy, cpol, master_mode_sig)
+        idle_ok, idle_note = self._check_sclk_idle(sclk, busy, cpol, spi_role, master_mode_sig)
         checks.append(("SCLK_idle_level_matches_CPOL", idle_ok, idle_note))
 
-        ss_ok, ss_note = self._check_ss_framing(ss_n, busy)
+        ss_ok, ss_note = self._check_ss_framing(ss_n, busy, master_mode_sig)
         checks.append(("SS_n_matches_busy_window", ss_ok, ss_note))
 
-        edge_ok, edge_note = self._check_mosi_not_changing_on_sampling_edges(sclk, mosi, cpol, cpha)
+        ss_idle_ok, ss_idle_note = self._check_ss_inactive_when_not_busy(ss_n, busy, master_mode_sig)
+        checks.append(("SS_n_inactive_when_not_busy", ss_idle_ok, ss_idle_note))
+
+        edge_ok, edge_note = self._check_mosi_not_changing_on_sampling_edges(
+            sclk, mosi, busy, cpol, cpha, spi_role, master_mode_sig
+        )
         checks.append(("MOSI_does_not_change_on_sampling_edge", edge_ok, edge_note))
+
+        sclk_busy_ok, sclk_busy_note = self._check_sclk_toggles_during_busy(sclk, busy, spi_role, master_mode_sig)
+        checks.append(("SCLK_activity_present_during_busy", sclk_busy_ok, sclk_busy_note))
 
         lines = []
         lines.append("# SPI Protocol Compliance (evidence-based)")
@@ -1789,7 +1883,17 @@ class ProtocolComplianceChecker:
                 break
         return current
 
-    def _check_sclk_idle(self, sclk_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]], cpol: int, master_mode_sig: Optional[Dict[str, Any]] = None):
+    def _check_sclk_idle(
+        self,
+        sclk_sig: Optional[Dict[str, Any]],
+        busy_sig: Optional[Dict[str, Any]],
+        cpol: int,
+        spi_role: str,
+        master_mode_sig: Optional[Dict[str, Any]] = None,
+    ):
+        # In slave-only mode, SCLK is externally driven; idle-level ownership is outside DUT.
+        if spi_role == "slave":
+            return True, "Skipped: slave mode SCLK is externally driven."
         if not sclk_sig or not busy_sig:
             return None, "Missing `sclk` or `busy` in VCD."
         changes = busy_sig.get("changes", [])
@@ -1797,38 +1901,122 @@ class ProtocolComplianceChecker:
             return None, "`busy` has no transitions; cannot infer idle window."
 
         checked = 0
-        for t, v in changes:
+        for idx, (t, v) in enumerate(changes):
             if v == "0":
                 # In dual mode, skip check when master_mode=0 (SCLK is an input, not driven)
                 if master_mode_sig is not None:
                     mm_v = self._value_at_or_before(master_mode_sig, t)
                     if mm_v != "1":
                         continue
-                sclk_v = self._value_at_or_before(sclk_sig, t)
+                # Probe well inside the busy=0 idle window, not right at the boundary.
+                next_t = changes[idx + 1][0] if idx + 1 < len(changes) else None
+                if next_t is not None and next_t <= t + 1:
+                    continue
+                if next_t is None:
+                    probe_t = t + 1
+                else:
+                    probe_t = t + ((next_t - t) // 2)
+                sclk_v = self._value_at_or_before(sclk_sig, probe_t)
                 if sclk_v in ["0", "1"] and int(sclk_v) != cpol:
-                    return False, f"At busy=0 transition time {t}ns, sclk={sclk_v} but expected idle {cpol}."
+                    return False, f"During busy=0 idle window near {t}ns, sclk={sclk_v} but expected idle {cpol}."
                 checked += 1
         if checked == 0:
             return None, "No master-mode busy=0 transitions found to check SCLK idle."
         return True, f"Checked sclk at {checked} master-mode busy=0 boundaries against CPOL={cpol}."
 
-    def _check_ss_framing(self, ss_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]]):
+    def _value_just_after(self, sig: Dict[str, Any], t: int) -> str:
+        """
+        Return the first known value strictly after time t, falling back to value-at-or-before.
+        This avoids false mismatches when multiple signals transition at the same timestamp.
+        """
+        for ct, v in sig.get("changes", []):
+            if ct > t:
+                return v
+        return self._value_at_or_before(sig, t)
+
+    def _check_ss_framing(self, ss_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]], master_mode_sig: Optional[Dict[str, Any]] = None):
         if not ss_sig or not busy_sig:
             return None, "Missing `ss_n` or `busy` in VCD."
         active_low = bool(getattr(self.config, "slave_active_low", True))
-        active_val = "0" if active_low else "1"
-
-        # For multi-bit ss_n, treat any value starting with 'b' as unknown for this check.
+        checked = 0
+        unknown = 0
         for t, v in busy_sig.get("changes", []):
             if v == "1":
+                # In dual mode, only evaluate framing while master is driving ss_n.
+                if master_mode_sig is not None:
+                    mm_v = self._value_at_or_before(master_mode_sig, t)
+                    if mm_v != "1":
+                        continue
                 ss_v = self._value_at_or_before(ss_sig, t)
-                if ss_v.startswith("b"):
-                    return None, "Multi-bit ss_n observed; framing check not implemented for bus-valued ss_n."
-                if ss_v in ["0", "1"] and ss_v != active_val:
-                    return False, f"At busy=1 time {t}ns, ss_n={ss_v} but expected active {active_val}."
-        return True, "Checked ss_n at busy=1 boundaries."
+                ss_active = self._is_ss_active(ss_v, active_low)
+                if ss_active is None:
+                    unknown += 1
+                    continue
+                if not ss_active:
+                    return False, f"At busy=1 time {t}ns, ss_n={ss_v} but expected active selection."
+                checked += 1
 
-    def _check_mosi_not_changing_on_sampling_edges(self, sclk_sig, mosi_sig, cpol: int, cpha: int):
+        if checked == 0 and unknown > 0:
+            return None, "Could not evaluate SS framing due to unknown SS values during busy windows."
+        if checked == 0:
+            return None, "No busy=1 windows found for SS framing check."
+        return True, f"Checked ss_n activity at {checked} busy=1 boundaries."
+
+    def _check_ss_inactive_when_not_busy(self, ss_sig: Optional[Dict[str, Any]], busy_sig: Optional[Dict[str, Any]], master_mode_sig: Optional[Dict[str, Any]] = None):
+        if not ss_sig or not busy_sig:
+            return None, "Missing `ss_n` or `busy` in VCD."
+        active_low = bool(getattr(self.config, "slave_active_low", True))
+        checked = 0
+        for t, v in busy_sig.get("changes", []):
+            if v == "0":
+                if master_mode_sig is not None:
+                    mm_v = self._value_at_or_before(master_mode_sig, t)
+                    if mm_v != "1":
+                        continue
+                ss_v = self._value_at_or_before(ss_sig, t)
+                ss_active = self._is_ss_active(ss_v, active_low)
+                if ss_active is None:
+                    continue
+                if ss_active:
+                    return False, f"At busy=0 time {t}ns, ss_n={ss_v} remained active."
+                checked += 1
+        if checked == 0:
+            return None, "No busy=0 windows found for SS idle check."
+        return True, f"Checked ss_n inactive state at {checked} busy=0 boundaries."
+
+    def _is_ss_active(self, ss_value: str, active_low: bool) -> Optional[bool]:
+        """
+        Evaluate whether slave-select is active for single-bit or bus-valued ss_n.
+        Returns None when value is unknown/undecidable.
+        """
+        if ss_value in ["0", "1"]:
+            return (ss_value == "0") if active_low else (ss_value == "1")
+
+        if ss_value.startswith("b"):
+            bits = ss_value[1:]
+            if not bits or any(b not in "01" for b in bits):
+                return None
+            if active_low:
+                # Any low bit indicates one selected slave.
+                return any(b == "0" for b in bits)
+            # Active-high: any high bit indicates selection.
+            return any(b == "1" for b in bits)
+
+        return None
+
+    def _check_mosi_not_changing_on_sampling_edges(
+        self,
+        sclk_sig,
+        mosi_sig,
+        busy_sig,
+        cpol: int,
+        cpha: int,
+        spi_role: str,
+        master_mode_sig: Optional[Dict[str, Any]] = None,
+    ):
+        # In slave-only mode, MOSI is externally driven and not controlled by DUT.
+        if spi_role == "slave":
+            return True, "Skipped: slave mode MOSI timing is externally driven."
         if not sclk_sig or not mosi_sig:
             return None, "Missing `sclk` or `mosi` in VCD."
         sclk_changes = [(t, v) for t, v in sclk_sig.get("changes", []) if v in ["0", "1"]]
@@ -1857,10 +2045,46 @@ class ProtocolComplianceChecker:
         if not sampling_times:
             return None, f"No {sampling_edge} edges found on sclk."
 
-        bad = [t for t in sampling_times if t in mosi_change_times]
+        relevant_sampling_times = []
+        for t in sampling_times:
+            if busy_sig is not None and self._value_at_or_before(busy_sig, t) != "1":
+                continue
+            if master_mode_sig is not None and self._value_at_or_before(master_mode_sig, t) != "1":
+                continue
+            relevant_sampling_times.append(t)
+
+        if not relevant_sampling_times:
+            return None, f"No active-transaction {sampling_edge} sampling edges found on sclk."
+
+        bad = [t for t in relevant_sampling_times if t in mosi_change_times]
         if bad:
             return False, f"MOSI changes at {len(bad)} sampling edge time(s), e.g. {bad[:5]}."
-        return True, f"Checked {len(sampling_times)} sampling edges ({sampling_edge})."
+        return True, f"Checked {len(relevant_sampling_times)} active-transaction sampling edges ({sampling_edge})."
+
+    def _check_sclk_toggles_during_busy(
+        self,
+        sclk_sig: Optional[Dict[str, Any]],
+        busy_sig: Optional[Dict[str, Any]],
+        spi_role: str,
+        master_mode_sig: Optional[Dict[str, Any]] = None,
+    ):
+        if spi_role == "slave":
+            return True, "Skipped: slave mode SCLK is externally driven."
+        if not sclk_sig or not busy_sig:
+            return None, "Missing `sclk` or `busy` in VCD."
+        busy_rise_times = [t for t, v in busy_sig.get("changes", []) if v == "1"]
+        if master_mode_sig is not None:
+            busy_rise_times = [t for t in busy_rise_times if self._value_at_or_before(master_mode_sig, t) == "1"]
+        if not busy_rise_times:
+            return None, "No busy=1 windows found for SCLK activity check."
+        toggles = [t for t, _ in sclk_sig.get("changes", []) if t > 0]
+        checked = 0
+        for t in busy_rise_times:
+            has_toggle = any(tt >= t and tt <= (t + 2_000_000) for tt in toggles)
+            if not has_toggle:
+                return False, f"No sclk transition found shortly after busy asserted at {t}ns."
+            checked += 1
+        return True, f"Checked SCLK activity for {checked} busy windows."
 
 
 if __name__ == "__main__":

@@ -7,3 +7,4 @@ Time (ns),spi_dual_tb.dut.slave_bit_counter
 3370000,b101
 3470000,b110
 3570000,b111
+3670000,b1000
