@@ -45,3 +45,4 @@ Switch from agent-specific GitHub paths to a single finalized issue-driven gener
 | 2026-04-28 03:38 | 4 | DONE | Added `.github/workflows/build-ci-image.yml` to build and publish CI image to GHCR on demand and when Docker/requirements change on `main` |
 | 2026-04-28 03:38 | 4 | DONE | Updated `Dockerfile` to keep CI runtime minimal (`iverilog` + Python deps; removed `gtkwave`) |
 | 2026-04-28 03:42 | 4 | DONE | Fixed GHCR tag casing bug by switching image references to lowercase org path `ghcr.io/sjtu-yongfu-research-grp/spi-customizer-ci:*` |
+| 2026-04-28 03:45 | 4 | DONE | Fixed container dependency resolution by installing `python3-numpy/python3-matplotlib` via apt and switching pip install to `tools/requirements-minimal.txt` |
