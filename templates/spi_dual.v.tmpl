@@ -7,6 +7,7 @@ module spi_dual #(
     parameter MODE = {{MODE}},                    // SPI mode (0, 1, 2, 3)
     parameter DATA_WIDTH = {{DATA_WIDTH}},        // Data width in bits
     parameter NUM_SLAVES = {{NUM_SLAVES}},        // Number of slaves when in master mode
+    parameter SELECTED_SLAVE = {{ SELECTED_SLAVE }},                 // Selected slave index for deterministic one-hot SS
     parameter SLAVE_ACTIVE_LOW = {{SLAVE_ACTIVE_LOW|int}},  // Slave select polarity
     parameter MSB_FIRST = {{MSB_FIRST|int}},  // Data order
     parameter FIFO_DEPTH = {{FIFO_DEPTH}},        // FIFO buffer depth
@@ -52,6 +53,7 @@ module spi_dual #(
     localparam CPOL = (MODE == 2 || MODE == 3) ? 1 : 0; // Clock polarity: 1=idles high
     localparam SAMPLE_ON_RISING = (MODE == 0 || MODE == 3) ? 1 : 0; // 1=sample rising, 0=sample falling
     localparam SS_ACTIVE = SLAVE_ACTIVE_LOW ? 1'b0 : 1'b1;
+    localparam integer SELECTED_SLAVE_CLAMP = (SELECTED_SLAVE >= 0 && SELECTED_SLAVE < NUM_SLAVES) ? SELECTED_SLAVE : 0;
     reg [DATA_WIDTH-1:0] default_data;
 
     // Master mode internal signals
@@ -103,9 +105,9 @@ module spi_dual #(
                 master_bit_counter <= 8'd0;
                 master_sclk_counter <= 8'd0;
                 master_start_tx <= 1'b1;
-                // Assert slave 0 using configured slave-select polarity
+                // Deterministic one-hot selection using SELECTED_SLAVE
                 master_ss_n_reg <= {NUM_SLAVES{~SS_ACTIVE}};
-                master_ss_n_reg[0] <= SS_ACTIVE;
+                master_ss_n_reg[SELECTED_SLAVE_CLAMP] <= SS_ACTIVE;
             end else begin
                 master_start_tx <= 1'b0;
             end
@@ -160,7 +162,7 @@ module spi_dual #(
             slave_tx_shift_reg <= default_data;
             slave_bit_counter <= 8'd0;
             slave_sclk_last_state <= CPOL[0]; // Initialize to CPOL idle state
-            slave_ss_last_state <= 1'b1;
+            slave_ss_last_state <= ~SS_ACTIVE;
             slave_transaction_active <= 1'b0;
             slave_timeout_counter <= 8'd0;
         end else if (!master_mode) begin
@@ -168,7 +170,7 @@ module spi_dual #(
             slave_ss_last_state <= ss_in;
 
             // Start transaction on SS falling edge
-            if (slave_ss_last_state && !ss_in) begin
+            if ((slave_ss_last_state != SS_ACTIVE) && (ss_in == SS_ACTIVE)) begin
                 slave_transaction_active <= 1'b1;
                 slave_busy_buffer <= 1'b1;
                 slave_bit_counter <= 8'd0;
@@ -177,7 +179,7 @@ module spi_dual #(
             end
 
             // End transaction on SS rising edge
-            if (!slave_ss_last_state && ss_in && slave_transaction_active) begin
+            if ((slave_ss_last_state == SS_ACTIVE) && (ss_in != SS_ACTIVE) && slave_transaction_active) begin
                 slave_transaction_active <= 1'b0;
                 slave_busy_buffer <= 1'b0;
                 slave_rx_valid_buffer <= 1'b1; // Data received

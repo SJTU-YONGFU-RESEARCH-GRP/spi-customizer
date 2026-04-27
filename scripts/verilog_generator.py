@@ -85,6 +85,7 @@ class VerilogGenerator:
             MODE=config.mode,
             DATA_WIDTH=config.data_width,
             NUM_SLAVES=config.num_slaves,
+            SELECTED_SLAVE=config.selected_slave,
             SLAVE_ACTIVE_LOW=config.slave_active_low,
             MSB_FIRST=config.msb_first,
 
@@ -185,6 +186,7 @@ class VerilogGenerator:
             mode=config.mode,
             data_width=config.data_width,
             num_slaves=config.num_slaves,
+            selected_slave=config.selected_slave,
             slave_active_low=config.slave_active_low,
             msb_first=config.msb_first,
             fifo_depth=config.fifo_depth,

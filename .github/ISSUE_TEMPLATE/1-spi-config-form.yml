@@ -41,6 +41,14 @@ body:
       placeholder: "1, 2, 4, 8, or custom"
     validations:
       required: true
+  - type: input
+    id: selected-slave-index
+    attributes:
+      label: Selected Slave Index
+      description: Target slave index for master/dual tests (0-based, must be < Number of Slaves)
+      placeholder: "0"
+    validations:
+      required: false
   - type: dropdown
     id: slave-select
     attributes:

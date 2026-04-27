@@ -2,6 +2,7 @@ module spi_master #(
     parameter MODE = {{ MODE }},              // SPI Mode (0-3)
     parameter DATA_WIDTH = {{ DATA_WIDTH }},       // Data width in bits
     parameter NUM_SLAVES = {{ NUM_SLAVES }},        // Number of slave devices
+    parameter SELECTED_SLAVE = {{ SELECTED_SLAVE }},             // Selected slave index for deterministic one-hot SS
     parameter SLAVE_ACTIVE_LOW = {{ SLAVE_ACTIVE_LOW | int }},  // Slave select active level
     parameter MSB_FIRST = {{ MSB_FIRST | int }},          // Data transmission order
     parameter FIFO_DEPTH = {{ FIFO_DEPTH }},        // FIFO buffer depth
@@ -56,6 +57,7 @@ module spi_master #(
 
     // Slave select active level
     wire SS_ACTIVE = SLAVE_ACTIVE_LOW ? 1'b0 : 1'b1;
+    localparam integer SELECTED_SLAVE_CLAMP = (SELECTED_SLAVE >= 0 && SELECTED_SLAVE < NUM_SLAVES) ? SELECTED_SLAVE : 0;
 
     // Default data generation
     reg [DATA_WIDTH-1:0] default_data;
@@ -206,7 +208,7 @@ module spi_master #(
                                 bit_counter <= bit_counter + 1;
                             end
                         end else if (sclk_gen == CPOL) begin // Trailing edge - sample data
-                            if (bit_counter < DATA_WIDTH && bit_counter > 0) begin
+                            if (bit_counter <= DATA_WIDTH && bit_counter > 0) begin
                                 // Shift in received data
                                 if (MSB_FIRST) begin
                                     if (DATA_WIDTH > 1) begin
@@ -287,17 +289,21 @@ module spi_master #(
 
             SETUP: begin
                 busy = 1;
-                ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Activate slave select
+                // Deterministic one-hot selection using SELECTED_SLAVE.
+                ss_n = {NUM_SLAVES{~SS_ACTIVE}};
+                ss_n[SELECTED_SLAVE_CLAMP] = SS_ACTIVE;
             end
 
             TRANSMIT: begin
                 busy = 1;
-                ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Keep slave select active
+                ss_n = {NUM_SLAVES{~SS_ACTIVE}};
+                ss_n[SELECTED_SLAVE_CLAMP] = SS_ACTIVE;
             end
 
             RECEIVE: begin
                 busy = 1;
-                ss_n = {NUM_SLAVES{SS_ACTIVE}};  // Keep slave select active
+                ss_n = {NUM_SLAVES{~SS_ACTIVE}};
+                ss_n[SELECTED_SLAVE_CLAMP] = SS_ACTIVE;
             end
 
             COMPLETE: begin

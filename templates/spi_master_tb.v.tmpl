@@ -10,6 +10,7 @@ module spi_master_tb;
     parameter MODE = {{ mode }};
     parameter DATA_WIDTH = {{ data_width }};
     parameter NUM_SLAVES = {{ num_slaves }};
+    parameter SELECTED_SLAVE = {{ selected_slave }};
     parameter SLAVE_ACTIVE_LOW = {{ slave_active_low | int }};
     parameter MSB_FIRST = {{ msb_first | int }};
     parameter FIFO_DEPTH = {{ fifo_depth }};
@@ -32,12 +33,16 @@ module spi_master_tb;
     wire [NUM_SLAVES-1:0] ss_n;
     wire irq;
     integer timeout_cycles;
+    integer ss_idx;
+    localparam SS_ACTIVE = SLAVE_ACTIVE_LOW ? 1'b0 : 1'b1;
+    localparam SS_INACTIVE = ~SS_ACTIVE;
 
     // DUT instantiation
     spi_master #(
         .MODE(MODE),
         .DATA_WIDTH(DATA_WIDTH),
         .NUM_SLAVES(NUM_SLAVES),
+        .SELECTED_SLAVE(SELECTED_SLAVE),
         .SLAVE_ACTIVE_LOW(SLAVE_ACTIVE_LOW),
         .MSB_FIRST(MSB_FIRST),
         .FIFO_DEPTH(FIFO_DEPTH),
@@ -82,6 +87,46 @@ module spi_master_tb;
         end
     endtask
 
+    task wait_for_busy_assert;
+        input [255:0] tag;
+        input integer max_cycles;
+        begin
+            timeout_cycles = 0;
+            while (!busy && timeout_cycles < max_cycles) begin
+                #20;
+                timeout_cycles = timeout_cycles + 1;
+            end
+            if (!busy) begin
+                $fatal(1, "Timeout waiting for busy assertion during %0s", tag);
+            end
+        end
+    endtask
+
+    task assert_selected_ss_active;
+        input [255:0] tag;
+        begin
+            if (ss_n[SELECTED_SLAVE] !== SS_ACTIVE) begin
+                $fatal(1, "Selected SS index %0d not active during %0s", SELECTED_SLAVE, tag);
+            end
+            for (ss_idx = 0; ss_idx < NUM_SLAVES; ss_idx = ss_idx + 1) begin
+                if (ss_idx != SELECTED_SLAVE && ss_n[ss_idx] !== SS_INACTIVE) begin
+                    $fatal(1, "Non-selected SS index %0d active during %0s", ss_idx, tag);
+                end
+            end
+        end
+    endtask
+
+    task assert_all_ss_inactive;
+        input [255:0] tag;
+        begin
+            for (ss_idx = 0; ss_idx < NUM_SLAVES; ss_idx = ss_idx + 1) begin
+                if (ss_n[ss_idx] !== SS_INACTIVE) begin
+                    $fatal(1, "SS index %0d not inactive during %0s", ss_idx, tag);
+                end
+            end
+        end
+    endtask
+
     // Test sequence for master mode
     initial begin
         // Initialize
@@ -120,8 +165,11 @@ module spi_master_tb;
         start_tx = 1;
         #50;
         start_tx = 0;
+        wait_for_busy_assert("test1_tx", 2000);
+        assert_selected_ss_active("test1_tx");
 
         wait_for_not_busy("test1_tx", 20000);
+        assert_all_ss_inactive("test1_tx_complete");
         $display("✓ Transmission complete");
 
         // Brief delay between transactions
@@ -146,24 +194,31 @@ module spi_master_tb;
         start_tx = 1;
         #50;
         start_tx = 0;
+        wait_for_busy_assert("test2_tx", 2000);
+        assert_selected_ss_active("test2_tx");
 
         wait_for_not_busy("test2_tx", 20000);
+        assert_all_ss_inactive("test2_tx_complete");
         $display("✓ Second transmission complete");
 
         // Test reception (simplified for speed)
         $display("--- Testing Reception ---");
 
         {% if num_slaves > 0 %}
-        // Prepare to receive data from slave 0
+        // Prepare to receive data from selected slave index
+        $display("Target slave index: %0d", SELECTED_SLAVE);
         start_rx = 1;
         #50;
         start_rx = 0;
+        wait_for_busy_assert("test_rx", 2000);
+        assert_selected_ss_active("test_rx");
 
         // Simulate slave providing response data
         #200;
         miso = {{ "1'b1" if (mode in [1,3]) else "1'b0" }};  // Data bit based on CPHA
 
         wait_for_not_busy("test_rx", 20000);
+        assert_all_ss_inactive("test_rx_complete");
         $display("✓ Reception complete");
         {% endif %}
 
@@ -172,10 +227,13 @@ module spi_master_tb;
         tx_data = {{ "16'hFF00" if data_width >= 16 else "8'hF0" }};
         $display("Burst TX: 0x%h", tx_data);
         start_tx = 1;
-        #30;
+        #50;
         start_tx = 0;
+        wait_for_busy_assert("test3_burst", 2000);
+        assert_selected_ss_active("test3_burst");
 
         wait_for_not_busy("test3_burst", 20000);
+        assert_all_ss_inactive("test3_burst_complete");
         $display("✓ Burst transmission complete");
 
         // Test 4: Quick configuration test
@@ -189,10 +247,13 @@ module spi_master_tb;
         {% endif %}
         $display("Config TX: 0x%h", tx_data);
         start_tx = 1;
-        #30;
+        #50;
         start_tx = 0;
+        wait_for_busy_assert("test4_config", 2000);
+        assert_selected_ss_active("test4_config");
 
         wait_for_not_busy("test4_config", 20000);
+        assert_all_ss_inactive("test4_config_complete");
         $display("✓ Configuration test complete");
 
         $display("=== All Master Tests Completed Successfully ===");

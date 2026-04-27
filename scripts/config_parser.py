@@ -19,6 +19,7 @@ class SPIConfig:
     mode: int
     data_width: int
     num_slaves: int = 1
+    selected_slave: int = 0
     slave_active_low: bool = True
     msb_first: bool = True
     interrupts: bool = False
@@ -51,6 +52,7 @@ class SPIConfigParser:
             'mode': r'(?:SPI Mode|Mode)[^0-9]*(\d)',
             'data_width': r'(?:Data Width|Width)[^0-9]*(\d+)',
             'num_slaves': r'(?:Number of Slaves|Slaves)[^0-9]*(\d+)',
+            'selected_slave': r'(?:Selected Slave Index|Selected Slave)[^0-9]*(\d+)',
             'clock_freq': r'(?:Clock Frequency|Frequency)[^0-9]*(\d+(?:\.\d+)?)',
             'slave_active': r'\[[^\]]*\]\s*Active (Low|High)',
             'data_order': r'\[[^\]]*\]\s*(MSB|LSB) First',
@@ -73,6 +75,7 @@ class SPIConfigParser:
             'mode': ['SPI Mode'],
             'data_width': ['Data Width'],
             'num_slaves': ['Number of Slaves'],
+            'selected_slave': ['Selected Slave Index', 'Selected Slave'],
             'slave_select': ['Slave Select Behavior', 'Slave Select'],
             'data_order': ['Data Order'],
             'spi_role': ['SPI Role'],
@@ -133,10 +136,12 @@ class SPIConfigParser:
 
         # Optional parameters with defaults
         num_slaves_value = self._extract_form_or_regex(issue_body, 'num_slaves', self.patterns['num_slaves'])
+        selected_slave_value = self._extract_form_or_regex(issue_body, 'selected_slave', self.patterns['selected_slave'])
         clock_freq_value = self._extract_single(issue_body, self.patterns['clock_freq'])
 
         try:
             params['num_slaves'] = int(num_slaves_value) if num_slaves_value else 1
+            params['selected_slave'] = int(selected_slave_value) if selected_slave_value else 0
             params['clock_frequency'] = float(clock_freq_value) if clock_freq_value else 25.0
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid optional parameter values: {e}")
@@ -317,6 +322,12 @@ class SPIConfigParser:
         if not (1 <= params['num_slaves'] <= 32):
             raise ValueError(f"Number of slaves {params['num_slaves']} is out of range (1-32)")
 
+        # Validate selected slave index
+        if not (0 <= params['selected_slave'] < params['num_slaves']):
+            raise ValueError(
+                f"Selected slave index {params['selected_slave']} out of range for num_slaves={params['num_slaves']}"
+            )
+
         # Validate test duration
         if params['test_duration'].lower() not in ['brief', 'standard', 'comprehensive']:
             raise ValueError(f"Invalid test duration: {params['test_duration']}")
@@ -348,6 +359,10 @@ class SPIConfigParser:
         # Validate max slaves
         if params['max_slaves'] < 1 or params['max_slaves'] > 32:
             raise ValueError(f"Max slaves {params['max_slaves']} out of range (1-32)")
+        if params['num_slaves'] > params['max_slaves']:
+            raise ValueError(
+                f"Number of slaves {params['num_slaves']} exceeds max_slaves {params['max_slaves']}"
+            )
 
 
 def main():

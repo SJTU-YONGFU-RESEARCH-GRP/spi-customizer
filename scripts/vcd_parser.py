@@ -644,6 +644,29 @@ class SignalPlotGenerator:
         self.graphs_dir = self.output_dir / 'graphs'
         self.data_dir = self.output_dir / 'data'
         self.graphs_dir.mkdir(exist_ok=True)
+        self.slave_active_low = self._load_slave_active_low()
+        self.num_slaves = self._load_num_slaves()
+
+    def _load_slave_active_low(self) -> bool:
+        """Load SS polarity from generated spi_config.json; default active-low."""
+        config_path = self.output_dir / 'code' / 'spi_config.json'
+        try:
+            with open(config_path, 'r') as f:
+                cfg = json.load(f)
+            return bool(cfg.get('slave_active_low', True))
+        except Exception:
+            return True
+
+    def _load_num_slaves(self) -> int:
+        """Load configured slave count from spi_config.json; default 1."""
+        config_path = self.output_dir / 'code' / 'spi_config.json'
+        try:
+            with open(config_path, 'r') as f:
+                cfg = json.load(f)
+            value = int(cfg.get('num_slaves', 1))
+            return value if value > 0 else 1
+        except Exception:
+            return 1
 
     def generate_all_plots(self) -> List[str]:
         """Generate all 4 types of plots"""
@@ -684,6 +707,7 @@ class SignalPlotGenerator:
             # Read timing data
             time_data = []
             signal_data = {}
+            signal_raw_data = {}
 
             with open(timing_csv, 'r') as f:
                 reader = csv.reader(f)
@@ -701,9 +725,14 @@ class SignalPlotGenerator:
                         signal_name = header[i]
                         if signal_name not in signal_data:
                             signal_data[signal_name] = []
+                            signal_raw_data[signal_name] = []
 
                         value = row[i] if i < len(row) else 'x'
-                        signal_data[signal_name].append(1 if value == '1' else 0 if value == '0' else 0.5)
+                        if signal_name == 'SS_N':
+                            signal_data[signal_name].append(self._ss_to_numeric(value))
+                        else:
+                            signal_data[signal_name].append(self._logic_to_numeric(value))
+                        signal_raw_data[signal_name].append(value)
 
             if not time_data:
                 print("⚠️  No data found for individual plots")
@@ -715,35 +744,26 @@ class SignalPlotGenerator:
                     continue
 
                 plt.figure(figsize=(12, 6))
+                ax = plt.gca()
+                self._plot_spi_signal(ax, signal_name, time_data, values)
 
-                # Plot the signal with step-style for sharp digital transitions
-                plt.plot(time_data, values, drawstyle='steps-post', linewidth=2, color='blue')
-
-                # Add signal statistics
-                high_count = sum(1 for v in values if v == 1)
-                low_count = sum(1 for v in values if v == 0)
-                transitions = sum(1 for j in range(1, len(values))
-                                if values[j] != values[j-1])
-
-                plt.title(f'SPI {signal_name} Signal - Detailed Analysis',
-                         fontsize=14, fontweight='bold')
-                plt.xlabel('Time (μs)')
-                plt.ylabel('Signal Value')
-                plt.grid(True, alpha=0.3)
-                plt.ylim(-0.1, 1.1)
-
-                # Format y-axis
-                plt.yticks([0, 0.5, 1], ['0', 'X', '1'])
-
-                # Add statistics text
-                stats_text = f'Signal: {signal_name}\nTransitions: {transitions}\nHigh: {high_count} ({100*high_count/len(values):.1f}%)\nLow: {low_count} ({100*low_count/len(values):.1f}%)\nTotal Points: {len(values)}'
-                plt.text(0.02, 0.98, stats_text, transform=plt.gca().transAxes,
-                        fontsize=10, verticalalignment='top',
-                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightcyan', alpha=0.8))
+                # Preserve bus-value readability in individual DATA plot.
+                if signal_name == 'DATA':
+                    self._annotate_data_bus_values(
+                        ax,
+                        time_data,
+                        signal_raw_data.get(signal_name, []),
+                        values,
+                    )
+                    self._annotate_data_bus_summary(
+                        ax,
+                        signal_raw_data.get(signal_name, []),
+                        values,
+                    )
 
                 plt.tight_layout()
                 plot_file = self.graphs_dir / f'spi_{signal_name.lower()}_individual.png'
-                plt.savefig(plot_file, dpi=150, bbox_inches='tight')
+                plt.savefig(plot_file, dpi=150)
                 plt.close()
 
                 individual_plots.append(str(plot_file))
@@ -755,6 +775,104 @@ class SignalPlotGenerator:
         except Exception as e:
             print(f"❌ Failed to generate individual plots: {e}")
             return individual_plots
+
+    def _annotate_data_bus_values(
+        self,
+        ax: plt.Axes,
+        time_data: List[float],
+        raw_values: List[str],
+        numeric_values: List[float],
+    ) -> None:
+        """
+        Annotate DATA bus values as hex on value-change intervals.
+        Limits label count to keep plots readable.
+        """
+        if not time_data or not raw_values:
+            return
+        max_labels = 24
+        changes = []
+        prev = None
+        for i, raw in enumerate(raw_values):
+            if prev is None or raw != prev:
+                changes.append(i)
+                prev = raw
+        if len(changes) > max_labels:
+            stride = max(1, len(changes) // max_labels)
+            changes = changes[::stride]
+
+        for idx in changes:
+            raw = raw_values[idx]
+            label = self._format_bus_value_label(raw)
+            if not label:
+                continue
+            x = time_data[idx]
+            y = numeric_values[idx] if idx < len(numeric_values) else 0.5
+            ax.annotate(
+                label,
+                (x, y),
+                textcoords="offset points",
+                xytext=(0, 6),
+                ha="center",
+                fontsize=7,
+                color="black",
+                bbox=dict(boxstyle='round,pad=0.15', facecolor='white', alpha=0.7),
+            )
+
+    def _format_bus_value_label(self, raw: str) -> str:
+        if raw in {"0", "1"}:
+            return raw
+        if raw.startswith('b'):
+            bits = raw[1:]
+            if bits and all(bit in "01" for bit in bits):
+                return f"0x{int(bits, 2):X}"
+            return "X"
+        return ""
+
+    def _annotate_data_bus_summary(
+        self,
+        ax: plt.Axes,
+        raw_values: List[str],
+        numeric_values: List[float],
+    ) -> None:
+        """
+        Add a DATA-bus specific summary annotation for individual DATA plot.
+        """
+        if not raw_values or not numeric_values:
+            return
+
+        transitions = sum(1 for i in range(1, len(raw_values)) if raw_values[i] != raw_values[i - 1])
+        unknown_count = sum(1 for v in numeric_values if v == 0.5)
+        known_values = [int(v) for v in numeric_values if v != 0.5]
+        if known_values:
+            min_val = min(known_values)
+            max_val = max(known_values)
+            last_val = known_values[-1]
+            min_txt = f"0x{min_val:X}"
+            max_txt = f"0x{max_val:X}"
+            last_txt = f"0x{last_val:X}"
+        else:
+            min_txt = "X"
+            max_txt = "X"
+            last_txt = "X"
+
+        stats_text = (
+            f"Bus Transitions: {transitions}\n"
+            f"Min: {min_txt}\n"
+            f"Max: {max_txt}\n"
+            f"Last: {last_txt}\n"
+            f"Unknown: {unknown_count}\n"
+            f"Samples: {len(raw_values)}"
+        )
+        ax.text(
+            0.98,
+            0.98,
+            stats_text,
+            transform=ax.transAxes,
+            fontsize=8,
+            verticalalignment='top',
+            horizontalalignment='right',
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', alpha=0.85),
+        )
 
     def _generate_input_ports_plot(self) -> Optional[str]:
         """Generate plot for input ports only"""
@@ -833,9 +951,9 @@ class SignalPlotGenerator:
             for i in range(len(signal_names), len(axes)):
                 axes[i].set_visible(False)
 
-            plt.tight_layout()
+            plt.tight_layout(rect=[0, 0, 1, 0.97])
             plot_file = self.graphs_dir / filename
-            plt.savefig(plot_file, dpi=150, bbox_inches='tight')
+            plt.savefig(plot_file, dpi=150)
             plt.close()
 
             print(f"✅ Generated {title} protocol plot: {plot_file}")
@@ -889,7 +1007,7 @@ class SignalPlotGenerator:
                         if signal_name == 'SS_N':
                             signal_data[signal_name].append(self._ss_to_numeric(value))
                         else:
-                            signal_data[signal_name].append(1 if value == '1' else 0 if value == '0' else 0.5)
+                            signal_data[signal_name].append(self._logic_to_numeric(value))
 
         print(f"✅ Processed {len(time_data):,} samples after sampling")
         return time_data, signal_data
@@ -897,21 +1015,36 @@ class SignalPlotGenerator:
     def _ss_to_numeric(self, value: str) -> float:
         """
         Convert SS value to a plottable numeric level.
-        Assumes active-low semantics for visualization:
-        - inactive/all-high -> 1
-        - any selected low bit -> 0
+        Polarity-aware visualization convention:
+        - inactive -> 1
+        - active (any selected slave) -> 0
         - unknown/undecidable -> 0.5
         """
-        if value == '1':
-            return 1
-        if value == '0':
-            return 0
+        active_low = self.slave_active_low
+        if value in {'0', '1'}:
+            bit_active = (value == '0') if active_low else (value == '1')
+            return 0 if bit_active else 1
         if value.startswith('b'):
             bits = value[1:]
-            if bits and all(b == '1' for b in bits):
-                return 1
-            if bits and any(b == '0' for b in bits):
-                return 0
+            if bits and all(b in '01' for b in bits):
+                any_active = any((b == '0') if active_low else (b == '1') for b in bits)
+                return 0 if any_active else 1
+        return 0.5
+
+    def _logic_to_numeric(self, value: str) -> float:
+        """
+        Convert logic strings into plottable numeric values.
+        Supports single-bit and known multi-bit bus values.
+        """
+        if value == '1':
+            return 1.0
+        if value == '0':
+            return 0.0
+        if value.startswith('b'):
+            bits = value[1:]
+            if bits and all(bit in '01' for bit in bits):
+                return float(int(bits, 2))
+            return 0.5
         return 0.5
 
     def _plot_spi_signal(self, ax: plt.Axes, signal_name: str, time_data: List[float], values: List[float]) -> None:
@@ -931,13 +1064,15 @@ class SignalPlotGenerator:
         # Configure axis
         ax.set_title(f'{signal_name} Signal', fontsize=12, fontweight='bold')
         ax.set_xlabel('Time (μs)')
-        ax.set_ylabel('Logic Level')
         ax.grid(True, alpha=0.3)
 
-        # Format y-axis for digital signals
-        ax.set_yticks([0, 0.5, 1])
-        ax.set_yticklabels(['0', 'X', '1'])
-        ax.set_ylim(-0.1, 1.1)
+        if signal_name == 'DATA':
+            ax.set_ylabel('Data Value')
+        else:
+            ax.set_ylabel('Logic Level')
+            ax.set_yticks([0, 0.5, 1])
+            ax.set_yticklabels(['0', 'X', '1'])
+            ax.set_ylim(-0.1, 1.1)
 
         # Add signal statistics
         self._add_signal_statistics(ax, signal_name, values)
@@ -949,11 +1084,10 @@ class SignalPlotGenerator:
             # Find active transaction periods based on SS_N being active (any slave selected)
             ss_n_values = self._get_signal_values('SS_N')
             if ss_n_values:
-                # Identify transaction periods where SS_N has any slave active (not b111)
+                # Identify transaction periods where SS_N has any slave active.
                 transaction_samples = []
                 for i, (val, ss_val) in enumerate(zip(values, ss_n_values)):
-                    # SS_N is active low per slave, so 'b0' means slave 0 is selected (active)
-                    ss_active = str(ss_val) == 'b0'  # b0 = slave 0 active, b111 = all inactive
+                    ss_active = self._is_ss_active_for_plot(ss_val)
                     if ss_active:
                         transaction_samples.append(val)
 
@@ -1040,7 +1174,7 @@ class SignalPlotGenerator:
 
     def _enhance_slave_select(self, ax: plt.Axes, time_data: List[float], values: List[float]) -> None:
         """Add slave select specific enhancements"""
-        # Detect slave selection periods (active low)
+        # Values use convention active=0, inactive=1 from _ss_to_numeric.
         active_periods = []
         start_time = None
 
@@ -1060,11 +1194,90 @@ class SignalPlotGenerator:
             ax.axvspan(start, end, alpha=0.2, color='yellow', label='Slave Active' if len(active_periods) == 1 else "")
 
         # Add polarity indicator
-        ax.text(0.02, 0.85, 'Active Low', transform=ax.transAxes,
+        polarity = 'Active Low' if self.slave_active_low else 'Active High'
+        ax.text(0.02, 0.85, polarity, transform=ax.transAxes,
                fontsize=9, bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', alpha=0.8))
 
-    def _get_signal_values(self, signal_name: str) -> Optional[List[float]]:
-        """Get processed values for a specific signal from the timing data"""
+        # Sparse semantic labels on transitions for readability on multi-bit SS buses.
+        raw_ss = self._get_signal_values('SS_N') or []
+        if raw_ss:
+            max_labels = 8
+            labels_drawn = 0
+            prev = None
+            for i, raw in enumerate(raw_ss[:len(time_data)]):
+                if prev is None or raw != prev:
+                    label = self._ss_semantic_label(raw)
+                    if label is not None:
+                        ax.annotate(
+                            label,
+                            (time_data[i], values[i] if i < len(values) else 0.5),
+                            textcoords="offset points",
+                            xytext=(0, 8),
+                            ha='center',
+                            fontsize=7,
+                            color='darkorange',
+                        )
+                        labels_drawn += 1
+                        if labels_drawn >= max_labels:
+                            break
+                prev = raw
+
+    def _is_ss_active_for_plot(self, raw_value: object) -> bool:
+        """
+        Determine whether SS is active for plotting/statistics from raw CSV value.
+        """
+        bits = self._normalized_ss_bits(raw_value)
+        if bits is not None:
+            active_low = self.slave_active_low
+            return any((b == '0') if active_low else (b == '1') for b in bits)
+        return False
+
+    def _normalized_ss_bits(self, raw_value: object) -> Optional[str]:
+        """
+        Normalize raw SS value to full bus-width bitstring.
+        Handles compact VCD encodings like b0 / b1000.
+        """
+        value = str(raw_value)
+        active_low = self.slave_active_low
+        inactive_bit = '1' if active_low else '0'
+        if value in {'0', '1'}:
+            bits = value
+        elif value.startswith('b'):
+            bits = value[1:]
+        else:
+            return None
+        if not bits or not all(b in '01' for b in bits):
+            return None
+        if self.num_slaves > 1 and len(bits) < self.num_slaves:
+            bits = bits.rjust(self.num_slaves, inactive_bit)
+        return bits
+
+    def _ss_semantic_label(self, raw_value: object) -> Optional[str]:
+        """
+        Convert raw SS value into readable semantic labels for sparse plot annotations.
+        """
+        active_low = self.slave_active_low
+        bits = self._normalized_ss_bits(raw_value)
+        if bits is None:
+            return "INV"
+        active_indices = []
+        for pos, bit in enumerate(bits):
+            bit_active = (bit == '0') if active_low else (bit == '1')
+            if bit_active:
+                # Verilog vector text is MSB->LSB; slave index 0 is rightmost bit.
+                active_indices.append(len(bits) - 1 - pos)
+        if not active_indices:
+            return "IDLE"
+        if len(active_indices) == 1:
+            return f"SEL[{active_indices[0]}]"
+        return "MULTI"
+
+    def _get_signal_values(self, signal_name: str) -> Optional[List[object]]:
+        """Get signal values from timing CSV.
+
+        Returns raw SS_N vector/scalar strings for SS-aware predicates and numeric
+        logic levels for other single-bit signals.
+        """
         try:
             timing_csv = self.data_dir / 'spi_timing_data.csv'
             if not timing_csv.exists():
@@ -1089,7 +1302,7 @@ class SignalPlotGenerator:
                 for row in reader:
                     if len(row) > signal_idx:
                         value = row[signal_idx]
-                        # For SS_N, return raw string values to detect 'b0' vs 'b111'
+                        # Keep raw SS values so polarity-aware predicate can classify activity.
                         if signal_name == 'SS_N':
                             signal_values.append(value)
                         else:
@@ -1841,6 +2054,11 @@ class ProtocolComplianceChecker:
         )
         checks.append(("MOSI_does_not_change_on_sampling_edge", edge_ok, edge_note))
 
+        timing_ok, timing_note = self._check_mosi_setup_hold_window(
+            sclk, mosi, busy, cpol, cpha, spi_role, master_mode_sig
+        )
+        checks.append(("MOSI_setup_hold_window_ok", timing_ok, timing_note))
+
         sclk_busy_ok, sclk_busy_note = self._check_sclk_toggles_during_busy(sclk, busy, spi_role, master_mode_sig)
         checks.append(("SCLK_activity_present_during_busy", sclk_busy_ok, sclk_busy_note))
 
@@ -1947,13 +2165,19 @@ class ProtocolComplianceChecker:
                     mm_v = self._value_at_or_before(master_mode_sig, t)
                     if mm_v != "1":
                         continue
-                ss_v = self._value_at_or_before(ss_sig, t)
-                ss_active = self._is_ss_active(ss_v, active_low)
-                if ss_active is None:
+                ss_before = self._value_at_or_before(ss_sig, t)
+                ss_after = self._value_just_after(ss_sig, t)
+                ss_active_before = self._is_ss_active(ss_before, active_low)
+                ss_active_after = self._is_ss_active(ss_after, active_low)
+                ss_candidates = [v for v in (ss_active_before, ss_active_after) if v is not None]
+                if not ss_candidates:
                     unknown += 1
                     continue
-                if not ss_active:
-                    return False, f"At busy=1 time {t}ns, ss_n={ss_v} but expected active selection."
+                if not any(ss_candidates):
+                    return False, (
+                        f"At busy=1 time {t}ns, ss_n(before)={ss_before}, ss_n(after)={ss_after} "
+                        f"but expected active selection."
+                    )
                 checked += 1
 
         if checked == 0 and unknown > 0:
@@ -1973,12 +2197,18 @@ class ProtocolComplianceChecker:
                     mm_v = self._value_at_or_before(master_mode_sig, t)
                     if mm_v != "1":
                         continue
-                ss_v = self._value_at_or_before(ss_sig, t)
-                ss_active = self._is_ss_active(ss_v, active_low)
-                if ss_active is None:
+                ss_before = self._value_at_or_before(ss_sig, t)
+                ss_after = self._value_just_after(ss_sig, t)
+                ss_active_before = self._is_ss_active(ss_before, active_low)
+                ss_active_after = self._is_ss_active(ss_after, active_low)
+                ss_candidates = [v for v in (ss_active_before, ss_active_after) if v is not None]
+                if not ss_candidates:
                     continue
-                if ss_active:
-                    return False, f"At busy=0 time {t}ns, ss_n={ss_v} remained active."
+                if all(ss_candidates):
+                    return False, (
+                        f"At busy=0 time {t}ns, ss_n(before)={ss_before}, ss_n(after)={ss_after} "
+                        f"remained active."
+                    )
                 checked += 1
         if checked == 0:
             return None, "No busy=0 windows found for SS idle check."
@@ -2047,10 +2277,16 @@ class ProtocolComplianceChecker:
 
         relevant_sampling_times = []
         for t in sampling_times:
-            if busy_sig is not None and self._value_at_or_before(busy_sig, t) != "1":
-                continue
-            if master_mode_sig is not None and self._value_at_or_before(master_mode_sig, t) != "1":
-                continue
+            if busy_sig is not None:
+                busy_now = self._value_at_or_before(busy_sig, t)
+                busy_pre = self._value_at_or_before(busy_sig, max(0, t - 1))
+                if busy_now != "1" and busy_pre != "1":
+                    continue
+            if master_mode_sig is not None:
+                mode_now = self._value_at_or_before(master_mode_sig, t)
+                mode_pre = self._value_at_or_before(master_mode_sig, max(0, t - 1))
+                if mode_now != "1" and mode_pre != "1":
+                    continue
             relevant_sampling_times.append(t)
 
         if not relevant_sampling_times:
@@ -2085,6 +2321,88 @@ class ProtocolComplianceChecker:
                 return False, f"No sclk transition found shortly after busy asserted at {t}ns."
             checked += 1
         return True, f"Checked SCLK activity for {checked} busy windows."
+
+    def _check_mosi_setup_hold_window(
+        self,
+        sclk_sig: Optional[Dict[str, Any]],
+        mosi_sig: Optional[Dict[str, Any]],
+        busy_sig: Optional[Dict[str, Any]],
+        cpol: int,
+        cpha: int,
+        spi_role: str,
+        master_mode_sig: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        Conservative timing-window check:
+        require MOSI changes to be at least 1ns away from active sampling edges.
+        """
+        if spi_role == "slave":
+            return True, "Skipped: slave mode MOSI timing is externally driven."
+        if not sclk_sig or not mosi_sig:
+            return None, "Missing `sclk` or `mosi` in VCD."
+
+        sclk_changes = [(t, v) for t, v in sclk_sig.get("changes", []) if v in ["0", "1"]]
+        if not sclk_changes:
+            return None, "`sclk` has no transitions."
+        mosi_change_times = sorted(set(t for t, _ in mosi_sig.get("changes", [])))
+
+        leading = "rising" if cpol == 0 else "falling"
+        sampling_edge = leading if cpha == 0 else ("falling" if leading == "rising" else "rising")
+
+        sampling_times = []
+        prev_v = None
+        for t, v in sclk_changes:
+            if prev_v is None:
+                prev_v = v
+                continue
+            if sampling_edge == "rising" and prev_v == "0" and v == "1":
+                sampling_times.append(t)
+            elif sampling_edge == "falling" and prev_v == "1" and v == "0":
+                sampling_times.append(t)
+            prev_v = v
+        if not sampling_times:
+            return None, f"No {sampling_edge} edges found on sclk."
+
+        relevant_sampling_times = []
+        for t in sampling_times:
+            if busy_sig is not None:
+                busy_now = self._value_at_or_before(busy_sig, t)
+                busy_pre = self._value_at_or_before(busy_sig, max(0, t - 1))
+                if busy_now != "1" and busy_pre != "1":
+                    continue
+            if master_mode_sig is not None:
+                mode_now = self._value_at_or_before(master_mode_sig, t)
+                mode_pre = self._value_at_or_before(master_mode_sig, max(0, t - 1))
+                if mode_now != "1" and mode_pre != "1":
+                    continue
+            relevant_sampling_times.append(t)
+        if not relevant_sampling_times:
+            return None, f"No active-transaction {sampling_edge} sampling edges found on sclk."
+
+        required_margin_ns = 1
+        violations = []
+        min_observed = None
+        for t in relevant_sampling_times:
+            nearest = min((abs(mt - t) for mt in mosi_change_times), default=None)
+            if nearest is None:
+                continue
+            if min_observed is None or nearest < min_observed:
+                min_observed = nearest
+            if nearest < required_margin_ns:
+                violations.append((t, nearest))
+
+        if violations:
+            first_t, first_d = violations[0]
+            return False, (
+                f"MOSI setup/hold violation near sampling edge {first_t}ns "
+                f"(nearest change delta={first_d}ns, required>={required_margin_ns}ns)."
+            )
+        if min_observed is None:
+            return None, "No MOSI transitions observed to evaluate setup/hold window."
+        return True, (
+            f"Checked {len(relevant_sampling_times)} sampling edges with >= {required_margin_ns}ns "
+            f"setup/hold margin (min observed {min_observed}ns)."
+        )
 
 
 if __name__ == "__main__":

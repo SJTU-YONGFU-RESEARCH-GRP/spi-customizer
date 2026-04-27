@@ -45,13 +45,16 @@ localparam SLAVE_ID = 0;  // Default slave ID
 // Mode parameters
 localparam CPOL = (MODE >> 1);  // Clock polarity
 localparam CPHA = (MODE & 1);   // Clock phase
+localparam SAMPLE_ON_RISING = (MODE == 0 || MODE == 3);
+localparam SS_ACTIVE_LEVEL = SLAVE_ACTIVE_LOW ? 1'b0 : 1'b1;
+localparam SS_INACTIVE_LEVEL = ~SS_ACTIVE_LEVEL;
 
 // =============================================
 // Internal Signals
 // =============================================
 
 // Clock domain signals
-reg [2:0] bit_counter;
+reg [15:0] bit_counter;
 reg [2:0] state, next_state;
 reg [DATA_WIDTH-1:0] shift_reg_rx;
 reg [DATA_WIDTH-1:0] shift_reg_tx;
@@ -61,7 +64,8 @@ reg miso_reg;
 // Control signals
 reg ss_n_sync, ss_n_prev;
 reg sclk_sync, sclk_prev;
-reg sample_edge, shift_edge;
+wire sample_edge, shift_edge;
+wire ss_selected, ss_released;
 
 // FIFO signals
 reg fifo_wr_en;
@@ -107,8 +111,8 @@ end
 // =============================================
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        ss_n_sync <= 1'b1;
-        ss_n_prev <= 1'b1;
+        ss_n_sync <= SS_INACTIVE_LEVEL;
+        ss_n_prev <= SS_INACTIVE_LEVEL;
         sclk_sync <= 1'b0;
         sclk_prev <= 1'b0;
     end else begin
@@ -120,20 +124,12 @@ always @(posedge clk or negedge rst_n) begin
 end
 
 // =============================================
-// Edge Detection
+// Edge Detection (combinational from synchronized clock)
 // =============================================
-always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-        sample_edge <= 1'b0;
-        shift_edge <= 1'b0;
-    end else begin
-        // Sample edge: CPHA=0 uses rising, CPHA=1 uses falling
-        sample_edge <= (CPHA == 0) ? (~sclk_prev & sclk_sync) : (sclk_prev & ~sclk_sync);
-
-        // Shift edge: opposite of sample edge
-        shift_edge <= (CPHA == 0) ? (sclk_prev & ~sclk_sync) : (~sclk_prev & sclk_sync);
-    end
-end
+assign sample_edge = SAMPLE_ON_RISING ? (~sclk_prev & sclk_sync) : (sclk_prev & ~sclk_sync);
+assign shift_edge = SAMPLE_ON_RISING ? (sclk_prev & ~sclk_sync) : (~sclk_prev & sclk_sync);
+assign ss_selected = (ss_n == SS_ACTIVE_LEVEL);
+assign ss_released = (ss_n == SS_INACTIVE_LEVEL);
 
 // =============================================
 // Main State Machine
@@ -141,7 +137,7 @@ end
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         state <= IDLE;
-        bit_counter <= 3'b000;
+        bit_counter <= 16'd0;
         shift_reg_rx <= {DATA_WIDTH{1'b0}};
         shift_reg_tx <= {DATA_WIDTH{1'b0}};
         rx_data_reg <= {DATA_WIDTH{1'b0}};
@@ -153,20 +149,20 @@ always @(posedge clk or negedge rst_n) begin
 
         case (state)
             IDLE: begin
-                bit_counter <= 3'b000;
+                bit_counter <= 16'd0;
                 busy_reg <= 1'b0;
-                if (!ss_n_sync) begin  // Slave selected
+                if (ss_selected) begin  // Slave selected
                     busy_reg <= 1'b1;
                     shift_reg_tx <= tx_valid ? tx_data : default_data;
                 end
             end
 
             RECEIVE: begin
-                if (sample_edge) begin
+                if (sample_edge && bit_counter < DATA_WIDTH) begin
                     if (MSB_FIRST) begin
-                        shift_reg_rx <= {shift_reg_rx[DATA_WIDTH-2:0], mosi};
+                        shift_reg_rx[DATA_WIDTH - 1 - bit_counter] <= mosi;
                     end else begin
-                        shift_reg_rx <= {mosi, shift_reg_rx[DATA_WIDTH-1:1]};
+                        shift_reg_rx[bit_counter] <= mosi;
                     end
                     bit_counter <= bit_counter + 1'b1;
                 end
@@ -176,10 +172,18 @@ always @(posedge clk or negedge rst_n) begin
                 if (shift_edge) begin
                     if (MSB_FIRST) begin
                         miso_reg <= shift_reg_tx[DATA_WIDTH-1];
-                        shift_reg_tx <= {shift_reg_tx[DATA_WIDTH-2:0], 1'b0};
+                        if (DATA_WIDTH > 1) begin
+                            shift_reg_tx <= {shift_reg_tx[DATA_WIDTH-2:0], 1'b0};
+                        end else begin
+                            shift_reg_tx <= 1'b0;
+                        end
                     end else begin
                         miso_reg <= shift_reg_tx[0];
-                        shift_reg_tx <= {1'b0, shift_reg_tx[DATA_WIDTH-1:1]};
+                        if (DATA_WIDTH > 1) begin
+                            shift_reg_tx <= {1'b0, shift_reg_tx[DATA_WIDTH-1:1]};
+                        end else begin
+                            shift_reg_tx <= 1'b0;
+                        end
                     end
                     bit_counter <= bit_counter + 1'b1;
                 end
@@ -192,7 +196,7 @@ always @(posedge clk or negedge rst_n) begin
 
             ERROR: begin
                 // Handle error condition
-                bit_counter <= 3'b000;
+                bit_counter <= 16'd0;
             end
         endcase
     end
@@ -206,7 +210,7 @@ always @(*) begin
 
     case (state)
         IDLE: begin
-            if (!ss_n_sync) begin  // Slave selected
+            if (ss_selected) begin  // Slave selected
                 next_state = RECEIVE;
             end
         end
@@ -218,7 +222,7 @@ always @(*) begin
         end
 
         COMPLETE: begin
-            if (ss_n_sync) begin  // Slave deselected
+            if (ss_released) begin  // Slave deselected
                 next_state = IDLE;
             end
         end
@@ -231,7 +235,7 @@ end
 // Output Assignments
 // =============================================
 assign rx_data = rx_data_reg;
-assign rx_valid = (state == COMPLETE);
+assign rx_valid = (state == COMPLETE) || ((ss_n_sync == SS_INACTIVE_LEVEL) && (bit_counter >= DATA_WIDTH));
 assign tx_ready = (state == IDLE);
 assign miso = miso_reg;
 assign busy = busy_reg;
@@ -269,6 +273,6 @@ assign fifo_rd_data = fifo_mem[fifo_rd_ptr[FIFO_WIDTH-1:0]];
 // Debug Signals (for testing)
 // =============================================
 wire [2:0] debug_state = state;
-wire [2:0] debug_bit_count = bit_counter;
+wire [15:0] debug_bit_count = bit_counter;
 
 endmodule

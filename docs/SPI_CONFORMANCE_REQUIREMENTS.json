@@ -1,0 +1,55 @@
+{
+  "version": "0.1.0",
+  "requirements": [
+    {
+      "id": "SPI-CONF-001",
+      "title": "SCLK idle level shall match CPOL during idle windows.",
+      "checks": [
+        "SCLK_idle_level_matches_CPOL"
+      ],
+      "applies_to": []
+    },
+    {
+      "id": "SPI-CONF-002",
+      "title": "Slave select shall be active while busy and inactive while not busy.",
+      "checks": [
+        "SS_n_matches_busy_window",
+        "SS_n_inactive_when_not_busy"
+      ],
+      "applies_to": []
+    },
+    {
+      "id": "SPI-CONF-003",
+      "title": "MOSI shall remain stable on sampling edges for active transactions.",
+      "checks": [
+        "MOSI_does_not_change_on_sampling_edge"
+      ],
+      "applies_to": [
+        "master",
+        "dual"
+      ]
+    },
+    {
+      "id": "SPI-CONF-004",
+      "title": "SCLK activity shall be present while transactions are active.",
+      "checks": [
+        "SCLK_activity_present_during_busy"
+      ],
+      "applies_to": [
+        "master",
+        "dual"
+      ]
+    },
+    {
+      "id": "SPI-CONF-005",
+      "title": "MOSI setup/hold margin around sampling edges shall meet minimum timing window.",
+      "checks": [
+        "MOSI_setup_hold_window_ok"
+      ],
+      "applies_to": [
+        "master",
+        "dual"
+      ]
+    }
+  ]
+}
