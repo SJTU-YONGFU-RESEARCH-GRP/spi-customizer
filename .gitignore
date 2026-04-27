@@ -107,3 +107,20 @@ test_results/
 config.bak
 
 scripts/__pycache__/
+
+# Keep full per-issue generated artifacts in repo tree
+!results/issue-*/
+!results/issue-*/code/
+!results/issue-*/code/*.v
+!results/issue-*/code/*_tb.v
+!results/issue-*/code/*.py
+!results/issue-*/code/*.json
+!results/issue-*/logs/
+!results/issue-*/logs/*.md
+!results/issue-*/logs/*.log
+!results/issue-*/data/
+!results/issue-*/data/*.vcd
+!results/issue-*/data/*.csv
+!results/issue-*/data/*.gtkw
+!results/issue-*/graphs/
+!results/issue-*/graphs/*.png
