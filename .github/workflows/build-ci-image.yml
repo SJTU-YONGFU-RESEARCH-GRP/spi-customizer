@@ -37,5 +37,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/spi-customizer-ci:latest
-            ghcr.io/${{ github.repository_owner }}/spi-customizer-ci:${{ github.sha }}
+            ghcr.io/sjtu-yongfu-research-grp/spi-customizer-ci:latest
+            ghcr.io/sjtu-yongfu-research-grp/spi-customizer-ci:${{ github.sha }}

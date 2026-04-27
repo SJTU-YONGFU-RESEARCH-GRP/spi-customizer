@@ -18,7 +18,7 @@ jobs:
   process-spi-issue:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/spi-customizer-ci:latest
+      image: ghcr.io/sjtu-yongfu-research-grp/spi-customizer-ci:latest
     concurrency:
       group: spi-issue-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number || github.event.issue.number }}
       cancel-in-progress: true
