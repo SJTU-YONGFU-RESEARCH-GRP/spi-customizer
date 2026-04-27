@@ -1,0 +1,4 @@
+Time (ns),spi_slave_tb.dut.ss_n_prev
+0,1
+430000,0
+970000,1

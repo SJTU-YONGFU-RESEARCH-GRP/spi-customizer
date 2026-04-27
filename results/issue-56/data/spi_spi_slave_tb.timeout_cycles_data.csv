@@ -1,0 +1,7 @@
+Time (ns),spi_slave_tb.timeout_cycles
+0,bx
+400000,b0
+420000,b1
+940000,b0
+960000,b1
+980000,b0

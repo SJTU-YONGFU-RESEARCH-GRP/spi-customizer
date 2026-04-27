@@ -1,0 +1,5 @@
+Time (ns),spi_slave_tb.dut.debug_state
+0,b0
+410000,b1
+670000,b11
+950000,b0

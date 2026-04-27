@@ -1,0 +1,188 @@
+SPI Signal Analysis Summary
+========================================
+
+Signal: spi_slave_tb.dut.tx_ready
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.rx_valid
+  Width: 1 bits
+  Changes: 4
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.rx_data
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.miso
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.irq
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.busy
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.clk
+  Width: 1 bits
+  Changes: 99
+  Current Value: 0
+
+Signal: spi_slave_tb.expected_rx
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.mosi
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.rst_n
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.rx_valid_seen
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.sclk
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.ss_n
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.tx_data
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_slave_tb.i
+  Width: 32 bits
+  Changes: 3
+  Current Value: b1
+
+Signal: spi_slave_tb.timeout_cycles
+  Width: 32 bits
+  Changes: 6
+  Current Value: b0
+
+Signal: spi_slave_tb.dut.debug_bit_count
+  Width: 16 bits
+  Changes: 3
+  Current Value: b0
+
+Signal: spi_slave_tb.dut.debug_state
+  Width: 3 bits
+  Changes: 4
+  Current Value: b0
+
+Signal: spi_slave_tb.dut.irq_clear
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.sample_edge
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.shift_edge
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.ss_released
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.ss_selected
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.bit_counter
+  Width: 16 bits
+  Changes: 3
+  Current Value: b0
+
+Signal: spi_slave_tb.dut.busy_reg
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.default_data
+  Width: 1 bits
+  Changes: 1
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.irq_reg
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.miso_reg
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.next_state
+  Width: 3 bits
+  Changes: 4
+  Current Value: b0
+
+Signal: spi_slave_tb.dut.rx_data_reg
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.sclk_prev
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.sclk_sync
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.shift_reg_rx
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.shift_reg_tx
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_slave_tb.dut.ss_n_prev
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.ss_n_sync
+  Width: 1 bits
+  Changes: 3
+  Current Value: 1
+
+Signal: spi_slave_tb.dut.state
+  Width: 3 bits
+  Changes: 4
+  Current Value: b0
+

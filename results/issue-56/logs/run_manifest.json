@@ -1,0 +1,46 @@
+{
+  "issue_number": 56,
+  "issue_body_sha256": "e738ddc5636c1c438d86a291add8a8739668113685325bcdeedb1c4b4e10d341",
+  "config": {
+    "mode": 0,
+    "data_width": 1,
+    "num_slaves": 3,
+    "selected_slave": 0,
+    "slave_active_low": true,
+    "msb_first": false,
+    "interrupts": true,
+    "fifo_buffers": false,
+    "dma_support": false,
+    "multi_master": false,
+    "test_duration": "Standard",
+    "clock_jitter_test": true,
+    "waveform_capture": true,
+    "spi_role": "slave",
+    "clock_divider": 2,
+    "fifo_depth": 16,
+    "max_slaves": 8
+  },
+  "generated_files": {
+    "core_file": "code/spi_slave_mode0_1bit.v",
+    "tb_file": "code/spi_slave_tb.v",
+    "expected_vcd": "data/spi_waveform.vcd"
+  },
+  "tools": {
+    "iverilog": "Icarus Verilog version 11.0 (stable) ()",
+    "vvp": "Icarus Verilog runtime version 11.0 (stable) ()",
+    "python": "Python 3.10.12"
+  },
+  "verification_spec": {
+    "spi_role": "slave",
+    "mode": 0,
+    "cpol": 0,
+    "cpha": 0,
+    "data_width": 1,
+    "num_slaves": 3,
+    "selected_slave": 0,
+    "slave_active_low": true,
+    "bit_order": "lsb_first",
+    "intent": "",
+    "acceptance_criteria": []
+  }
+}

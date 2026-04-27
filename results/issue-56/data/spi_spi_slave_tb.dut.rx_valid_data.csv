@@ -1,0 +1,5 @@
+Time (ns),spi_slave_tb.dut.rx_valid
+0,0
+670000,1
+950000,1
+970000,0

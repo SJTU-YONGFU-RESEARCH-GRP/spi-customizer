@@ -1,0 +1,4 @@
+Time (ns),spi_slave_tb.dut.sclk
+0,0
+620000,1
+720000,0

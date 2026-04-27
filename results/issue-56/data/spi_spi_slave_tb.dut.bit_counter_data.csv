@@ -1,0 +1,4 @@
+Time (ns),spi_slave_tb.dut.bit_counter
+0,b0
+650000,b1
+970000,b0

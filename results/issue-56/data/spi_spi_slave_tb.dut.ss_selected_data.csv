@@ -1,0 +1,4 @@
+Time (ns),spi_slave_tb.dut.ss_selected
+0,0
+400000,1
+940000,0

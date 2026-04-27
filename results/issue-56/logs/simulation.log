@@ -1,0 +1,15 @@
+Icarus Verilog simulation log
+==================================================
+Command: /usr/bin/vvp -n results/issue-56/data/spi_simulation
+Simulation time: 100us
+VCD file: results/issue-56/data/spi_waveform.vcd
+Working directory: /__w/spi-customizer/spi-customizer
+
+Return code: 0
+STDOUT:
+VCD info: dumpfile results/issue-56/data/spi_waveform.vcd opened for output.
+=== SPI Slave RTL Testbench Starting ===
+Configuration: Mode           0,           1-bit data, Slave mode
+--- Testing Slave with Deterministic Transaction ---
+=== All Slave Tests Completed Successfully ===
+

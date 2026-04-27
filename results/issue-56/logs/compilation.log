@@ -1,0 +1,21 @@
+Icarus Verilog compilation log
+==================================================
+Command: /usr/bin/iverilog -g2012 -o results/issue-56/data/spi_simulation results/issue-56/code/spi_slave_mode0_1bit.v results/issue-56/code/spi_slave_tb.v
+Working directory: /__w/spi-customizer/spi-customizer
+Return code: 0
+STDERR:
+results/issue-56/code/spi_slave_mode0_1bit.v:14: warning: Numeric constant truncated to 1 bits.
+results/issue-56/code/spi_slave_mode0_1bit.v:100: warning: extra digits given for sized hex constant.
+results/issue-56/code/spi_slave_mode0_1bit.v:100: warning: Numeric constant truncated to 1 bits.
+results/issue-56/code/spi_slave_mode0_1bit.v:101: warning: extra digits given for sized hex constant.
+results/issue-56/code/spi_slave_mode0_1bit.v:101: warning: Numeric constant truncated to 1 bits.
+results/issue-56/code/spi_slave_mode0_1bit.v:102: warning: extra digits given for sized hex constant.
+results/issue-56/code/spi_slave_mode0_1bit.v:103: warning: extra digits given for sized hex constant.
+results/issue-56/code/spi_slave_mode0_1bit.v:103: warning: Numeric constant truncated to 1 bits.
+results/issue-56/code/spi_slave_tb.v:19: warning: Numeric constant truncated to 1 bits.
+results/issue-56/code/spi_slave_tb.v:95: warning: extra digits given for sized hex constant.
+results/issue-56/code/spi_slave_tb.v:95: warning: Numeric constant truncated to 1 bits.
+results/issue-56/code/spi_slave_tb.v:96: warning: extra digits given for sized hex constant.
+results/issue-56/code/spi_slave_tb.v:96: warning: Numeric constant truncated to 1 bits.
+
+Compilation: SUCCESS

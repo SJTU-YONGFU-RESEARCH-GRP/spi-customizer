@@ -1,0 +1,4 @@
+Time (ns),spi_slave_tb.dut.shift_edge
+0,0
+730000,1
+750000,0

@@ -1,0 +1,5 @@
+Time (ns),spi_slave_tb.dut.next_state
+0,b0
+400000,b1
+650000,b11
+940000,b0

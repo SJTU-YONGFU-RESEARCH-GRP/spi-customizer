@@ -1,0 +1,4 @@
+Time (ns),spi_slave_tb.dut.busy_reg
+0,0
+410000,1
+970000,0
