@@ -47,3 +47,4 @@ Switch from agent-specific GitHub paths to a single finalized issue-driven gener
 | 2026-04-28 03:42 | 4 | DONE | Fixed GHCR tag casing bug by switching image references to lowercase org path `ghcr.io/sjtu-yongfu-research-grp/spi-customizer-ci:*` |
 | 2026-04-28 03:45 | 4 | DONE | Fixed container dependency resolution by installing `python3-numpy/python3-matplotlib` via apt and switching pip install to `tools/requirements-minimal.txt` |
 | 2026-04-28 03:50 | 4 | DONE | Fixed Docker build hang on `tzdata` prompt by setting non-interactive apt environment (`DEBIAN_FRONTEND=noninteractive`, `TZ=Etc/UTC`) |
+| 2026-04-28 04:20 | 4 | DONE | Fixed `spi-automation` commit step in container mode by setting `git safe.directory` to `$GITHUB_WORKSPACE` before staging/pushing generated issue results |
