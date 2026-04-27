@@ -65,7 +65,7 @@ jobs:
           fi
 
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git add "$ISSUE_PATH"
+          git add -f "$ISSUE_PATH"
           if git diff --cached --quiet; then
             echo "No changes to commit for $ISSUE_PATH"
             exit 0
