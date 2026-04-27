@@ -208,7 +208,8 @@ class SPIConfigParser:
         # Enhanced features
         default_data_val = self._extract_form_or_regex(issue_body, 'default_data', self.patterns['default_data']) or 'Disabled'
         params['default_data_enabled'] = 'enabled' in default_data_val.lower()
-        params['default_data_pattern'] = self._extract_form_or_regex(issue_body, 'data_pattern', self.patterns['data_pattern']) or 'a5a5'
+        raw_pattern = self._extract_form_or_regex(issue_body, 'data_pattern', self.patterns['data_pattern']) or 'a5a5'
+        params['default_data_pattern'] = self._normalize_data_pattern(raw_pattern)
         params['default_data_value'] = self._extract_form_or_regex(issue_body, 'custom_data', self.patterns['custom_data']) or 'A5A5'
 
         # Advanced configuration
@@ -306,6 +307,24 @@ class SPIConfigParser:
         if form_value:
             return form_value.strip()
         return self._extract_single(text, regex_pattern)
+
+    def _normalize_data_pattern(self, raw: str) -> str:
+        """
+        Normalize issue-form dropdown text to canonical pattern tokens.
+        Examples:
+          "FFFF (all ones)" -> "ffff"
+          "A5A5 (alternating pattern)" -> "a5a5"
+        """
+        value = (raw or "").strip().lower()
+        value = re.sub(r"\s*\(.*\)\s*$", "", value)
+        aliases = {
+            "a5a5": "a5a5",
+            "ffff": "ffff",
+            "0000": "0000",
+            "5555": "5555",
+            "custom": "custom",
+        }
+        return aliases.get(value, value)
 
     def _validate_config(self, params: Dict[str, Any]) -> None:
         """Validate the parsed configuration parameters"""
