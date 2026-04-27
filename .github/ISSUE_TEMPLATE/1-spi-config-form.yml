@@ -1,20 +1,13 @@
-name: "🗃️ Legacy: SPI Configuration (parameter-only)"
-description: Legacy parameter-only form. Prefer intent-driven templates (Spec / Verification / Debug) for flexibility.
-title: "Legacy SPI Config (parameters only): [Brief description]"
+name: "🗃️ SPI Configuration (parameter-only)"
+description: Submit SPI configuration requirements for generation and verification.
+title: "SPI Config (parameters only): [Brief description]"
 labels: ["spi-customization", "enhancement"]
 assignees: []
 body:
   - type: markdown
     attributes:
       value: |
-        ## Legacy SPI Configuration (parameter-only)
-
-        This legacy form is **parameter-only** and is less flexible than the intent-driven workflows.
-
-        Prefer these templates for most work:
-        - **SPI Spec (intent-driven)**: captures behavior + acceptance criteria
-        - **SPI Verification / Compliance**: captures what must be proven
-        - **SPI Debug / Triage**: captures symptoms + evidence
+        ## SPI Configuration (parameter-only)
 
         Please provide the following details for your custom SPI configuration:
   - type: input

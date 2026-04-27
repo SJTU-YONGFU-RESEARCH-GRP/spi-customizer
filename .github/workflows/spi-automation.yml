@@ -1,4 +1,7 @@
 name: SPI Automation
+run-name: >-
+  SPI Automation #${{ github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number || github.event.issue.number }}:
+  issue by ${{ github.actor }}
 
 on:
   issues:
@@ -74,7 +77,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git commit -m "chore(results): update issue-${{ steps.issue.outputs.number }} artifacts"
+          git commit -m "🤖 Auto-generated results for issue #${{ steps.issue.outputs.number }}"
           for attempt in 1 2 3; do
             if git push origin "HEAD:${BRANCH}"; then
               echo "Push succeeded on attempt ${attempt}"
