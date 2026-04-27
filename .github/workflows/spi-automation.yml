@@ -1,24 +1,97 @@
-name: SPI Customizer (Agent-driven)
+name: SPI Automation
 
 on:
+  issues:
+    types: [opened, edited, reopened]
   workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to process manually"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
 
 jobs:
-  agent-driven-notice:
+  process-spi-issue:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/spi-customizer-ci:latest
+    concurrency:
+      group: spi-issue-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number || github.event.issue.number }}
+      cancel-in-progress: true
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'issues' &&
+        github.actor != 'github-actions[bot]' &&
+        contains(github.event.issue.body, '### SPI Mode') &&
+        contains(github.event.issue.body, '### Data Width')
+      )
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Agent-driven workflow notice
-      run: |
-        echo "This repository is pure agent-driven."
-        echo ""
-        echo "- GitHub Issues encode intent (use templates 5 / 6 / 7 for spec, verify, debug)."
-        echo "- Copilot (as a coding agent) reads the issue and the per-template instruction"
-        echo "  files under .github/instructions/ then performs generation, verification,"
-        echo "  and debugging directly — no scripts are auto-executed by CI."
-        echo ""
-        echo "Artifact packaging: if you want to bundle artifacts already produced under"
-        echo "results/issue-<n>/ extend this workflow with an upload-artifact step."
+      - name: Set issue number
+        id: issue
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "number=${{ github.event.inputs.issue_number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run SPI generation and simulation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 scripts/process_issue.py "${{ steps.issue.outputs.number }}"
+
+      - name: Commit and push generated issue results
+        shell: bash
+        run: |
+          ISSUE_PATH="results/issue-${{ steps.issue.outputs.number }}"
+          BRANCH="${GITHUB_REF_NAME}"
+          if [ ! -d "$ISSUE_PATH" ]; then
+            echo "No generated issue directory found at $ISSUE_PATH"
+            exit 1
+          fi
+
+          git add "$ISSUE_PATH"
+          if git diff --cached --quiet; then
+            echo "No changes to commit for $ISSUE_PATH"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git commit -m "chore(results): update issue-${{ steps.issue.outputs.number }} artifacts"
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${BRANCH}"; then
+              echo "Push succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "Push failed on attempt ${attempt}; rebasing and retrying..."
+            git fetch origin "${BRANCH}"
+            git pull --rebase origin "${BRANCH}"
+          done
+
+          echo "Failed to push after 3 attempts"
+          exit 1
+
+      - name: Upload issue artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spi-results-${{ steps.issue.outputs.number }}
+          path: |
+            results/issue-${{ steps.issue.outputs.number }}/
+          if-no-files-found: warn

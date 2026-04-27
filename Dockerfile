@@ -3,7 +3,6 @@ FROM ubuntu:22.04
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     iverilog \
-    gtkwave \
     python3 \
     python3-pip \
     make \
