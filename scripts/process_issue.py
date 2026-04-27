@@ -70,7 +70,7 @@ class GitHubIssueProcessor:
             return None
 
     def update_issue_status(self, status: str, body: str = ""):
-        """Update GitHub issue with processing status (no-op in local mode)"""
+        """Update labels/state and post status comment without mutating issue body."""
         # In local test mode or without token, just print the update
         if os.environ.get("LOCAL_DRY_RUN") == "1" or not self.token:
             print(f"📝 [LOCAL] Would update issue #{self.issue_number} with status '{status}'")
@@ -86,7 +86,7 @@ class GitHubIssueProcessor:
             'Content-Type': 'application/json'
         }
 
-        data = {'body': body}
+        data = {}
 
         if status == 'processing':
             data['labels'] = ['in-progress']
@@ -96,11 +96,18 @@ class GitHubIssueProcessor:
         elif status == 'failed':
             data['labels'] = ['failed']
 
-        url = f"{self.api_base}/{self.repo_owner}/{self.repo_name}/issues/{self.issue_number}"
-        response = requests.patch(url, headers=headers, json=data)
+        issue_url = f"{self.api_base}/{self.repo_owner}/{self.repo_name}/issues/{self.issue_number}"
+        response = requests.patch(issue_url, headers=headers, json=data)
 
         if response.status_code == 200:
             print(f"✅ Issue #{self.issue_number} updated with status: {status}")
+            if body:
+                comment_url = f"{issue_url}/comments"
+                comment_resp = requests.post(comment_url, headers=headers, json={"body": body})
+                if comment_resp.status_code == 201:
+                    print(f"✅ Posted status comment for issue #{self.issue_number}")
+                else:
+                    print(f"⚠️ Failed to post status comment: {comment_resp.status_code}")
         else:
             print(f"❌ Failed to update issue: {response.status_code}")
             try:
