@@ -3,7 +3,7 @@
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![Verilog](https://img.shields.io/badge/Verilog-IEEE%201364-orange.svg)](https://en.wikipedia.org/wiki/Verilog)
-[![Workflow](https://img.shields.io/badge/Workflow-Agent--driven-blue)](https://github.com/features/copilot)
+[![Workflow](https://img.shields.io/badge/Workflow-Issue--driven-blue)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/actions)
 [![Issues](https://img.shields.io/github/issues/SJTU-YONGFU-RESEARCH-GRP/spi-customizer)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/SJTU-YONGFU-RESEARCH-GRP/spi-customizer?style=flat-square&logo=github&color=ffdd00&label=⭐%20Stars&v=1)](https://github.com/SJTU-YONGFU-RESEARCH-GRP/spi-customizer/stargazers)
 
@@ -50,14 +50,14 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 - 🔧 **Automatic Code Generation**: Generates Verilog code based on your specifications
 - 🧪 **RTL Simulation**: Tests generated designs with comprehensive testbenches
 - 📊 **Waveform Generation**: Creates timing diagrams and performance plots
-- 🧭 **Agent-driven workflow**: GitHub Issues encode intent; a Copilot agent handles generation and verification
+- ⚙️ **Issue-driven workflow**: GitHub Issues trigger generation, simulation, and artifact publishing via GitHub Actions
 
 ## How It Works
 
 1. **File an Issue**: Use the GitHub issue template to specify your SPI configuration
 2. **Automatic Processing**: The system parses your requirements and generates custom code
 3. **RTL Testing**: Generated Verilog is compiled and simulated with testbenches
-4. **Results Delivery**: Results are posted back to the issue with downloadable artifacts
+4. **Results Delivery**: Results are committed under `results/issue-<n>/` and uploaded as workflow artifacts
 5. **Issue Updates**: The GitHub issue is updated with progress and final results
 
 ## Quick Start
@@ -65,7 +65,7 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 ### For Users: Requesting a Custom SPI Core
 
 1. Go to the **Issues** tab and click **New Issue**
-2. Select **SPI Configuration Request** template
+2. Select **SPI Configuration (parameter-only)** template
 3. Fill in your SPI configuration:
    - **SPI Mode** (0-3)
    - **Data Width** (bits)
@@ -113,7 +113,7 @@ A GitHub-based system for automatic generation of custom SPI (Serial Peripheral 
 - **Issue Parser** (`scripts/config_parser.py`): Extracts SPI parameters from GitHub issues
 - **Verilog Generator** (`scripts/verilog_generator.py`): Creates custom SPI cores
 - **RTL Simulator** (`scripts/simulator_runner.py`): Runs simulations and generates waveforms
-- **Agent instructions** (`.github/copilot-instructions.md`): Defines the agent workflow and required artifacts
+- **Automation Workflow** (`.github/workflows/spi-automation.yml`): Runs issue processing, simulation, and artifact publishing
 
 ### Generated Files
 
@@ -159,13 +159,14 @@ docker build -t spi-customizer .
 docker run -it spi-customizer
 ```
 
-### Workflow (Agent-driven)
+### Workflow (GitHub Actions)
 
-This repository is designed to be **pure agent-driven**:
+This repository is designed to be **issue-driven and script-automated**:
 
-1. Users file issues that encode design/verification/debug intent
-2. A Copilot agent explores the repo, modifies templates/code as needed, and produces artifacts + evidence
-3. The agent reports reasoning and results back into the issue
+1. Users file issues using `/.github/ISSUE_TEMPLATE/1-spi-config-form.yml`
+2. `spi-automation.yml` runs `scripts/process_issue.py` for the issue
+3. Generated outputs are committed to `results/issue-<n>/` and uploaded as run artifacts
+4. Status/progress is posted back to the issue
 
 ## Testing
 
