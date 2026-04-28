@@ -1,0 +1,4 @@
+Time (ns),spi_dual_tb.dut.slave_ss_last_state
+0,1
+2790000,0
+5890000,1

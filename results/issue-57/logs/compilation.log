@@ -1,0 +1,12 @@
+Icarus Verilog compilation log
+==================================================
+Command: /usr/bin/iverilog -g2012 -o results/issue-57/data/spi_simulation results/issue-57/code/spi_dual_mode0_30bit.v results/issue-57/code/spi_dual_tb.v
+Working directory: /__w/spi-customizer/spi-customizer
+Return code: 0
+STDERR:
+results/issue-57/code/spi_dual_mode0_30bit.v:17: warning: Numeric constant truncated to 30 bits.
+results/issue-57/code/spi_dual_tb.v:20: warning: Numeric constant truncated to 30 bits.
+results/issue-57/code/spi_dual_tb.v:24: warning: Numeric constant truncated to 30 bits.
+results/issue-57/code/spi_dual_tb.v:115: warning: Numeric constant truncated to 30 bits.
+
+Compilation: SUCCESS

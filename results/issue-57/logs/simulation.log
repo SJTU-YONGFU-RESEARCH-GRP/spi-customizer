@@ -1,0 +1,22 @@
+Icarus Verilog simulation log
+==================================================
+Command: /usr/bin/vvp -n results/issue-57/data/spi_simulation
+Simulation time: 100us
+VCD file: results/issue-57/data/spi_waveform.vcd
+Working directory: /__w/spi-customizer/spi-customizer
+
+Return code: 0
+STDOUT:
+VCD info: dumpfile results/issue-57/data/spi_waveform.vcd opened for output.
+=== SPI Dual Mode RTL Testbench Starting ===
+Configuration: Mode           0,          30-bit data, Dual mode
+--- Testing Master Mode ---
+TX Data: 0x25a5a5a5
+Master transmission complete
+--- Switched to Slave Mode ---
+Simulating SPI master transaction to test slave mode
+Slave selected (SS active=0)
+Slave mode SPI transaction complete - sent 0x1a5a5a5a (30 bits)
+Slave RX matched expected payload: 0x1a5a5a5a
+=== All Dual Mode Tests Completed Successfully ===
+

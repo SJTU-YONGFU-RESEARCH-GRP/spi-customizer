@@ -1,0 +1,3 @@
+Time (ns),spi_dual_tb.expected_slave_rx
+0,bx
+2790000,b11010010110100101101001011010

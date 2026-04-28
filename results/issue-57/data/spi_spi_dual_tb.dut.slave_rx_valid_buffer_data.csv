@@ -1,0 +1,4 @@
+Time (ns),spi_dual_tb.dut.slave_rx_valid_buffer
+0,0
+5890000,1
+5910000,0

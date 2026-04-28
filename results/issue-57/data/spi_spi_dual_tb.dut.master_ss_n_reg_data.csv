@@ -1,0 +1,4 @@
+Time (ns),spi_dual_tb.dut.master_ss_n_reg
+0,b1111
+310000,b1101
+2170000,b1111
