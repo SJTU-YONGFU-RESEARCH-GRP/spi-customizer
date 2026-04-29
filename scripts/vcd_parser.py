@@ -1341,6 +1341,7 @@ class SummaryGenerator:
 
         # Read simulation log
         sim_log = self._read_simulation_log()
+        simulation_ok = self._simulation_succeeded()
 
         # Read signal summary
         signal_stats = self._read_signal_summary()
@@ -1388,7 +1389,7 @@ class SummaryGenerator:
 ## 📊 Waveform Visualization
 
 ### Complete Signal Analysis
-![All Signals Waveform](spi_all_signals.png)
+![All Signals Waveform](../graphs/spi_all_signals.png)
 
 *Figure 1: Complete SPI signal analysis showing all monitored signals over the simulation period. Each signal is displayed in its own subplot for optimal readability.*
 
@@ -1475,7 +1476,7 @@ class SummaryGenerator:
             slave_select='Active Low' if config.get('slave_active_low') else 'Active High',
             data_order='MSB First' if config.get('msb_first') else 'LSB First',
             test_duration=config.get('test_duration', 'Unknown'),
-            simulation_status='✅ PASSED' if config.get('simulation_success') else '❌ FAILED',
+            simulation_status='✅ PASSED' if simulation_ok else '❌ FAILED',
             interrupts='✅ Enabled' if config.get('interrupts') else '❌ Disabled',
             fifo_buffers='✅ Enabled' if config.get('fifo_buffers') else '❌ Disabled',
             dma_support='✅ Enabled' if config.get('dma_support') else '❌ Disabled',
@@ -1555,6 +1556,21 @@ class SummaryGenerator:
 
             return "\n".join(formatted_lines) if formatted_lines else "No simulation log available"
         return "No simulation log available"
+
+    def _simulation_succeeded(self) -> bool:
+        """Determine simulation pass/fail from simulation.log evidence."""
+        log_file = self.logs_dir / 'simulation.log'
+        if not log_file.exists():
+            return False
+        try:
+            content = log_file.read_text(encoding='utf-8', errors='ignore')
+        except Exception:
+            return False
+        if "Return code: 0" not in content:
+            return False
+        if "FATAL:" in content:
+            return False
+        return True
 
     def _read_signal_summary(self) -> str:
         """Read and format signal summary"""
@@ -1649,17 +1665,17 @@ class SummaryGenerator:
 The visualization is organized into logical signal groups for better analysis:
 
 **Input/Output Ports**:
-![Input/Output Ports](spi_io_ports.png)
+![Input/Output Ports](../graphs/spi_io_ports.png)
 
 *Figure 2: Input and output ports showing SPI data flow between master and slave devices.*
 
 **Input Ports Only**:
-![Input Ports](spi_input_ports.png)
+![Input Ports](../graphs/spi_input_ports.png)
 
 *Figure 3: Input ports (SCLK, MOSI, SS_N) showing master-to-slave communication signals.*
 
 **Output Ports Only**:
-![Output Ports](spi_output_ports.png)
+![Output Ports](../graphs/spi_output_ports.png)
 
 *Figure 4: Output ports (MISO, IRQ) showing slave-to-master communication signals.*
 
@@ -1667,37 +1683,37 @@ The visualization is organized into logical signal groups for better analysis:
 For detailed signal examination, individual plots are provided for each signal:
 
 **SCLK (Serial Clock)**:
-![SCLK Individual](spi_sclk_individual.png)
+![SCLK Individual](../graphs/spi_sclk_individual.png)
 
 *Figure 5: SCLK signal showing clock transitions and timing characteristics.*
 
 **MOSI (Master Out Slave In)**:
-![MOSI Individual](spi_mosi_individual.png)
+![MOSI Individual](../graphs/spi_mosi_individual.png)
 
 *Figure 6: MOSI signal showing data transmission from master to slave.*
 
 **MISO (Master In Slave Out)**:
-![MISO Individual](spi_miso_individual.png)
+![MISO Individual](../graphs/spi_miso_individual.png)
 
 *Figure 7: MISO signal showing data reception from slave to master.*
 
 **SS_N (Slave Select)**:
-![SS_N Individual](spi_ss_n_individual.png)
+![SS_N Individual](../graphs/spi_ss_n_individual.png)
 
 *Figure 8: Slave select signal showing device selection timing.*
 
 **BUSY Signal**:
-![BUSY Individual](spi_busy_individual.png)
+![BUSY Individual](../graphs/spi_busy_individual.png)
 
 *Figure 9: BUSY signal indicating SPI controller status.*
 
 **IRQ (Interrupt Request)**:
-![IRQ Individual](spi_irq_individual.png)
+![IRQ Individual](../graphs/spi_irq_individual.png)
 
 *Figure 10: Interrupt signal showing exception conditions.*
 
 **DATA Bus**:
-![DATA Individual](spi_data_individual.png)
+![DATA Individual](../graphs/spi_data_individual.png)
 
 *Figure 11: Internal data bus showing parallel data processing.*
 
@@ -1971,8 +1987,7 @@ For detailed signal examination, individual plots are provided for each signal:
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def _get_protocol_compliance_status(self) -> str:
-        config = self._read_config()
-        sim_ok = bool(config.get("simulation_success"))
+        sim_ok = self._simulation_succeeded()
         report = self.logs_dir / "protocol_compliance.md"
         if sim_ok and report.exists():
             return "`✅ Evidence-based checks generated`"
