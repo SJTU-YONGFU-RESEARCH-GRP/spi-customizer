@@ -1,0 +1,178 @@
+SPI Signal Analysis Summary
+========================================
+
+Signal: spi_master_tb.ss_n
+  Width: 8 bits
+  Changes: 60
+  Current Value: b11111111
+
+Signal: spi_master_tb.dut.sclk
+  Width: 1 bits
+  Changes: 161
+  Current Value: 1
+
+Signal: spi_master_tb.rx_data
+  Width: 16 bits
+  Changes: 4
+  Current Value: b1111111111111111
+
+Signal: spi_master_tb.dut.mosi
+  Width: 1 bits
+  Changes: 60
+  Current Value: 1
+
+Signal: spi_master_tb.dut.irq
+  Width: 1 bits
+  Changes: 11
+  Current Value: 0
+
+Signal: spi_master_tb.dut.busy
+  Width: 1 bits
+  Changes: 11
+  Current Value: 0
+
+Signal: spi_master_tb.dut.clk
+  Width: 1 bits
+  Changes: 1368
+  Current Value: 1
+
+Signal: spi_master_tb.dut.miso
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_master_tb.dut.rst_n
+  Width: 1 bits
+  Changes: 2
+  Current Value: 1
+
+Signal: spi_master_tb.dut.start_rx
+  Width: 1 bits
+  Changes: 3
+  Current Value: 0
+
+Signal: spi_master_tb.dut.start_tx
+  Width: 1 bits
+  Changes: 9
+  Current Value: 0
+
+Signal: spi_master_tb.tx_data
+  Width: 16 bits
+  Changes: 5
+  Current Value: b1010101111001101
+
+Signal: spi_master_tb.ss_idx
+  Width: 32 bits
+  Changes: 11
+  Current Value: b1000
+
+Signal: spi_master_tb.timeout_cycles
+  Width: 32 bits
+  Changes: 642
+  Current Value: b10000010
+
+Signal: spi_master_tb.dut.CPHA
+  Width: 1 bits
+  Changes: 1
+  Current Value: 1
+
+Signal: spi_master_tb.dut.CPOL
+  Width: 1 bits
+  Changes: 1
+  Current Value: 1
+
+Signal: spi_master_tb.dut.SS_ACTIVE
+  Width: 1 bits
+  Changes: 1
+  Current Value: 0
+
+Signal: spi_master_tb.dut.tx_data
+  Width: 16 bits
+  Changes: 5
+  Current Value: b1010101111001101
+
+Signal: spi_master_tb.dut.bit_counter
+  Width: 16 bits
+  Changes: 85
+  Current Value: b10000
+
+Signal: spi_master_tb.dut.clk_counter
+  Width: 16 bits
+  Changes: 651
+  Current Value: b0
+
+Signal: spi_master_tb.dut.default_data
+  Width: 16 bits
+  Changes: 1
+  Current Value: b1010010110100101
+
+Signal: spi_master_tb.dut.last_sclk
+  Width: 1 bits
+  Changes: 161
+  Current Value: 1
+
+Signal: spi_master_tb.dut.next_state
+  Width: 3 bits
+  Changes: 24
+  Current Value: b0
+
+Signal: spi_master_tb.dut.rx_data
+  Width: 16 bits
+  Changes: 4
+  Current Value: b1111111111111111
+
+Signal: spi_master_tb.dut.rx_shift_reg
+  Width: 16 bits
+  Changes: 50
+  Current Value: b1111111111111111
+
+Signal: spi_master_tb.dut.sclk_gen
+  Width: 1 bits
+  Changes: 161
+  Current Value: 1
+
+Signal: spi_master_tb.dut.ss_n
+  Width: 8 bits
+  Changes: 60
+  Current Value: b11111111
+
+Signal: spi_master_tb.dut.state
+  Width: 3 bits
+  Changes: 21
+  Current Value: b0
+
+Signal: spi_master_tb.dut.tx_shift_reg
+  Width: 16 bits
+  Changes: 78
+  Current Value: b0
+
+Signal: spi_master_tb.assert_all_ss_inactive.tag
+  Width: 256 bits
+  Changes: 6
+  Current Value: b11101000110010101110011011101000011010001011111011000110110111101101110011001100110100101100111010111110110001101101111011011010111000001101100011001010111010001100101
+
+Signal: spi_master_tb.assert_selected_ss_active.tag
+  Width: 256 bits
+  Changes: 6
+  Current Value: b11101000110010101110011011101000011010001011111011000110110111101101110011001100110100101100111
+
+Signal: spi_master_tb.wait_for_busy_assert.tag
+  Width: 256 bits
+  Changes: 6
+  Current Value: b11101000110010101110011011101000011010001011111011000110110111101101110011001100110100101100111
+
+Signal: spi_master_tb.wait_for_busy_assert.max_cycles
+  Width: 32 bits
+  Changes: 2
+  Current Value: b11111010000
+
+Signal: spi_master_tb.wait_for_not_busy.tag
+  Width: 256 bits
+  Changes: 6
+  Current Value: b11101000110010101110011011101000011010001011111011000110110111101101110011001100110100101100111
+
+Signal: spi_master_tb.wait_for_not_busy.max_cycles
+  Width: 32 bits
+  Changes: 2
+  Current Value: b100111000100000
+

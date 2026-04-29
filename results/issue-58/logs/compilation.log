@@ -1,0 +1,6 @@
+Icarus Verilog compilation log
+==================================================
+Command: /usr/bin/iverilog -g2012 -o results/issue-58/data/spi_simulation results/issue-58/code/spi_master_mode3_16bit.v results/issue-58/code/spi_master_tb.v
+Working directory: /__w/spi-customizer/spi-customizer
+Return code: 0
+Compilation: SUCCESS
