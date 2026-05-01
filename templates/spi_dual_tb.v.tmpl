@@ -20,6 +20,8 @@ module spi_dual_tb;
     parameter DEFAULT_DATA_VALUE = {{ data_width }}'h{{ default_data_value }};
     localparam SS_ACTIVE = SLAVE_ACTIVE_LOW ? 1'b0 : 1'b1;
     localparam SS_INACTIVE = ~SS_ACTIVE;
+    localparam CPOL = (MODE == 2 || MODE == 3) ? 1'b1 : 1'b0;
+    localparam CPHA = (MODE == 1 || MODE == 3) ? 1'b1 : 1'b0;
     localparam integer SLAVE_TEST_BITS = DATA_WIDTH;
     localparam [DATA_WIDTH-1:0] SLAVE_TEST_WORD = {{ data_width }}'h{{ '5A' * ((data_width + 7) // 8) }};
 
@@ -96,7 +98,7 @@ module spi_dual_tb;
         tx_data = 0;
         tx_valid = 0;
         miso = 0;
-        sclk_in = (MODE == 2 || MODE == 3) ? 1 : 0; // CPOL idle state
+        sclk_in = CPOL; // CPOL idle state
         mosi_in = 0;
         ss_in = SS_INACTIVE;
         slave_rx_valid_seen = 0;
@@ -165,19 +167,33 @@ module spi_dual_tb;
         // Send full DATA_WIDTH transaction and expect exact match.
         expected_slave_rx = SLAVE_TEST_WORD;
 
+        // CPHA-aware external-master drive:
+        // - CPHA=0: set MOSI before leading edge so slave samples on leading edge.
+        // - CPHA=1: change MOSI on leading edge so slave samples on trailing edge.
         for (i = 0; i < SLAVE_TEST_BITS; i = i + 1) begin
-            if (MSB_FIRST)
-                mosi_in = SLAVE_TEST_WORD[DATA_WIDTH - 1 - i];
-            else
-                mosi_in = SLAVE_TEST_WORD[i];
-            #50;
-            sclk_in = {% if mode in [0,3] %}1{% else %}0{% endif %}; // Leading edge
-            #50;
-            sclk_in = {% if mode in [0,3] %}0{% else %}1{% endif %}; // Trailing edge
+            if (!CPHA) begin
+                if (MSB_FIRST)
+                    mosi_in = SLAVE_TEST_WORD[DATA_WIDTH - 1 - i];
+                else
+                    mosi_in = SLAVE_TEST_WORD[i];
+                #50;
+                sclk_in = ~CPOL; // Leading edge
+                #50;
+                sclk_in = CPOL;  // Trailing edge
+            end else begin
+                #50;
+                sclk_in = ~CPOL; // Leading edge
+                if (MSB_FIRST)
+                    mosi_in = SLAVE_TEST_WORD[DATA_WIDTH - 1 - i];
+                else
+                    mosi_in = SLAVE_TEST_WORD[i];
+                #50;
+                sclk_in = CPOL;  // Trailing edge (sampling edge for CPHA=1)
+            end
         end
 
         // Return clock to idle
-        sclk_in = (MODE == 2 || MODE == 3) ? 1 : 0;
+        sclk_in = CPOL;
 
         // End transaction: deassert SS
         #100;

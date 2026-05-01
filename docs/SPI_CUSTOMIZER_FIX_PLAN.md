@@ -60,7 +60,7 @@ Make `spi-customizer` deterministic and correct from issue spec to generated RTL
 - Simulation fails loudly when protocol expectations are violated.
 
 **Status**
-- `IN_PROGRESS`
+- `DONE`
 
 ---
 
@@ -618,6 +618,51 @@ Make `spi-customizer` deterministic and correct from issue spec to generated RTL
 **Status**
 - `IN_PROGRESS`
 
+---
+
+### Milestone 22 - Replay Validation Coverage and Telemetry Expansion
+
+**Objective**
+- Upgrade replay validation to explicitly support compact-suite claim reporting with stronger coverage metrics, targeted case expansion, and runtime telemetry.
+
+**Primary Files**
+- `scripts/replay_validation.py`
+- `scripts/expand_replay_matrix.py`
+- `docs/SPI_REPLAY_VALIDATION_REPORT.md`
+- `docs/SPI_CONFORMANCE_SIGNOFF.md`
+
+**Tasks**
+- Expand coverage targets from pass/fail to coverage metrics:
+  - Define explicit replay coverage dimensions:
+    - mode, role, width bucket, SS polarity, bit order
+    - special-feature tuple: `(interrupts, fifo, dma, multi_master)`
+    - selected-slave bucket (`zero` vs `nonzero`)
+    - test options (`clock_jitter_test`, `waveform_capture`)
+  - Report coverage as `covered / target` per dimension.
+  - Add pairwise interaction coverage for special features (all 2-way feature pairs).
+- Add higher-coverage replay case generation:
+  - Build target matrix for missing combinations (including rare tuples).
+  - Auto-generate new replay issues for uncovered points.
+  - Re-run replay iteratively until:
+    - required corners are covered
+    - modern-set gate pass remains stable.
+- Add runtime telemetry per replay case:
+  - Capture start timestamp, end timestamp, and total duration (seconds) for each case.
+  - Compute/report aggregate latency metrics:
+    - min
+    - max
+    - mean
+    - p50/p90.
+
+**Exit Criteria**
+- Replay report includes `covered / target` coverage summaries for required dimensions.
+- Replay report includes 2-way special-feature interaction coverage status.
+- Replay expansion loop can generate/close uncovered corners while keeping modern gates stable.
+- Replay report includes per-case runtime and aggregate stats (`min/max/mean/p50/p90`).
+
+**Status**
+- `IN_PROGRESS`
+
 ## Global Quality Gates (applied to each replay case)
 
 1. Compilation succeeds (`iverilog -g2012`).
@@ -731,6 +776,12 @@ Status will be updated after each milestone completion (or earlier if blocked) i
 | 2026-04-28 | M21 | IN_PROGRESS | Added deterministic numeric-space scheduler `scripts/expand_replay_matrix.py` (full-grid target, missing-signature diff, bounded `--max-cases` generation, deterministic ordering) |
 | 2026-04-28 | M21 | IN_PROGRESS | Generated two bounded scheduler batches (new modern cases through `issue-1098`) and refreshed replay/sign-off; expansion exposed `mode=1/master/width=1` compliance `NOT_RUN` corner |
 | 2026-04-28 | M21 | IN_PROGRESS | Closed exposed corner regressions by fixing CPHA=1 receive boundary in `templates/spi_core.v.tmpl` and active-edge boundary filtering in `scripts/vcd_parser.py`; replay/sign-off restored to green with modern `94/94 PASS` |
+| 2026-04-30 | M22 | PENDING | Added replay-validation enhancement scope for coverage metrics, higher-coverage matrix generation, pairwise feature interactions, and per-case runtime telemetry |
+| 2026-04-30 | M22 | IN_PROGRESS | Implemented Step 1 in `scripts/replay_validation.py`: added `covered/target` representativeness table, 2-way special-feature pair coverage table, and aggregate representativeness score in `docs/SPI_REPLAY_VALIDATION_REPORT.md` (current score `69/70`, missing pair `interrupts=False x fifo_buffers=True`) |
+| 2026-04-30 | M22 | IN_PROGRESS | Implemented Step 2 gap-driven generation support in `scripts/expand_replay_matrix.py` via `--target-feature-pair` and generated targeted case `issue-1099`; replay rerun now reports full pairwise closure (`special_feature_pairs_2way: 24/24`) and representativeness `70/70` |
+| 2026-04-30 | M22 | IN_PROGRESS | Implemented Step 3 runtime telemetry in `scripts/replay_validation.py`: per-case `start/end/duration` table plus aggregate latency metrics (`min/max/mean/p50/p90`) now emitted in `docs/SPI_REPLAY_VALIDATION_REPORT.md` |
+| 2026-04-30 | M22 | DONE | Implemented Step 4 iterative auto-close loop in `scripts/expand_replay_matrix.py` (`--auto-close`) with replay gate checks and closure detection; sanity run exits on stable closure in iteration 1 |
+| 2026-04-30 | M22 | DONE | Re-ran full modern replay after telemetry upgrade (`--compact-modern-target 0`): report confirms modern `95/95 PASS`, `coverage_gap=none`, representativeness `70/70`, feature-pair closure `24/24`, and practical compact size computed from observed closure (`95`) |
 
 ## Status Legend
 

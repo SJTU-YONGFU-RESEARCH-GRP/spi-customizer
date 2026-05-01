@@ -7,8 +7,10 @@ Evaluates objective gates across existing results/issue-*/ artifacts.
 import csv
 import json
 import re
+import argparse
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 
 def read_text(path: Path) -> str:
@@ -163,6 +165,42 @@ def evaluate_negative_cases(root: Path) -> List[Dict[str, object]]:
     return cases
 
 
+def _compute_case_runtime(issue_dir: Path) -> Dict[str, object]:
+    """
+    Derive per-case runtime telemetry from artifact modification times.
+    """
+    candidates = [
+        issue_dir / "logs" / "run_manifest.json",
+        issue_dir / "logs" / "compilation.log",
+        issue_dir / "logs" / "simulation.log",
+        issue_dir / "logs" / "protocol_compliance.md",
+        issue_dir / "logs" / "SUMMARY.md",
+    ]
+    times = [p.stat().st_mtime for p in candidates if p.exists()]
+    if not times:
+        return {"start_ts": "", "end_ts": "", "duration_s": None}
+    start = min(times)
+    end = max(times)
+    return {
+        "start_ts": datetime.fromtimestamp(start, tz=timezone.utc).isoformat(),
+        "end_ts": datetime.fromtimestamp(end, tz=timezone.utc).isoformat(),
+        "duration_s": max(0.0, end - start),
+    }
+
+
+def _percentile(values: List[float], pct: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return ordered[0]
+    pos = (len(ordered) - 1) * pct
+    lo = int(pos)
+    hi = min(lo + 1, len(ordered) - 1)
+    frac = pos - lo
+    return ordered[lo] * (1.0 - frac) + ordered[hi] * frac
+
+
 def evaluate_issue(issue_dir: Path) -> Dict[str, object]:
     issue = issue_dir.name.replace("issue-", "")
     code_dir = issue_dir / "code"
@@ -243,6 +281,7 @@ def evaluate_issue(issue_dir: Path) -> Dict[str, object]:
     pass_all = all(gates.values())
     issue_num = int(issue)
     is_modern = issue_num >= 1002
+    runtime = _compute_case_runtime(issue_dir)
 
     return {
         "issue": issue,
@@ -252,6 +291,7 @@ def evaluate_issue(issue_dir: Path) -> Dict[str, object]:
         "is_modern": is_modern,
         "config": config,
         "compliance_checks": compliance_checks,
+        "runtime": runtime,
     }
 
 
@@ -338,6 +378,238 @@ def _compute_coverage_profile(results: List[Dict[str, object]]) -> Dict[str, obj
         if missing:
             gaps[key] = missing
     return {"profile": profile, "required": required, "gaps": gaps}
+
+
+def _compute_feature_pair_coverage(modern: List[Dict[str, object]]) -> Dict[str, object]:
+    feature_dims = ("interrupts", "fifo_buffers", "dma_support", "multi_master")
+    observed = {dim: set() for dim in feature_dims}
+    for r in modern:
+        cfg = r.get("config", {}) if isinstance(r.get("config"), dict) else {}
+        for dim in feature_dims:
+            observed[dim].add(bool(cfg.get(dim, False)))
+
+    pair_rows: List[Dict[str, object]] = []
+    total_pairs = 0
+    total_covered = 0
+    for i in range(len(feature_dims)):
+        for j in range(i + 1, len(feature_dims)):
+            left = feature_dims[i]
+            right = feature_dims[j]
+            target_pairs = {(a, b) for a in (False, True) for b in (False, True)}
+            seen_pairs = set()
+            for r in modern:
+                cfg = r.get("config", {}) if isinstance(r.get("config"), dict) else {}
+                seen_pairs.add((bool(cfg.get(left, False)), bool(cfg.get(right, False))))
+            missing_pairs = sorted(target_pairs - seen_pairs, key=lambda x: (str(x[0]), str(x[1])))
+            covered = len(seen_pairs)
+            target = len(target_pairs)
+            total_pairs += target
+            total_covered += covered
+            pair_rows.append(
+                {
+                    "pair": f"{left} x {right}",
+                    "covered": covered,
+                    "target": target,
+                    "missing_pairs": missing_pairs,
+                    "coverage_ratio": covered / target if target else 0.0,
+                }
+            )
+    return {
+        "feature_dims": feature_dims,
+        "observed": observed,
+        "rows": pair_rows,
+        "covered": total_covered,
+        "target": total_pairs,
+        "all_closed": total_covered == total_pairs if total_pairs else False,
+    }
+
+
+def _compute_representativeness_metrics(coverage: Dict[str, object], pairwise: Dict[str, object]) -> Dict[str, object]:
+    rows: List[Dict[str, object]] = []
+    total_covered = 0
+    total_target = 0
+    for key in sorted(coverage["required"].keys()):
+        required = set(coverage["required"][key])
+        covered_vals = set(coverage["profile"].get(key, set()))
+        covered_count = len(required & covered_vals)
+        target_count = len(required)
+        total_covered += covered_count
+        total_target += target_count
+        rows.append(
+            {
+                "dimension": key,
+                "covered": covered_count,
+                "target": target_count,
+                "missing": sorted(required - covered_vals, key=lambda x: str(x)),
+            }
+        )
+    pairwise_missing: List[str] = []
+    for pair_row in pairwise["rows"]:
+        for left_val, right_val in pair_row["missing_pairs"]:
+            pairwise_missing.append(f"{pair_row['pair']}({left_val},{right_val})")
+    rows.append(
+        {
+            "dimension": "special_feature_pairs_2way",
+            "covered": pairwise["covered"],
+            "target": pairwise["target"],
+            "missing": pairwise_missing,
+        }
+    )
+    total_covered += pairwise["covered"]
+    total_target += pairwise["target"]
+    score = (100.0 * total_covered / total_target) if total_target else 0.0
+    return {
+        "rows": rows,
+        "score": score,
+        "covered": total_covered,
+        "target": total_target,
+    }
+
+
+def _compute_balance_matrix(modern: List[Dict[str, object]]) -> Dict[str, object]:
+    dims: Dict[str, Dict[object, int]] = {
+        "mode": {},
+        "role": {},
+        "data_width": {},
+        "num_slaves": {},
+        "ss_polarity": {},
+        "bit_order": {},
+        "default_data_enabled": {},
+        "default_data_pattern": {},
+        "interrupts": {},
+        "fifo_buffers": {},
+        "dma_support": {},
+        "multi_master": {},
+        "clock_jitter_test": {},
+        "waveform_capture": {},
+    }
+    for r in modern:
+        cfg = r.get("config", {}) if isinstance(r.get("config"), dict) else {}
+        entries = {
+            "mode": str(cfg.get("mode", "unknown")),
+            "role": str(cfg.get("spi_role", "unknown")).lower(),
+            "data_width": int(cfg.get("data_width", 0) or 0),
+            "num_slaves": int(cfg.get("num_slaves", 0) or 0),
+            "ss_polarity": "active_low" if bool(cfg.get("slave_active_low", True)) else "active_high",
+            "bit_order": "msb_first" if bool(cfg.get("msb_first", True)) else "lsb_first",
+            "default_data_enabled": bool(cfg.get("default_data_enabled", False)),
+            "default_data_pattern": str(cfg.get("default_data_pattern", "unknown")).lower(),
+            "interrupts": bool(cfg.get("interrupts", False)),
+            "fifo_buffers": bool(cfg.get("fifo_buffers", False)),
+            "dma_support": bool(cfg.get("dma_support", False)),
+            "multi_master": bool(cfg.get("multi_master", False)),
+            "clock_jitter_test": bool(cfg.get("clock_jitter_test", False)),
+            "waveform_capture": bool(cfg.get("waveform_capture", False)),
+        }
+        for k, v in entries.items():
+            dims[k][v] = dims[k].get(v, 0) + 1
+
+    rows: List[Dict[str, object]] = []
+    for name in sorted(dims.keys()):
+        counts = dims[name]
+        values = [counts[k] for k in counts]
+        if values:
+            min_count = min(values)
+            max_count = max(values)
+            ratio = (float(max_count) / float(min_count)) if min_count > 0 else 0.0
+        else:
+            min_count = 0
+            max_count = 0
+            ratio = 0.0
+        rows.append(
+            {
+                "dimension": name,
+                "counts": counts,
+                "min": min_count,
+                "max": max_count,
+                "max_min_ratio": ratio,
+            }
+        )
+    return {"rows": rows}
+
+
+def _compact_case_features(result: Dict[str, object]) -> Set[str]:
+    """
+    Build deterministic feature tokens used for compact-suite selection.
+    Tokens capture both single-dimension values and key pairwise interactions.
+    """
+    cfg = result.get("config", {}) if isinstance(result.get("config"), dict) else {}
+    try:
+        width = int(cfg.get("data_width", 0) or 0)
+    except (TypeError, ValueError):
+        width = 0
+    mode = str(cfg.get("mode", "unknown"))
+    role = str(cfg.get("spi_role", "unknown")).lower()
+    ss = "active_low" if bool(cfg.get("slave_active_low", True)) else "active_high"
+    order = "msb_first" if bool(cfg.get("msb_first", True)) else "lsb_first"
+    features: Set[str] = {
+        f"mode={mode}",
+        f"role={role}",
+        f"width={width}",
+        f"ss={ss}",
+        f"order={order}",
+        f"feat_interrupts={bool(cfg.get('interrupts', False))}",
+        f"feat_fifo={bool(cfg.get('fifo_buffers', False))}",
+        f"feat_dma={bool(cfg.get('dma_support', False))}",
+        f"feat_multi_master={bool(cfg.get('multi_master', False))}",
+        f"test_duration={str(cfg.get('test_duration', 'unknown')).lower()}",
+        f"clock_jitter={bool(cfg.get('clock_jitter_test', False))}",
+        f"waveform_capture={bool(cfg.get('waveform_capture', False))}",
+    }
+    features.add(f"pair_mode_role={mode}|{role}")
+    features.add(f"pair_mode_order={mode}|{order}")
+    features.add(f"pair_role_ss={role}|{ss}")
+    features.add(f"pair_width_role={width}|{role}")
+    return features
+
+
+def _select_compact_modern_suite(modern: List[Dict[str, object]], target_size: int) -> List[Dict[str, object]]:
+    """
+    Deterministic greedy selector:
+    maximize newly covered feature tokens per added case, tie-break by issue number.
+    """
+    if target_size <= 0 or not modern:
+        return modern
+    if len(modern) <= target_size:
+        return sorted(modern, key=lambda r: int(r["issue"]))
+
+    pool = sorted(modern, key=lambda r: int(r["issue"]))
+    selected: List[Dict[str, object]] = []
+    covered: Set[str] = set()
+
+    while pool and len(selected) < target_size:
+        best_idx = 0
+        best_gain = -1
+        for idx, case in enumerate(pool):
+            gain = len(_compact_case_features(case) - covered)
+            if gain > best_gain:
+                best_gain = gain
+                best_idx = idx
+        chosen = pool.pop(best_idx)
+        selected.append(chosen)
+        covered.update(_compact_case_features(chosen))
+
+    return selected
+
+
+def _find_practical_compact_suite(modern: List[Dict[str, object]]) -> Dict[str, object]:
+    """
+    Find smallest compact-suite size that closes required coverage dimensions
+    and 2-way special-feature pair coverage.
+    """
+    if not modern:
+        return {"size": 0, "score": 0.0, "closed": False}
+    for size in range(1, len(modern) + 1):
+        subset = _select_compact_modern_suite(modern, size)
+        coverage = _compute_coverage_profile(subset)
+        pairwise = _compute_feature_pair_coverage(subset)
+        rep = _compute_representativeness_metrics(coverage, pairwise)
+        if not coverage["gaps"] and pairwise["all_closed"]:
+            return {"size": size, "score": rep["score"], "closed": True}
+    full_cov = _compute_coverage_profile(modern)
+    full_pairwise = _compute_feature_pair_coverage(modern)
+    full_rep = _compute_representativeness_metrics(full_cov, full_pairwise)
+    return {"size": len(modern), "score": full_rep["score"], "closed": False}
 
 
 def _evaluate_spec_oracle(manifest_text: str, compliance_text: str, simulation_text: str) -> bool:
@@ -664,7 +936,7 @@ def _evaluate_selected_slave_oracle(config: Dict[str, object], timing_csv: Path,
     return saw_valid_ss
 
 
-def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, object]:
+def write_report(results: List[Dict[str, object]], out_file: Path, suite_meta: Optional[Dict[str, int]] = None) -> Dict[str, object]:
     total = len(results)
     passed = sum(1 for r in results if r["pass_all"])
     modern = [r for r in results if r["is_modern"]]
@@ -679,7 +951,16 @@ def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, 
     lines.append(f"- Passed all gates: **{passed}**")
     lines.append(f"- Failed at least one gate: **{total - passed}**")
     lines.append(f"- Modern cases (post-fix replay set): **{len(modern)}**, pass: **{modern_pass}**")
-    lines.append(f"- Legacy cases (historical artifacts): **{len(legacy)}**, pass: **{legacy_pass}**")
+    if suite_meta:
+        lines.append(
+            f"- Compact modern suite: **{suite_meta['selected_modern']}** selected from **{suite_meta['available_modern']}** available "
+            f"(target={suite_meta['target_modern']})"
+        )
+        if "practical_compact_size" in suite_meta:
+            lines.append(
+                f"- Practical compact size for full scoped closure: **{suite_meta['practical_compact_size']}** "
+                f"(computed from actual coverage closure)"
+            )
     lines.append("")
 
     # Coverage matrix over modern cases
@@ -688,6 +969,9 @@ def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, 
         key = _coverage_key(r)
         modern_coverage[key] = modern_coverage.get(key, 0) + 1
     coverage = _compute_coverage_profile(results)
+    pairwise = _compute_feature_pair_coverage(modern)
+    representativeness = _compute_representativeness_metrics(coverage, pairwise)
+    balance = _compute_balance_matrix(modern)
     coverage_gap = "none" if not coverage["gaps"] else "listed"
     requirements = load_conformance_requirements(Path("docs") / "SPI_CONFORMANCE_REQUIREMENTS.json")
     conformance = _evaluate_requirement_coverage(modern, requirements)
@@ -716,6 +1000,22 @@ def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, 
         for key in sorted(coverage["gaps"].keys()):
             missing = ", ".join(str(v) for v in coverage["gaps"][key])
             lines.append(f"  - {key}: {missing}")
+    lines.append("")
+    durations = [
+        float(r["runtime"]["duration_s"])
+        for r in results
+        if isinstance(r.get("runtime"), dict) and r["runtime"].get("duration_s") is not None
+    ]
+    lines.append("## Runtime Telemetry")
+    lines.append("")
+    if durations:
+        mean = sum(durations) / len(durations)
+        lines.append(f"- Cases with telemetry: **{len(durations)} / {len(results)}**")
+        lines.append(f"- Duration seconds: min **{min(durations):.3f}**, max **{max(durations):.3f}**, mean **{mean:.3f}**")
+        lines.append(f"- Percentiles: p50 **{_percentile(durations, 0.50):.3f}**, p90 **{_percentile(durations, 0.90):.3f}**")
+    else:
+        lines.append("- Cases with telemetry: **0**")
+        lines.append("- Duration seconds: no telemetry available")
     lines.append("")
     lines.append("## Gate Definitions")
     lines.append("")
@@ -774,6 +1074,18 @@ def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, 
             f"{'Y' if g['transaction_oracle_ok'] else 'N'} | "
             f"{'Y' if g['selected_slave_oracle_ok'] else 'N'} |"
         )
+    lines.append("")
+    lines.append("## Per-Issue Runtime")
+    lines.append("")
+    lines.append("| Issue | Start (UTC) | End (UTC) | Duration (s) |")
+    lines.append("|---:|---|---|---:|")
+    for r in sorted(results, key=lambda x: int(x["issue"])):
+        rt = r.get("runtime", {}) if isinstance(r.get("runtime"), dict) else {}
+        start_ts = str(rt.get("start_ts", "")) or "(n/a)"
+        end_ts = str(rt.get("end_ts", "")) or "(n/a)"
+        duration = rt.get("duration_s")
+        duration_text = f"{float(duration):.3f}" if duration is not None else "(n/a)"
+        lines.append(f"| {r['issue']} | {start_ts} | {end_ts} | {duration_text} |")
 
     lines.append("")
     lines.append("## Coverage Matrix (Modern Cases)")
@@ -822,6 +1134,44 @@ def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, 
     else:
         lines.append("| (none) | 0 | 0 | 0 |")
     lines.append("")
+    lines.append("## Compact Suite Representativeness")
+    lines.append("")
+    lines.append(
+        f"- Representativeness score: **{representativeness['score']:.1f}%** "
+        f"({representativeness['covered']}/{representativeness['target']})"
+    )
+    lines.append(
+        "- Confidence claim: compact suite representativeness is based on coverage closure and stable gate outcomes, not raw case count."
+    )
+    lines.append("")
+    lines.append("| Dimension | Covered / Target | Missing Required Values |")
+    lines.append("|---|---:|---|")
+    for row in representativeness["rows"]:
+        missing = ", ".join(str(v) for v in row["missing"]) if row["missing"] else "none"
+        lines.append(f"| {row['dimension']} | {row['covered']} / {row['target']} | {missing} |")
+    lines.append("")
+    lines.append("## Special Feature Pairwise Coverage (2-way)")
+    lines.append("")
+    lines.append("| Pair | Covered / Target | Missing Pairs |")
+    lines.append("|---|---:|---|")
+    for row in pairwise["rows"]:
+        missing = (
+            ", ".join(f"({a},{b})" for (a, b) in row["missing_pairs"])
+            if row["missing_pairs"]
+            else "none"
+        )
+        lines.append(f"| {row['pair']} | {row['covered']} / {row['target']} | {missing} |")
+    lines.append("")
+    lines.append("## Balance Matrix (Modern Cases)")
+    lines.append("")
+    lines.append("| Dimension | Value Counts | Min | Max | Max/Min Ratio |")
+    lines.append("|---|---|---:|---:|---:|")
+    for row in balance["rows"]:
+        counts = ", ".join(f"{k}:{row['counts'][k]}" for k in sorted(row["counts"].keys(), key=lambda x: str(x)))
+        lines.append(
+            f"| {row['dimension']} | {counts if counts else '(none)'} | {row['min']} | {row['max']} | {row['max_min_ratio']:.2f} |"
+        )
+    lines.append("")
     lines.append("## Template Input Coverage (Modern Cases)")
     lines.append("")
     lines.append("| Dimension | Covered Values | Required Values |")
@@ -846,16 +1196,6 @@ def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, 
     else:
         lines.append("- No modern cases selected.")
 
-    lines.append("")
-    lines.append("### Legacy Failures (Historical Artifacts)")
-    lines.append("")
-    legacy_failed = [r for r in legacy if not r["pass_all"]]
-    if legacy_failed:
-        lines.append(f"- Count: {len(legacy_failed)}")
-        lines.append("- Primary pattern: missing compliance/summary-consistency artifacts from older runs.")
-    else:
-        lines.append("- None.")
-    lines.append("")
     lines.append("## Failure Signatures")
     lines.append("")
     lines.append("| Gate | Corner Signature | Count | Issues |")
@@ -899,6 +1239,7 @@ def write_report(results: List[Dict[str, object]], out_file: Path) -> Dict[str, 
         "negative_suite_ok": negative_suite_ok,
         "signoff_gate": signoff_gate,
         "requirement_rows": conformance["rows"],
+        "representativeness_score": representativeness["score"],
     }
 
 
@@ -974,15 +1315,36 @@ def _evaluate_requirement_coverage(modern: List[Dict[str, object]], requirements
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Replay validation report generator")
+    parser.add_argument(
+        "--compact-modern-target",
+        type=int,
+        default=500,
+        help="Target size for compact modern replay suite (0 = use all modern cases)",
+    )
+    args = parser.parse_args()
+
     root = Path("results")
     issue_dirs = sorted([p for p in root.glob("issue-*") if (p / "code" / "spi_config.json").exists()], key=lambda p: int(p.name.replace("issue-", "")))
     if not issue_dirs:
         print("No issue result directories found.")
         return 1
 
-    results = [evaluate_issue(p) for p in issue_dirs]
+    all_results = [evaluate_issue(p) for p in issue_dirs]
+    modern_all = [r for r in all_results if r["is_modern"]]
+    selected_modern = _select_compact_modern_suite(modern_all, args.compact_modern_target)
+    practical = _find_practical_compact_suite(modern_all)
+    # Report/sign-off are modern-suite focused; legacy artifacts are omitted.
+    results = selected_modern
+
+    suite_meta = {
+        "available_modern": len(modern_all),
+        "selected_modern": len(selected_modern),
+        "target_modern": args.compact_modern_target,
+        "practical_compact_size": practical["size"],
+    }
     report_file = Path("docs") / "SPI_REPLAY_VALIDATION_REPORT.md"
-    summary = write_report(results, report_file)
+    summary = write_report(results, report_file, suite_meta=suite_meta)
     signoff_file = Path("docs") / "SPI_CONFORMANCE_SIGNOFF.md"
     write_signoff(summary, signoff_file)
     print(f"Wrote report: {report_file}")
